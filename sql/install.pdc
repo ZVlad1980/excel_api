@@ -1,0 +1,109 @@
+prompt Install sp_fiz_litz_lspv_v.sql
+@@sp_fiz_litz_lspv_v.sql
+show error
+
+prompt Install sp_pen_schemes_v.sql
+@@sp_pen_schemes_v.sql
+show error
+
+prompt Install ndfl_report_api.pks
+@@ndfl_report_api.pks
+show error
+
+prompt Install ndfl_schet_options_v.sql
+@@ndfl_schet_options_v.sql
+show error
+
+prompt Install ndfl_dv_sr_lspv_v.sql
+@@ndfl_dv_sr_lspv_v.sql
+show error
+
+prompt Install ndfl_dv_sr_lspv_corr_v.sql
+@@ndfl_dv_sr_lspv_corr_v.sql
+show error
+
+prompt Install ndfl6_revenue_rep_v.sql
+@@ndfl6_revenue_rep_v.sql
+show error
+
+prompt Install ndfl6_revenue_corr_rep_v.sql
+@@ndfl6_revenue_corr_rep_v.sql
+show error
+
+prompt Install ndfl_report_detail_v.sql
+@@ndfl_report_detail_v.sql
+show error
+
+prompt Install ndfl6_revenue_rep_2_v.sql
+@@ndfl6_revenue_rep_v.sql
+show error
+
+prompt Install ndfl6_revenue_corr_rep_2_v.sql
+@@ndfl6_revenue_corr_rep_v.sql
+show error
+
+prompt Install ndfl_report_detail_2_v.sql
+@@ndfl_report_detail_v.sql
+show error
+
+prompt Install ndfl_report_errors_v.sql
+@@ndfl_report_errors_v.sql
+show error
+
+prompt Install ndfl_report_correcting_v.sql
+@@ndfl_report_correcting_v.sql
+show error
+
+prompt Install ndfl_report_api.pkb
+@@ndfl_report_api.pkb
+show error
+
+prompt Install grants.sql
+@@grants.sql
+show error
+prompt install create_tables.sql
+@@create_tables.sql
+
+prompt install zaprvkl_headers_tapi.pks
+@@zaprvkl_headers_tapi.pks
+
+prompt install zaprvkl_api.pks
+@@zaprvkl_api.pks
+
+prompt install zaprvkl_persons_v.sql
+@@zaprvkl_persons_v.sql
+
+prompt install zaprvkl_lines_v.sql
+@@zaprvkl_lines_v.sql
+
+prompt install zaprvkl_persons_rep_v.sql
+@@zaprvkl_persons_rep_v.sql
+
+prompt install zaprvkl_persons_translate_v.sql
+@@zaprvkl_persons_translate_v.sql
+
+prompt install zaprvkl_lines_translate_v.sql
+@@zaprvkl_lines_translate_v.sql
+
+prompt install zaprvkl_part_rep_v.sql
+@@zaprvkl_part_rep_v.sql
+
+prompt install zaprvkl_full_ident_v.sql
+@@zaprvkl_full_ident_v.sql
+
+prompt install zaprvkl_lines_tmp_v.sql
+@@zaprvkl_lines_tmp_v.sql
+
+prompt install zaprvkl_part_ident_v.sql
+@@zaprvkl_part_ident_v.sql
+
+prompt install zaprvkl_headers_tapi.pkb
+@@zaprvkl_headers_tapi.pkb
+
+prompt install zaprvkl_api.pkb
+@@zaprvkl_api.pkb
+
+prompt grants_to_others.sql
+@@grants_to_others.sql
+
+exit
