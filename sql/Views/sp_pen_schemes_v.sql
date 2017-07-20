@@ -1,4 +1,4 @@
-create or replace view sp_pen_schemes_v as
+create or replace drop view sp_pen_schemes_v as
   select lspv.nom_vkl,
          lspv.nom_ips,
          fz.ssylka,

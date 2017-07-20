@@ -53,7 +53,12 @@ with flow_cash_hier as (
            else
              o.det_charge_type
          end           det_charge_type,
-         o.tax_rate,
+         case
+           when o.charge_type = 'REVENUE' then
+             max(o.tax_rate) over(partition by f.nom_vkl, f.nom_ips, f.data_op, f.ssylka_doc)
+           else
+             tax_rate
+         end  tax_rate,
          f.NOM_VKL,
          f.NOM_IPS,
          f.SHIFR_SCHET,

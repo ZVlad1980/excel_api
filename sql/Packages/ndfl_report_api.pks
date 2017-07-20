@@ -18,8 +18,10 @@ create or replace package ndfl_report_api is
    * @param x_result      - курсор с данными
    * @param x_err_msg     - сообщение об ошибке
    * @param p_report_code - код отчета:
-   *                            detail_report - ежемес€чна€ расшифровка дл€ 6Ќƒ‘Ћ
-   *                            error_report  - отчет об ошибках коррекций
+   *                            detail_report     - ежемес€чна€ расшифровка 6Ќƒ‘Ћ
+   *                            detail_report_2   - ежемес€чна€ расшифровка 6Ќƒ‘Ћ разрезе типов дохода и ставок
+   *                            correcting_report - 
+   *                            error_report      - отчет об ошибках коррекций
    * @param p_from_date   - дата начала выборки в формате YYYYMMDD
    * @param p_end_date    - дата окончани€ выборки в формате YYYYMMDD
    *
