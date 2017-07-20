@@ -1,5 +1,15 @@
 create or replace view ndfl_dv_sr_lspv_corr_v as
-with flow_cash_hier as (
+with schet_options as (
+  select /*+ MATERIALIZE*/
+         nso.charge_type,
+         nso.det_charge_type,
+         nso.tax_rate,
+         nso.shifr_schet,
+         nso.sub_shifr_schet,
+         nso.max_nom_vkl
+  from   ndfl_schet_options_v nso
+),
+flow_cash_hier as (
     select level                         lvl,
            connect_by_isleaf             is_leaf,
            connect_by_root(d.data_op)    root_data_op,
@@ -19,9 +29,14 @@ with flow_cash_hier as (
     start with
           (d.NOM_VKL, d.NOM_IPS, d.data_op, d.SHIFR_SCHET, d.SUB_SHIFR_SCHET, d.SSYLKA_DOC) in
             (select cf.NOM_VKL, cf.NOM_IPS, cf.data_op, cf.SHIFR_SCHET, cf.SUB_SHIFR_SCHET, cf.SSYLKA_DOC
-             from   ndfl_dv_sr_lspv_v cf
-             where  cf.is_correction = 'Y'
+             from   fnd.dv_sr_lspv cf,
+                    schet_options  o --ndfl_dv_sr_lspv_v cf
+             where  1=1 --cf.is_correction = 'Y'
              and    cf.service_doc = -1
+             and    cf.nom_vkl <= nvl(o.max_nom_vkl, cf.nom_vkl)
+             and    cf.sub_shifr_schet = o.sub_shifr_schet
+             and    cf.shifr_schet = o.shifr_schet
+             and    cf.data_op between ndfl_report_api.get_start_date and ndfl_report_api.get_end_date
             )
     connect by
       prior ssylka_doc = service_doc          and
@@ -71,8 +86,8 @@ with flow_cash_hier as (
           where  ps.nom_ips = f.nom_ips
           and    ps.nom_vkl = f.nom_vkl
          ) pen_scheme
-  from   flow_cash_hier         f,
-         ndfl_schet_options_v   o
+  from   flow_cash_hier  f,
+         schet_options   o
   where  1=1
   and    o.sub_shifr_schet = f.SUB_SHIFR_SCHET
   and    o.shifr_schet = f.shifr_schet

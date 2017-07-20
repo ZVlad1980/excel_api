@@ -1,5 +1,5 @@
 create or replace view ndfl_dv_sr_lspv_v as
-with dict as (
+with schet_options as (
   select /*+ MATERIALIZE*/
          nso.charge_type,
          nso.det_charge_type,
@@ -54,7 +54,7 @@ cash_flow as (
               )
          end year_op_corrected
   from   fnd.dv_sr_lspv       d,
-         ndfl_schet_options_v o,
+         schet_options        o,--ndfl_schet_options_v o,
          sp_fiz_litz_lspv_v   f
   where  1=1
   and    f.nom_ips(+) = d.nom_ips
