@@ -1,15 +1,5 @@
 create or replace view ndfl_dv_sr_lspv_v as
-with schet_options as (
-  select /*+ MATERIALIZE*/
-         nso.charge_type,
-         nso.det_charge_type,
-         nso.tax_rate,
-         nso.shifr_schet,
-         nso.sub_shifr_schet,
-         nso.max_nom_vkl
-  from   ndfl_schet_options_v nso
-),
-cash_flow as (
+with cash_flow as (
   select d.ssylka_doc,
          d.service_doc,
          d.nom_vkl,
@@ -18,20 +8,19 @@ cash_flow as (
          d.shifr_schet,
          d.sub_shifr_schet,
          d.summa,
-         o.charge_type,
-         -- Определяем тип выплаты для вычетов (см. ndfl_schet_options_v) !
-         --  !!! Аналогичная логиа используется при вычислении поля gf_person (см. ниже)
+         a.charge_type,
+         -- Определяем тип выплаты для вычетов (см. ndfl_schet_options_t) !
          coalesce(
-           o.det_charge_type,
-           max(case when o.charge_type = 'REVENUE' then o.det_charge_type end)
+           a.det_charge_type,
+           max(case when a.charge_type = 'REVENUE' then a.det_charge_type end)
                over(partition by d.nom_vkl, d.nom_ips, d.data_op, d.ssylka_doc)
          ) det_charge_type,
          --
          case
-           when o.charge_type = 'REVENUE' then
-             max(o.tax_rate) over(partition by d.nom_vkl, d.nom_ips, d.data_op, d.ssylka_doc)
+           when a.charge_type = 'REVENUE' then
+             max(a.tax_rate) over(partition by d.nom_vkl, d.nom_ips, d.data_op, d.ssylka_doc)
            else
-             o.tax_rate
+             a.tax_rate
          end  tax_rate_op,
          --
          case
@@ -54,14 +43,14 @@ cash_flow as (
               )
          end year_op_corrected
   from   fnd.dv_sr_lspv       d,
-         schet_options        o,--ndfl_schet_options_v o,
+         ndfl_accounts_t      a,
          sp_fiz_litz_lspv_v   f
   where  1=1
   and    f.nom_ips(+) = d.nom_ips
   and    f.nom_vkl(+) = d.nom_vkl
-  and    d.nom_vkl <= nvl(o.max_nom_vkl, d.nom_vkl)
-  and    d.sub_shifr_schet = o.sub_shifr_schet
-  and    d.shifr_schet = o.shifr_schet
+  and    d.nom_vkl <= nvl(a.max_nom_vkl, d.nom_vkl)
+  and    d.sub_shifr_schet = a.sub_shifr_schet
+  and    d.shifr_schet = a.shifr_schet
   and    d.data_op between ndfl_report_api.get_start_date and ndfl_report_api.get_end_date
 ),
 cash_flow_person as (

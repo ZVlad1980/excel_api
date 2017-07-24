@@ -35,6 +35,8 @@ create or replace package body ndfl_report_api is
    *                            detail_report   - ежемесячная расшифровка для 6НДФЛ
    *                            detail_report_2 - ежемесячная расшифровка для 6НДФЛ c детализацией по статьям доходов и ставкам налога  
    *                            error_report    - отчет об ошибках коррекций
+   *                            ndfl6_part1       - обобщенные показатели раздела 1 формы 6НДФЛ (поля 060, 070, 080, 090)
+   *                            ndfl6_part1_rates - обобщенные показатели раздела 1 формы 6НДФЛ по ставкам (поля 010, 020, 030, 040)
    * @param p_from_date   - дата начала выборки в формате YYYYMMDD
    * @param p_end_date    - дата окончания выборки в формате YYYYMMDD
    *
@@ -46,9 +48,28 @@ create or replace package body ndfl_report_api is
     p_from_date     varchar2,
     p_end_date      varchar2
   ) is
+    l_header_id ndfl6_headers_t.header_id%type;
+    l_from_date date;
+    l_end_date  date;
   begin
     --
-    set_period(to_date(p_from_date, C_DATE_FMT), to_date(p_end_date, C_DATE_FMT));
+    l_from_date := to_date(p_from_date, C_DATE_FMT);
+    l_end_date := to_date(p_end_date, C_DATE_FMT);
+    --
+    if substr(p_report_code, 1, 5) = 'ndfl6' then
+      --
+      l_end_date := add_months(trunc(l_end_date, 'MM'), 1) - 1;
+      l_from_date := trunc(l_end_date, 'Y'); --для 6НДФЛ всегда с начала года до конца заданного месяца
+      --
+      ndfl6_headers_api.create_header(
+        x_header_id  => l_header_id,
+        p_start_date => l_from_date,
+        p_end_date   => l_end_date
+      );
+      --
+    end if;
+    --\
+    set_period(l_from_date, l_end_date);
     --
     case p_report_code
       when 'detail_report' then
@@ -129,12 +150,41 @@ create or replace package body ndfl_report_api is
                  end err_description
           from   ndfl_report_errors_v r
           order by r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
+      when 'ndfl6_part1' then
+        open x_result for
+          select max(c.total_persons)               total_persons,
+                 sum(
+                   nvl(c.tax_retained, 0) 
+                     - nvl(c.tax_returned_prev, 0) 
+                     - nvl(c.tax_returned_curr, 0)
+                 )                                  tax_retained,
+                 null                               tax_not_retained,
+                 abs(sum(
+                   nvl(c.tax_returned_prev, 0) 
+                     + nvl(c.tax_returned_curr, 0)
+                 ))                                 tax_returned
+          from   ndfl6_calcs_v c
+          where  c.header_id = l_header_id;
+      when 'ndfl6_part1_rates' then
+        open x_result for
+          select c.tax_rate          ,
+                 c.revenue_amount    ,
+                 null                revenue_div_amount,
+                 c.benefit           ,
+                 c.tax_calc          ,
+                 null                tax_calc_div      ,
+                 null                advance_amount    
+          from   ndfl6_calcs_v c
+          where  c.header_id = l_header_id
+          order by 
+            c.tax_rate;
       else
         x_err_msg := 'Неизвестный код отчета: ' || p_report_code;
     end case;
     --
   exception
     when others then
+      --
       x_err_msg := nvl(x_err_msg, dbms_utility.format_error_stack || chr(10) || dbms_utility.format_error_backtrace);
       --
   end get_report;
@@ -147,5 +197,6 @@ begin
     p_end_date   => add_months(trunc(sysdate, 'MM'), -1) - 1
   );
   --
+  
 end ndfl_report_api;
 /

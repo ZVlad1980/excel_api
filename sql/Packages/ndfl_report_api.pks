@@ -22,6 +22,8 @@ create or replace package ndfl_report_api is
    *                            detail_report_2   - ежемесячная расшифровка 6НДФЛ разрезе типов дохода и ставок
    *                            correcting_report - 
    *                            error_report      - отчет об ошибках коррекций
+   *                            ndfl6_part1       - обобщенные показатели раздела 1 формы 6НДФЛ (поля 060, 070, 080, 090)
+   *                            ndfl6_part1_rates - обобщенные показатели раздела 1 формы 6НДФЛ по ставкам (поля 010, 020, 030, 040)
    * @param p_from_date   - дата начала выборки в формате YYYYMMDD
    * @param p_end_date    - дата окончания выборки в формате YYYYMMDD
    *

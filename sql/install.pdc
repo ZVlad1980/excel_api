@@ -1,3 +1,19 @@
+prompt install create_tables.sql
+@@Tables\create_tables.sql
+show error
+
+prompt install ndfl_accounts_t.sql
+@@Tables\ndfl_accounts_t.sql
+show error
+
+prompt install ndfl6_persons_detail_t.sql
+@@Tables\ndfl6_persons_detail_t.sql
+show error
+
+prompt install create_tables.sql
+@@create_tables.sql
+show error
+
 prompt Install sp_fiz_litz_lspv_v.sql
 @@Views\sp_fiz_litz_lspv_v.sql
 show error
@@ -61,53 +77,66 @@ show error
 prompt Install grants.sql
 @@grants.sql
 show error
-prompt install create_tables.sql
-@@create_tables.sql
 
 prompt install zaprvkl_headers_tapi.pks
 @@Packages\zaprvkl_headers_tapi.pks
+show error
 
 prompt install zaprvkl_api.pks
 @@Packages\zaprvkl_api.pks
+show error
 
 prompt install zaprvkl_persons_v.sql
 @@Views\zaprvkl_persons_v.sql
+show error
 
 prompt install zaprvkl_lines_v.sql
 @@Views\zaprvkl_lines_v.sql
+show error
 
 prompt install zaprvkl_persons_rep_v.sql
 @@Views\zaprvkl_persons_rep_v.sql
+show error
 
 prompt install zaprvkl_persons_translate_v.sql
 @@Views\zaprvkl_persons_translate_v.sql
+show error
 
 prompt install zaprvkl_lines_translate_v.sql
 @@Views\zaprvkl_lines_translate_v.sql
+show error
 
 prompt install zaprvkl_part_rep_v.sql
 @@Views\zaprvkl_part_rep_v.sql
+show error
 
 prompt install zaprvkl_full_ident_v.sql
 @@Views\zaprvkl_full_ident_v.sql
+show error
 
 prompt install zaprvkl_lines_tmp_v.sql
 @@Views\zaprvkl_lines_tmp_v.sql
+show error
 
 prompt install zaprvkl_part_ident_v.sql
 @@Views\zaprvkl_part_ident_v.sql
+show error
 
 prompt install ndfl6_persons_detail_v.sql
 @@Views\ndfl6_persons_detail_v.sql
+show error
 
 prompt install ndfl6_persons_v.sql
 @@Views\ndfl6_persons_v.sql
+show error
 
 prompt install ndfl6_calcs_v.sql
 @@Views\ndfl6_calcs_v.sql
+show error
 
 prompt install 
 @@Views\
+show error
 
 prompt install 
 @@Views\
@@ -117,8 +146,10 @@ prompt install
 
 prompt install zaprvkl_headers_tapi.pkb
 @@PackageBodies\zaprvkl_headers_tapi.pkb
+show error
 
 prompt install zaprvkl_api.pkb
 @@PackageBodies\zaprvkl_api.pkb
+show error
 
 exit

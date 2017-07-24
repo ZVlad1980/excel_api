@@ -1,15 +1,5 @@
 create or replace view ndfl_dv_sr_lspv_corr_v as
-with schet_options as (
-  select /*+ MATERIALIZE*/
-         nso.charge_type,
-         nso.det_charge_type,
-         nso.tax_rate,
-         nso.shifr_schet,
-         nso.sub_shifr_schet,
-         nso.max_nom_vkl
-  from   ndfl_schet_options_v nso
-),
-flow_cash_hier as (
+with flow_cash_hier as (
     select level                         lvl,
            connect_by_isleaf             is_leaf,
            connect_by_root(d.data_op)    root_data_op,
@@ -29,13 +19,13 @@ flow_cash_hier as (
     start with
           (d.NOM_VKL, d.NOM_IPS, d.data_op, d.SHIFR_SCHET, d.SUB_SHIFR_SCHET, d.SSYLKA_DOC) in
             (select cf.NOM_VKL, cf.NOM_IPS, cf.data_op, cf.SHIFR_SCHET, cf.SUB_SHIFR_SCHET, cf.SSYLKA_DOC
-             from   fnd.dv_sr_lspv cf,
-                    schet_options  o --ndfl_dv_sr_lspv_v cf
+             from   fnd.dv_sr_lspv  cf,
+                    ndfl_accounts_t a --ndfl_dv_sr_lspv_v cf
              where  1=1 --cf.is_correction = 'Y'
              and    cf.service_doc = -1
-             and    cf.nom_vkl <= nvl(o.max_nom_vkl, cf.nom_vkl)
-             and    cf.sub_shifr_schet = o.sub_shifr_schet
-             and    cf.shifr_schet = o.shifr_schet
+             and    cf.nom_vkl <= nvl(a.max_nom_vkl, cf.nom_vkl)
+             and    cf.sub_shifr_schet = a.sub_shifr_schet
+             and    cf.shifr_schet = a.shifr_schet
              and    cf.data_op between ndfl_report_api.get_start_date and ndfl_report_api.get_end_date
             )
     connect by
@@ -60,17 +50,17 @@ flow_cash_hier as (
            end
          end summa,
          f.correcting_summa,
-         o.charge_type,
+         a.charge_type,
          case
-           when o.det_charge_type is null then
-             max(case when o.charge_type not in ('TAX', 'BENEFIT') then o.det_charge_type end)
+           when a.det_charge_type is null then
+             max(case when a.charge_type not in ('TAX', 'BENEFIT') then a.det_charge_type end)
                over(partition by f.nom_vkl, f.nom_ips, f.data_op, f.ssylka_doc)
            else
-             o.det_charge_type
+             a.det_charge_type
          end           det_charge_type,
          case
-           when o.charge_type = 'REVENUE' then
-             max(o.tax_rate) over(partition by f.nom_vkl, f.nom_ips, f.data_op, f.ssylka_doc)
+           when a.charge_type = 'REVENUE' then
+             max(a.tax_rate) over(partition by f.nom_vkl, f.nom_ips, f.data_op, f.ssylka_doc)
            else
              tax_rate
          end  tax_rate,
@@ -87,8 +77,8 @@ flow_cash_hier as (
           and    ps.nom_vkl = f.nom_vkl
          ) pen_scheme
   from   flow_cash_hier  f,
-         schet_options   o
+         ndfl_accounts_t a
   where  1=1
-  and    o.sub_shifr_schet = f.SUB_SHIFR_SCHET
-  and    o.shifr_schet = f.shifr_schet
+  and    a.sub_shifr_schet = f.SUB_SHIFR_SCHET
+  and    a.shifr_schet = f.shifr_schet
 /
