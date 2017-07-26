@@ -4,9 +4,6 @@ create or replace package body zaprvkl_api is
   G_SRC_CHR  constant varchar2(200) := 'AOPEHBCXMK';
   G_DEST_CHR constant varchar2(200) := 'АОРЕНВСХМК';
   
-  type g_lines_tmp_type is table of zaprvkl_lines_tmp%rowtype;
-  g_lines_tmp g_lines_tmp_type;
-  
   
   procedure plog(p_msg varchar2) is
     pragma autonomous_transaction;
@@ -20,15 +17,6 @@ create or replace package body zaprvkl_api is
       rollback;
       raise;
   end plog;
-  
-  procedure purge_lines_tmp is
-  begin
-    if g_lines_tmp is not null and g_lines_tmp.count > 0 then
-      forall i in 1..g_lines_tmp.count
-        insert into zaprvkl_lines_tmp values g_lines_tmp(i);
-      g_lines_tmp.delete;
-    end if;
-  end purge_lines_tmp;
   
   
   
@@ -46,7 +34,6 @@ create or replace package body zaprvkl_api is
   ) return zaprvkl_headers_t.id%type is
     --
     l_header_row    zaprvkl_headers_t%rowtype;
-    l_inv_not_found exception;
     --
     function get_investor_id_ return fnd.sp_ur_lits.ssylka%type is
       l_result fnd.sp_ur_lits.ssylka%type;
@@ -84,9 +71,7 @@ create or replace package body zaprvkl_api is
   
   /**
    * Процедура add_line_tmp добавляет персональные данные в tmp таблицу
-   *  Добавление производится через глобальный буфер g_lines_tmp,
-   *  Сброс через кажду 1000 строк (см. процедуру purge_lines_tmp)
-   *  Процедура вызывается из Excel
+   *   Вызывает API 
    *
    * @param p_last_name   - фамилия
    * @param p_first_name  - имя
@@ -107,31 +92,24 @@ create or replace package body zaprvkl_api is
     p_snils        varchar2,
     p_inn          varchar2
   ) is
+    l_line zaprvkl_lines_tmp%rowtype;
   begin
     if p_excel_id is null then
       return;
     end if;
     
-    if g_lines_tmp is null then
-      g_lines_tmp := g_lines_tmp_type();
-      plog('startTmp');
-    end if;
+    l_line.excel_id    := p_excel_id                   ;
+    l_line.last_name   := prepare_str$(p_last_name    );
+    l_line.first_name  := prepare_str$(p_first_name   );
+    l_line.second_name := prepare_str$(p_second_name  );
+    l_line.birth_date  := to_date$(p_birth_date       );
+    l_line.employee_id := p_employee_id                ;
+    l_line.snils       := p_snils                      ;
+    l_line.inn         := p_inn                        ;
     --
-    g_lines_tmp.extend;
-    g_lines_tmp(g_lines_tmp.last).excel_id    := p_excel_id;
-    g_lines_tmp(g_lines_tmp.last).last_name   := prepare_str$(p_last_name    );
-    g_lines_tmp(g_lines_tmp.last).first_name  := prepare_str$(p_first_name   );
-    g_lines_tmp(g_lines_tmp.last).second_name := prepare_str$(p_second_name  );
-    g_lines_tmp(g_lines_tmp.last).birth_date  := to_date$(p_birth_date       );
-    g_lines_tmp(g_lines_tmp.last).employee_id := p_employee_id    ;
-    g_lines_tmp(g_lines_tmp.last).snils       := p_snils      ;
-    g_lines_tmp(g_lines_tmp.last).inn         := p_inn        ;
-    --
-    g_lines_tmp(g_lines_tmp.last).birth_date_str  := p_birth_date ;
-    --
-    if g_lines_tmp.count = 1000 then
-      purge_lines_tmp;
-    end if;
+    zaprvkl_lines_tmp_api.add_line(
+      p_line => l_line
+    );
     --
   end add_line_tmp;
   
@@ -147,7 +125,7 @@ create or replace package body zaprvkl_api is
   ) is
   begin
     --
-    purge_lines_tmp;
+    zaprvkl_lines_tmp_api.flush_to_table;
     --
     insert into zaprvkl_lines_t(
       header_id,

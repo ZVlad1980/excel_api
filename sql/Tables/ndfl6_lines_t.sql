@@ -22,3 +22,5 @@ create table ndfl6_lines_t(
 /
 create index ndfl6_lines_hdr_idx on ndfl6_lines_t(header_id)
 /
+create index ndfl6_lines_idx1 on ndfl6_lines_t(gf_person)
+/

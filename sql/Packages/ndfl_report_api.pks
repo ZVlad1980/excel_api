@@ -36,5 +36,36 @@ create or replace package ndfl_report_api is
     p_end_date      varchar2
   );
   
+  /**
+   * Процедура add_line_tmp добавляет персональные данные в tmp таблицу
+   *   Вызывает API 
+   *
+   * @param p_last_name   - фамилия
+   * @param p_first_name  - имя
+   * @param p_second_name - отчество
+   * @param p_birth_date  - дата рождения в формате ДД.ММ.ГГГГ
+   * @param p_snils       - СНИЛС
+   * @param p_inn         - ИНН
+   *
+   */
+  procedure add_line(
+    p_last_name    varchar2,
+    p_first_name   varchar2,
+    p_second_name  varchar2,
+    p_birth_date   varchar2,
+    p_snils        varchar2,
+    p_inn          varchar2
+  );
+  
+  /**
+   *
+   * Процедура load_employees запускает загрузку сотрудников из tmp таблицы
+   *  в f_ndfl_load_spisrab
+   */
+  procedure load_employees(
+    x_err_msg   out varchar2,
+    p_load_date date
+  );
+  
 end ndfl_report_api;
 /
