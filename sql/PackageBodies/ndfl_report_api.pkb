@@ -344,7 +344,7 @@ create or replace package body ndfl_report_api is
    */
   procedure load_employees(
     x_err_msg   out varchar2,
-    p_load_date date
+    p_load_date varchar2
   ) is
     l_header_id  ndfl6_headers_t.header_id%type;
     l_start_date date;
@@ -353,7 +353,8 @@ create or replace package body ndfl_report_api is
     --
     utl_error_api.init_exceptions;
     --
-    l_end_date := p_load_date;
+    l_end_date := to_date(p_load_date, C_DATE_FMT);
+    --
     create_header(
       x_header_id  => l_header_id ,
       x_start_date => l_start_date,
@@ -363,13 +364,13 @@ create or replace package body ndfl_report_api is
     zaprvkl_lines_tmp_api.flush_to_table;
     --
     f_ndfl_load_spisrab_api.load_from_tmp(
-      p_load_date => p_load_date,
+      p_load_date => l_end_date,
       p_header_id => l_header_id
     );
     --
   exception
     when others then
-      fix_exception('load_employees(p_load_date => ' || to_char(p_load_date, 'dd.mm.yyyy'));
+      fix_exception('load_employees(p_load_date => ' || p_load_date);
       x_err_msg := utl_error_api.get_exception;
   end load_employees;
   
