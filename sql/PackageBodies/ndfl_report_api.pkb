@@ -185,6 +185,17 @@ create or replace package body ndfl_report_api is
                      'Сумма корректирующей операции (' || r.correcting_summa || ') не полностью закрывает сумму корректируемых операций (' || r.corrected_summa || ')'
                  end err_description
           from   ndfl_report_errors_v r
+          /*union all
+          select '1',
+                 '2',
+                 '3',
+                 '4',
+                 '5',
+                 '6',
+                 '7',
+                 '8',
+                 '9'
+          from   dual*/
           order by r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
       when 'ndfl6_part1' then
         open x_result for
