@@ -64,18 +64,40 @@ create or replace package body ndfl_report_api is
     when others then
       fix_exception;
       raise;
-  end;
+  end create_header;
+  
+  /**
+   *
+   */
+  procedure ndfl_prepare_data(
+    x_err_msg    out varchar2,
+    p_end_date   in  varchar2
+  ) is
+    l_header_id   ndfl6_headers_t.header_id%type;
+    l_start_date  date;
+    l_end_date    date;
+  begin
+    l_end_date := to_date(p_end_date, C_DATE_FMT);
+    create_header(
+      x_header_id  => l_header_id,
+      x_start_date => l_start_date,
+      x_end_date   => l_end_date
+    );
+    --
+  exception
+    when others then
+      --
+      fix_exception;
+      x_err_msg := nvl(x_err_msg, dbms_utility.format_error_stack || chr(10) || dbms_utility.format_error_backtrace);
+      --
+  end ndfl_prepare_data;
+  
   /**
    * Процедура get_report возвращает курсор с данными отчета
    * 
    * @param x_result      - курсор с данными
    * @param x_err_msg     - сообщение об ошибке
-   * @param p_report_code - код отчета:
-   *                            detail_report   - ежемесячная расшифровка для 6НДФЛ
-   *                            detail_report_2 - ежемесячная расшифровка для 6НДФЛ c детализацией по статьям доходов и ставкам налога  
-   *                            error_report    - отчет об ошибках коррекций
-   *                            ndfl6_part1       - обобщенные показатели раздела 1 формы 6НДФЛ (поля 060, 070, 080, 090)
-   *                            ndfl6_part1_rates - обобщенные показатели раздела 1 формы 6НДФЛ по ставкам (поля 010, 020, 030, 040)
+   * @param p_report_code - код отчета
    * @param p_from_date   - дата начала выборки в формате YYYYMMDD
    * @param p_end_date    - дата окончания выборки в формате YYYYMMDD
    *
@@ -185,19 +207,8 @@ create or replace package body ndfl_report_api is
                      'Сумма корректирующей операции (' || r.correcting_summa || ') не полностью закрывает сумму корректируемых операций (' || r.corrected_summa || ')'
                  end err_description
           from   ndfl_report_errors_v r
-          /*union all
-          select '1',
-                 '2',
-                 '3',
-                 '4',
-                 '5',
-                 '6',
-                 '7',
-                 '8',
-                 '9'
-          from   dual*/
           order by r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
-      when 'ndfl6_part1' then
+      when 'ndfl6_part1_general' then
         open x_result for
           select max(c.total_persons)               total_persons,
                  sum(
@@ -225,11 +236,10 @@ create or replace package body ndfl_report_api is
           where  c.header_id = l_header_id
           order by 
             c.tax_rate;
-      when 'employees_report' then
+      when 'ndfl6_employees_report' then
         open x_result for
           with emp_with_revenue as (
             select lin.gf_person,
-                   listagg(lin.pen_scheme, ', ') within group (order by lin.pen_scheme) pen_schemes,
                    listagg(
                      case lin.det_charge_type
                        when 'PENSION' then 'Пенсия'
@@ -241,28 +251,39 @@ create or replace package body ndfl_report_api is
                    sum(lin.revenue_amount) revenue_amount
             from   ndfl6_lines_t       lin
             where  1=1
-            and    lin.header_id = 1
+            and    lin.header_id = l_header_id
             group by lin.gf_person
           )
           select emp.familiya,
                  emp.imya,
                  emp.otchestvo,
                  emp.data_rozhd,
+                 emp.inn_fl,
                  case
-                   when emp.gf_person is null then 'Неучастник'
-                   else                            'Участник'
+                   when emp.gf_person is not null and
+                         exists(select 1 from fnd.sp_fiz_lits sfl where upper(sfl.familiya) = upper(emp.familiya) and sfl.gf_person = emp.gf_person)
+                     then
+                       'Участник'
+                   else 'Неучастник'
                  end participant,
                  case
                    when rev.revenue_amount > 0 then 'Да'
                    else                             'Нет'
                  end is_revenue,
-                 rev.pen_schemes,
+                 (select listagg(ps.pen_scheme, ', ') within group (order by ps.pen_scheme)
+                  from   (select fl.gf_person,
+                                 fl.pen_scheme
+                          from   sp_fiz_litz_lspv_v fl
+                          where  fl.gf_person = emp.gf_person
+                          and    upper(fl.last_name) = upper(emp.familiya)
+                          group by fl.gf_person, fl.pen_scheme) ps
+                 ) pen_schemes,
                  rev.revenue_types
           from   f_ndfl_load_spisrab emp,
                  emp_with_revenue    rev
           where  1=1
           and    rev.gf_person(+) = emp.gf_person
-          and    emp.god = 2017
+          and    emp.god = extract(year from l_end_date)
           order by emp.familiya,
                    emp.imya,
                    emp.otchestvo,
@@ -274,6 +295,7 @@ create or replace package body ndfl_report_api is
   exception
     when others then
       --
+      fix_exception;
       x_err_msg := nvl(x_err_msg, dbms_utility.format_error_stack || chr(10) || dbms_utility.format_error_backtrace);
       --
   end get_report;

@@ -15,7 +15,7 @@ create or replace view sp_fiz_litz_lspv_v as
          fnd.sp_fiz_lits    fz,
          fnd.kod_pens_shem  s
   where  1=1
-  and    s.kod_ps = nvl(dog.shema_dog, fz.pen_sxem) --fz.pen_sxem
-  and    dog.ssylka(+) = lspv.ssylka_fl
-  and    fz.ssylka = lspv.ssylka_fl
+  and    s.kod_ps(+) = nvl(dog.shema_dog, fz.pen_sxem) --fz.pen_sxem
+  and    dog.ssylka(+) = fz.ssylka
+  and    lspv.ssylka_fl(+) = fz.ssylka
 /

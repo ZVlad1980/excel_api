@@ -12,6 +12,11 @@ create or replace package ndfl_report_api is
     p_end_date   date default null
   );
   
+  procedure ndfl_prepare_data(
+    x_err_msg    out varchar2,
+    p_end_date   in  varchar2
+  );
+  
   /**
    * Процедура get_report возвращает курсор с данными отчета
    * 
@@ -30,7 +35,7 @@ create or replace package ndfl_report_api is
    */
   procedure get_report(
     x_result    out sys_refcursor, 
-    x_err_msg   out varchar2,
+    x_err_msg     out varchar2,
     p_report_code   varchar2,
     p_from_date     varchar2,
     p_end_date      varchar2
@@ -64,7 +69,7 @@ create or replace package ndfl_report_api is
    */
   procedure load_employees(
     x_err_msg   out varchar2,
-    p_load_date date
+    p_load_date varchar2
   );
   
 end ndfl_report_api;
