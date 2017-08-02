@@ -44,10 +44,29 @@ with flow_cash_hier as (
          f.data_op,
          case
            when f.is_leaf = 1 then
-             case sign(f.correcting_summa) 
-               when 1 then f.correcting_summa
-               else -1 * least(abs(f.summa), abs(f.correcting_summa))
-           end
+             case 
+               when a.charge_type = 'TAX' and a.det_charge_type = 'PENSION' and 
+                   exists( --существует операция по 83 счету с тем же доком и инверсной суммой
+                     select 1
+                     from   fnd.dv_sr_lspv dd
+                     where  1=1
+                     and    dd.summa = -1 * f.correcting_summa
+                     and    dd.shifr_schet = 83
+                     and    dd.ssylka_doc = f.root_ssylka_doc
+                     and    dd.nom_ips = f.nom_ips
+                     and    dd.nom_vkl = f.nom_vkl
+                   )
+                 then
+                   f.correcting_summa
+               else
+                 case sign(f.correcting_summa) 
+                   when 1 then f.correcting_summa
+                   else -1 * least(
+                     abs(f.summa), --abs(case when nvl(f.summa, 0)=0 then f.correcting_summa else f.summa end), 
+                     abs(f.correcting_summa)--abs(case when nvl(f.correcting_summa, 0)=0 then f.summa else f.correcting_summa end)
+                   )
+                 end
+             end
          end summa,
          f.correcting_summa,
          a.charge_type,
