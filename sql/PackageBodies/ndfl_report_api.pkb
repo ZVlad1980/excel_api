@@ -208,7 +208,7 @@ create or replace package body ndfl_report_api is
                  end err_description
           from   ndfl_report_errors_v r
           order by r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
-      when 'ndfl6_part1_general' then
+      when 'ndfl6_part1_general_data' then
         open x_result for
           select max(c.total_persons)               total_persons,
                  sum(
@@ -288,6 +288,44 @@ create or replace package body ndfl_report_api is
                    emp.imya,
                    emp.otchestvo,
                    emp.data_rozhd;
+      when 'ndfl6_recalc_curr_year' then
+        open x_result for
+          with lines as (
+            select lin.det_charge_type, lin.pen_scheme,
+                   sum(lin.tax_returned_curr) tax_returned_curr
+            from   ndfl6_lines_t lin
+            where  lin.header_id = 62
+            group by lin.det_charge_type, lin.pen_scheme
+          )
+          select case lin.det_charge_type
+                   when 'PENSION' then 'пенсии '
+                   when 'BUYBACK' then 'вык.сум.'
+                   when 'RITUAL' then  'рит.выпл.'
+                   else lin.det_charge_type
+                 end || 'сх.' || lin.pen_scheme,
+                 abs(lin.tax_returned_curr) tax_returned_curr
+          from   lines lin
+          where  lin.tax_returned_curr is not null
+          order by lin.det_charge_type, lin.pen_scheme;
+      when 'ndfl6_recalc_prev_year' then
+        open x_result for
+          with lines as (
+            select lin.det_charge_type, lin.pen_scheme,
+                   sum(lin.tax_returned_prev) tax_returned_prev
+            from   ndfl6_lines_t lin
+            where  lin.header_id = 62
+            group by lin.det_charge_type, lin.pen_scheme
+          )
+          select case lin.det_charge_type
+                   when 'PENSION' then 'пенсии '
+                   when 'BUYBACK' then 'вык.сум.'
+                   when 'RITUAL' then  'рит.выпл.'
+                   else lin.det_charge_type
+                 end || 'сх.' || lin.pen_scheme,
+                 abs(lin.tax_returned_prev) tax_returned_prev
+          from   lines lin
+          where  lin.tax_returned_prev is not null
+          order by lin.det_charge_type, lin.pen_scheme;
       else
         x_err_msg := 'Неизвестный код отчета: ' || p_report_code;
     end case;
