@@ -227,8 +227,16 @@ create or replace package body ndfl6_headers_api is
       tax_returned_prev,
       tax_returned_curr,
       tax_corr_83,
-      tax_corr_prev,
-      tax_corr_curr
+      rev_source_q1,
+      rev_source_q2,
+      rev_source_q3,
+      rev_source_q4,
+      rev_source,
+      rev_corr_prev,
+      rev_corr_q1,
+      rev_corr_q2,
+      rev_corr_q3,
+      rev_corr_q4
     ) with lines as (
         select /*+ materialize */lin.tax_rate,
                lin.nom_vkl,
@@ -243,11 +251,30 @@ create or replace package body ndfl6_headers_api is
                lin.tax_returned_prev,
                lin.tax_returned_curr,
                lin.tax_corr_83,
-               lin.tax_corr_prev,
-               lin.tax_corr_curr
+               lin.rev_source_q1,
+               lin.rev_source_q2,
+               lin.rev_source_q3,
+               lin.rev_source_q4,
+               lin.rev_source,
+               lin.rev_corr_prev,
+               lin.rev_corr_q1,
+               lin.rev_corr_q2,
+               lin.rev_corr_q3,
+               lin.rev_corr_q4
         from   ndfl6_lines_v lin
       ) select p_header_row.header_id, lines.* from lines;
     --
+
+
+
+
+
+
+
+
+
+
+
   exception
     when others then
       fix_exception('fill_lines. ID = ' || p_header_row.header_id);

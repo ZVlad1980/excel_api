@@ -39,20 +39,91 @@ create or replace view ndfl6_lines_v as
                  d.summa
              end
          )                                                           tax_returned_curr,
-         --сумма корректировки (в т.ч. возвращенного) налога за предыдущие периоды
-         sum(case
-               when d.charge_type = 'TAX'  and
-                    d.is_corr_curr_year = 'N' then
-                 d.summa
-             end
-         )                                                           tax_corr_prev,
-         --сумма корректировки (в т.ч. возвращенного) налога за текущий период
-         sum(case
-               when d.charge_type = 'TAX' and 
-                    d.is_corr_curr_year = 'Y' then
-                 d.summa
-             end
-         )                                                           tax_corr_curr
+         --сумма дохода: исходная по скорректированным операциям текущего года (лучше по кварталам)
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_correction = 'N'     and
+                  d.service_doc <> 0        and
+                  d.quarter_op = 1 then
+               d.summa
+           end
+         )                                                           rev_source_q1,
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_correction = 'N'     and
+                  d.service_doc <> 0        and
+                  d.quarter_op = 2 then
+               d.summa
+           end
+         )                                                           rev_source_q2,
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_correction = 'N'     and
+                  d.service_doc <> 0        and
+                  d.quarter_op = 3 then
+               d.summa
+           end
+         )                                                           rev_source_q3,
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_correction = 'N'     and
+                  d.service_doc <> 0        and
+                  d.quarter_op = 4 then
+               d.summa
+           end
+         )                                                           rev_source_q4,
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_correction = 'N'     and
+                  d.service_doc <> 0    then
+               d.summa
+           end
+         )                                                           rev_source,
+         --сумма дохода: коррекция по кварталам текущего периода и предыдущих периодов (налоговых)
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_corr_curr_year = 'N' then
+               d.summa
+           end
+         )                                                           rev_corr_prev,
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_corr_curr_year = 'Y' and
+                  d.quarter_op = 1 then
+               d.summa
+           end
+         )                                                           rev_corr_q1,
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_corr_curr_year = 'Y' and
+                  d.quarter_op = 2 then
+               d.summa
+           end
+         )                                                           rev_corr_q2,
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_corr_curr_year = 'Y' and
+                  d.quarter_op = 3 then
+               d.summa
+           end
+         )                                                           rev_corr_q3,
+         sum(
+           case
+             when d.charge_type = 'REVENUE' and
+                  d.is_corr_curr_year = 'Y' and
+                  d.quarter_op = 4 then
+               d.summa
+           end
+         )                                                           rev_corr_q4
   from   ndfl_dv_sr_lspv_v d
   group  by 
     d.tax_rate,

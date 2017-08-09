@@ -11,9 +11,7 @@ create or replace view ndfl6_persons_v as
            sum(d.tax_retained     ) tax_retained     ,
            sum(d.tax_corr_83      ) tax_corr_83      ,
            sum(d.tax_returned_prev) tax_returned_prev,
-           sum(d.tax_returned_curr) tax_returned_curr,
-           sum(d.tax_corr_prev    ) tax_corr_prev    ,
-           sum(d.tax_corr_curr    ) tax_corr_curr
+           sum(d.tax_returned_curr) tax_returned_curr
     from   ndfl6_lines_t d
     group  by 
       d.header_id,
@@ -46,8 +44,6 @@ create or replace view ndfl6_persons_v as
          d.tax_retained     ,
          d.tax_corr_83      ,
          d.tax_returned_prev,
-         d.tax_returned_curr,
-         d.tax_corr_prev    ,
-         d.tax_corr_curr    
+         d.tax_returned_curr
   from   ndfl_persons d
 /

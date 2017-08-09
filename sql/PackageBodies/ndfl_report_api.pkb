@@ -223,19 +223,142 @@ create or replace package body ndfl_report_api is
                  ))                                 tax_returned
           from   ndfl6_calcs_v c
           where  c.header_id = l_header_id;
-      when 'ndfl6_part1_rates' then
+      when 'ndfl6_part1_rates_data' then
         open x_result for
-          select c.tax_rate          ,
-                 c.revenue_amount    ,
-                 null                revenue_div_amount,
-                 c.benefit           ,
-                 c.tax_calc          ,
-                 null                tax_calc_div      ,
-                 null                advance_amount    
+          select c.tax_rate,
+                 sum(c.revenue_amount) revenue_amount     ,
+                 null                  revenue_div_amount ,
+                 sum(c.benefit)        benefit            ,
+                 sum(c.tax_calc)       tax_calc           ,
+                 null                  tax_calc_div       ,
+                 null                  advance_amount
           from   ndfl6_calcs_v c
           where  c.header_id = l_header_id
-          order by 
-            c.tax_rate;
+          group  by c.tax_rate
+          order  by c.tax_rate;
+      when 'ndfl6_part1_rates_13_wo_bb' then
+        open x_result for
+          select case t.det_charge_type
+                   when 'PENSION' then
+                     'Пенсия'
+                   else
+                     'Ритуалки'
+                 end det_charge_type,
+                 t.pen_scheme,
+                 sum(t.revenue_amount) revenue,
+                 sum(nvl(t.rev_corr_q1, 0) + nvl(t.rev_corr_q2, 0) + nvl(t.rev_corr_q3, 0) + nvl(t.rev_corr_q4, 0)) year,
+                 nvl(sum(t.rev_corr_q1), 0)    q1,
+                 nvl(sum(t.rev_corr_q2), 0)    q2,
+                 nvl(sum(t.rev_corr_q3), 0)    q3,
+                 nvl(sum(t.rev_corr_q4), 0)    q4
+          from   ndfl6_lines_t t
+          where  1=1
+          and    t.det_charge_type in ('PENSION', 'RITUAL')
+          and    t.tax_rate = 13
+          and    t.header_id = l_header_id
+          group by t.det_charge_type, t.pen_scheme
+          order by t.det_charge_type, t.pen_scheme;
+      when 'ndfl6_part1_rates_13_bb' then
+        open x_result for
+          select case rn
+                   when 1 then
+                     case c.det_charge_type 
+                       when 'BUYBACK' then
+                         'Выкупные суммы'
+                     end
+                 end                              det_charge_type,
+                 c.pen_scheme     ,
+                 nvl(c.revenue, 0)                revenue,
+                 nvl(c.revenue, 0) - 
+                   nvl(c.rev_corr_curr_year, 0)   source_summa,
+                 nvl(c.rev_source, 0)             rev_source,
+                 nvl(c.rev_corr_curr_year, 0)     rev_corr_curr_year,
+                 nvl(c.rev_source, 0) + 
+                   nvl(c.rev_corr_curr_year, 0)   diff,
+                 nvl(c.rev_corr_prev, 0)          rev_corr_prev
+          from   (
+                    select row_number()over(partition by t.det_charge_type order by t.det_charge_type) rn,
+                           t.det_charge_type,
+                           t.pen_scheme,
+                           sum(t.revenue_amount) revenue,
+                           null                  empty,
+                           sum(rev_source)       rev_source,
+                           sum(nvl(t.rev_corr_q1, 0) + nvl(t.rev_corr_q2, 0) + nvl(t.rev_corr_q3, 0) + nvl(t.rev_corr_q4, 0)) rev_corr_curr_year,
+                           sum(rev_corr_prev) rev_corr_prev
+                    from   ndfl6_lines_t t
+                    where  1=1
+                    and    t.det_charge_type in ('BUYBACK')
+                    and    t.tax_rate = 13
+                    and    t.header_id = l_header_id
+                    group by t.det_charge_type, t.pen_scheme
+                 ) c
+          order by c.det_charge_type, c.pen_scheme;
+      when 'ndfl6_part1_rates_30' then
+        open x_result for
+          select case rn
+                   when 1 then
+                     case c.det_charge_type 
+                       when 'PENSION' then
+                         'Пенсия'
+                       when 'RITUAL' then
+                         'Ритуалки'
+                       when 'BUYBACK' then
+                         'Выкупные суммы'
+                     end
+                 end det_charge_type,
+                 c.pen_scheme     ,
+                 c.revenue ,
+                 c.tax_calc,
+                 case
+                   when c.tax_calc - c.tax_retained <> 0 then
+                     case 
+                       when c.tax_calc - c.tax_retained > 1 then
+                         'недоплата'
+                       when c.tax_calc - c.tax_retained < -1 then
+                         'переплата'
+                     end || ': ' || to_char(c.tax_calc - c.tax_retained) || ' руб., см. ниже'
+                 end diff_descr
+          from   (
+                    select row_number()over(partition by t.det_charge_type order by t.det_charge_type) rn,
+                           t.det_charge_type,
+                           t.pen_scheme,
+                           sum(t.revenue_amount) revenue,
+                           sum(t.tax_calc)       tax_calc,
+                           sum(t.tax_retained)   tax_retained
+                    from   ndfl6_lines_t t
+                    where  1=1
+                    and    t.header_id = l_header_id
+                    and    t.tax_rate = 30
+                    group by t.det_charge_type, t.pen_scheme
+                 ) c
+          order by c.det_charge_type, c.pen_scheme;
+      when 'ndfl6_part1_rates_persn' then
+        open x_result for
+          select f.last_name,
+                 f.first_name,
+                 f.second_name,
+                 p.tax_calc,
+                 p.tax_retained,
+                 p.tax_calc - p.tax_retained tax_diff
+          from   (select p.gf_person, sum(p.tax_retained) tax_retained, sum(p.tax_calc) tax_calc 
+                  from   ndfl6_persons_v p 
+                  where  header_id = l_header_id 
+                  and    p.tax_rate = 30 
+                  group by p.gf_person) p,
+                 sp_fiz_litz_lspv_v f
+          where  1=1
+          and    f.gf_person = p.gf_person
+          and    p.tax_calc <> p.tax_retained
+          order by f.last_name,
+                 f.first_name,
+                 f.second_name;
+      when 'ndfl6_part2_data' then
+        open x_result for
+          select p.data_op,
+                 p.revenue,
+                 p.tax
+          from   ndfl6_part2_v p
+          order by p.data_op;
       when 'ndfl6_employees_report' then
         open x_result for
           with emp_with_revenue as (
@@ -276,6 +399,7 @@ create or replace package body ndfl_report_api is
                           from   sp_fiz_litz_lspv_v fl
                           where  fl.gf_person = emp.gf_person
                           and    upper(fl.last_name) = upper(emp.familiya)
+                          and    fl.pen_scheme_code <> 7
                           group by fl.gf_person, fl.pen_scheme) ps
                  ) pen_schemes,
                  rev.revenue_types
@@ -294,7 +418,7 @@ create or replace package body ndfl_report_api is
             select lin.det_charge_type, lin.pen_scheme,
                    sum(lin.tax_returned_curr) tax_returned_curr
             from   ndfl6_lines_t lin
-            where  lin.header_id = 62
+            where  lin.header_id = l_header_id
             group by lin.det_charge_type, lin.pen_scheme
           )
           select case lin.det_charge_type
@@ -313,7 +437,7 @@ create or replace package body ndfl_report_api is
             select lin.det_charge_type, lin.pen_scheme,
                    sum(lin.tax_returned_prev) tax_returned_prev
             from   ndfl6_lines_t lin
-            where  lin.header_id = 62
+            where  lin.header_id = l_header_id
             group by lin.det_charge_type, lin.pen_scheme
           )
           select case lin.det_charge_type
@@ -327,7 +451,13 @@ create or replace package body ndfl_report_api is
           where  lin.tax_returned_prev is not null
           order by lin.det_charge_type, lin.pen_scheme;
       else
-        x_err_msg := 'Неизвестный код отчета: ' || p_report_code;
+        x_err_msg := /*
+          ndfl_report2_api.request(
+            x_result        => x_result     ,
+            p_report_code   => p_report_code,
+            p_from_date     => p_from_date  ,
+            p_end_date      => p_end_date   
+          ); --*/'Неизвестный код отчета: ' || p_report_code;
     end case;
     --
   exception
@@ -449,8 +579,8 @@ create or replace package body ndfl_report_api is
 begin
   --
   set_period(
-    p_start_date => add_months(trunc(sysdate, 'MM'), -2), ---18),
-    p_end_date   => add_months(trunc(sysdate, 'MM'), -1) - 1
+    p_start_date => to_date(20170101, 'yyyymmdd'),
+    p_end_date   => to_date(20170630, 'yyyymmdd')
   );
   --
   

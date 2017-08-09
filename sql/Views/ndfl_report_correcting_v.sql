@@ -1,14 +1,11 @@
 create or replace view ndfl_report_correcting_v as
 with corrected_op as (
     select /*+ MATERIALIZE*/
-           c.lvl,
            c.is_leaf,
            c.root_ssylka_doc,
            c.root_data_op,
-           c.root_summa,
            c.data_op,
            c.summa,
-           c.correcting_summa,
            c.charge_type,
            c.det_charge_type,
            c.tax_rate,
@@ -18,7 +15,7 @@ with corrected_op as (
            c.sub_shifr_schet,
            c.ssylka_doc,
            c.service_doc,
-           c.source_summa
+           c.summa_source
            from   ndfl_dv_sr_lspv_corr_v c
   )
   select to_number(to_char(c.root_data_op, 'q'))  corr_quartal,
@@ -30,7 +27,7 @@ with corrected_op as (
          to_number(to_char(c.data_op, 'mm'))      src_mouth,
          c.data_op                                src_data_op,
          c.ssylka_doc                             src_ssylka_doc,
-         c.source_summa                           src_summa,
+         c.summa_source                           src_summa,
          c.summa                                  correction_sum,
          c.nom_vkl                                nom_vkl         ,
          c.nom_ips                                nom_ips         ,

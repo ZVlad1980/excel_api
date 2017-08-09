@@ -14,8 +14,16 @@ create table ndfl6_lines_t(
   tax_returned_prev  number,
   tax_returned_curr  number, 
   tax_corr_83        number,
-  tax_corr_prev      number,
-  tax_corr_curr      number,
+  rev_source_q1      number,
+  rev_source_q2      number,
+  rev_source_q3      number,
+  rev_source_q4      number,
+  rev_source         number,
+  rev_corr_prev      number,
+  rev_corr_q1        number,
+  rev_corr_q2        number,
+  rev_corr_q3        number,
+  rev_corr_q4        number,
   constraint ndfl6_line_hdr_fk foreign key (header_id)
     references ndfl6_headers_t(header_id)
 )
