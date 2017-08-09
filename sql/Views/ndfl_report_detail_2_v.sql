@@ -8,15 +8,14 @@ create or replace view ndfl_report_detail_2_v as
            when 'BUYBACK' then 'Выкупные суммы'
            when 'RITUAL'  then 'Ритуальные пособия'
          end charge_type,
-         --r.charge_code,
          r.revenue_13,
          r.benefit_13,
          r.tax_13,
          r.revenue_30,
          r.tax_30,
          r.pen_scheme,
+         rc.corrected_date ,
          rc.operation_date correction_date,
-         rc.corrected_date,
          rc.revenue_13 corr_revenue_13,
          rc.benefit_13 corr_benefit_13,
          rc.tax_13     corr_tax_13,
@@ -27,5 +26,5 @@ create or replace view ndfl_report_detail_2_v as
   where  1=1
   and    rc.pen_scheme(+) = r.pen_scheme
   and    rc.charge_type(+) = r.charge_type
-  and    rc.operation_date(+) = r.operation_date 
+  and    rc.corrected_date(+) = r.operation_date 
 /

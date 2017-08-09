@@ -4,11 +4,6 @@ create or replace view ndfl6_revenue_rep_2_v as
          d.transfer_date,
          d.det_charge_type                                         charge_type,
          d.pen_scheme,
-        /* case d.det_charge_type 
-           when 'PENSION' then 1 
-           when 'BUYBACK' then 2 
-           else 3 
-         end                                                       charge_code,--*/
          sum(case d.charge_type when 'REVENUE' then amount_13 end) revenue_13,
          sum(case d.charge_type when 'BENEFIT' then amount_13 end) benefit_13,
          sum(case d.charge_type when 'TAX'     then amount_13 end) tax_13,

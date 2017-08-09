@@ -6,13 +6,13 @@ create or replace view ndfl_report_detail_v as
          r.revenue,
          r.benefit,
          r.tax,
-         rc.operation_date correction_date,
-         rc.corrected_date,
+         rc.corrected_date,                 --дата операции коррекции
+         rc.operation_date correction_date, --дата исходной операции
          rc.revenue corr_revenue,
          rc.benefit corr_benefit,
          rc.tax     corr_tax
   from   ndfl6_revenue_rep_v      r,
          ndfl6_revenue_corr_rep_v rc
   where  1=1
-  and    rc.operation_date(+) = r.operation_date 
+  and    rc.corrected_date(+) = r.operation_date 
 /

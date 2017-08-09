@@ -9,8 +9,8 @@ create or replace view ndfl6_revenue_corr_rep_2_v as
          sum(case d.charge_type when 'REVENUE' then amount_30 end) revenue_30,
          sum(case d.charge_type when 'TAX'     then amount_30 end) tax_30
   from   (
-          select trunc(d.root_data_op)     operation_date,
-                 trunc(d.data_op)          corrected_date,
+          select trunc(d.data_op)          operation_date,
+                 trunc(d.root_data_op)     corrected_date,
                  d.charge_type,
                  d.det_charge_type,
                  d.pen_scheme,

@@ -68,3 +68,4 @@ begin
   dbms_stats.gather_table_stats(user, upper('ndfl_accounts_t'));
   dbms_stats.gather_index_stats(user, upper('ndfl_accounts_idx1'));
 end;
+/

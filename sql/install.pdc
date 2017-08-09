@@ -1,3 +1,4 @@
+
 prompt install create_tables.sql
 @@Tables\create_tables.sql
 show error
@@ -6,12 +7,44 @@ prompt install ndfl_accounts_t.sql
 @@Tables\ndfl_accounts_t.sql
 show error
 
-prompt install ndfl6_persons_detail_t.sql
-@@Tables\ndfl6_persons_detail_t.sql
+prompt install ndfl6_headers_t.sql
+@@Tables\ndfl6_headers_t.sql
 show error
 
-prompt install create_tables.sql
-@@create_tables.sql
+prompt install ndfl6_lines_t.sql
+@@Tables\ndfl6_lines_t.sql
+show error
+
+prompt install f_ndfl_spisrab_seq.sql
+@@Tables\f_ndfl_spisrab_seq.sql
+show error
+
+prompt install utl_error_api.pks
+@@Packages\utl_error_api.pks
+show error
+
+prompt install zaprvkl_api.pks
+@@Packages\zaprvkl_api.pks
+show error
+
+prompt install zaprvkl_headers_tapi.pks
+@@Packages\zaprvkl_headers_tapi.pks
+show error
+
+prompt install zaprvkl_lines_tmp_api.pks
+@@Packages\zaprvkl_lines_tmp_api.pks
+show error
+
+prompt install ndfl6_headers_api.pks
+@@Packages\ndfl6_headers_api.pks
+show error
+
+prompt install ndfl_report_api.pks
+@@Packages\ndfl_report_api.pks
+show error
+
+prompt install f_ndfl_load_spisrab_api.pks
+@@Packages\f_ndfl_load_spisrab_api.pks
 show error
 
 prompt Install sp_fiz_litz_lspv_v.sql
@@ -20,14 +53,6 @@ show error
 
 prompt Install sp_pen_schemes_v.sql
 @@Views\sp_pen_schemes_v.sql
-show error
-
-prompt Install ndfl_report_api.pks
-@@Packages\ndfl_report_api.pks
-show error
-
-prompt Install ndfl_schet_options_v.sql
-@@Views\ndfl_schet_options_v.sql
 show error
 
 prompt Install ndfl_dv_sr_lspv_v.sql
@@ -51,15 +76,15 @@ prompt Install ndfl_report_detail_v.sql
 show error
 
 prompt Install ndfl6_revenue_rep_2_v.sql
-@@Views\ndfl6_revenue_rep_v.sql
+@@Views\ndfl6_revenue_rep_2_v.sql
 show error
 
 prompt Install ndfl6_revenue_corr_rep_2_v.sql
-@@Views\ndfl6_revenue_corr_rep_v.sql
+@@Views\ndfl6_revenue_corr_rep_2_v.sql
 show error
 
 prompt Install ndfl_report_detail_2_v.sql
-@@Views\ndfl_report_detail_v.sql
+@@Views\ndfl_report_detail_2_v.sql
 show error
 
 prompt Install ndfl_report_errors_v.sql
@@ -70,20 +95,24 @@ prompt Install ndfl_report_correcting_v.sql
 @@Views\ndfl_report_correcting_v.sql
 show error
 
-prompt Install ndfl_report_api.pkb
-@@PackageBodies\ndfl_report_api.pkb
+prompt Install ndfl6_quarters_v.sql
+@@Views\ndfl6_quarters_v.sql
 show error
 
-prompt Install grants.sql
-@@grants.sql
+prompt Install ndfl6_persons_v.sql
+@@Views\ndfl6_persons_v.sql
 show error
 
-prompt install zaprvkl_headers_tapi.pks
-@@Packages\zaprvkl_headers_tapi.pks
+prompt Install ndfl6_lines_v.sql
+@@Views\ndfl6_lines_v.sql
 show error
 
-prompt install zaprvkl_api.pks
-@@Packages\zaprvkl_api.pks
+prompt Install ndfl6_calcs_v.sql
+@@Views\ndfl6_calcs_v.sql
+show error
+
+prompt Install ndfl6_part2_v.sql
+@@Views\ndfl6_part2_v.sql
 show error
 
 prompt install zaprvkl_persons_v.sql
@@ -122,34 +151,36 @@ prompt install zaprvkl_part_ident_v.sql
 @@Views\zaprvkl_part_ident_v.sql
 show error
 
-prompt install ndfl6_persons_detail_v.sql
-@@Views\ndfl6_persons_detail_v.sql
+prompt install utl_error_api.pkb
+@@PackageBodies\utl_error_api.pkb
 show error
 
-prompt install ndfl6_persons_v.sql
-@@Views\ndfl6_persons_v.sql
+prompt install zaprvkl_api.pkb
+@@PackageBodies\zaprvkl_api.pkb
 show error
-
-prompt install ndfl6_calcs_v.sql
-@@Views\ndfl6_calcs_v.sql
-show error
-
-prompt install 
-@@Views\
-show error
-
-prompt install 
-@@Views\
-
-prompt install 
-@@Views\
 
 prompt install zaprvkl_headers_tapi.pkb
 @@PackageBodies\zaprvkl_headers_tapi.pkb
 show error
 
-prompt install zaprvkl_api.pkb
-@@PackageBodies\zaprvkl_api.pkb
+prompt install zaprvkl_lines_tmp_api.pkb
+@@PackageBodies\zaprvkl_lines_tmp_api.pkb
+show error
+
+prompt install f_ndfl_load_spisrab_api.pkb
+@@PackageBodies\f_ndfl_load_spisrab_api.pkb
+show error
+
+prompt install ndfl_report_api.pkb
+@@PackageBodies\ndfl_report_api.pkb
+show error
+
+prompt install ndfl6_headers_api.pkb
+@@PackageBodies\ndfl6_headers_api.pkb
+show error
+
+prompt Install grants.sql
+@@grants.sql
 show error
 
 exit

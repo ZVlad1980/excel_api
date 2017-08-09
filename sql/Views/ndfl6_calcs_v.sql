@@ -5,7 +5,8 @@ create or replace view ndfl6_calcs_v as
          d.pen_scheme,
          (select count(distinct dd.gf_person) 
           from   (select dd.gf_person, sum(dd.revenue_amount) revenue_amount 
-                  from   ndfl6_persons_detail_t dd 
+                  from   ndfl6_persons_v dd 
+                  where  dd.header_id = d.header_id
                   group by dd.gf_person
                  ) dd 
           where  nvl(dd.revenue_amount, 0) > 0
