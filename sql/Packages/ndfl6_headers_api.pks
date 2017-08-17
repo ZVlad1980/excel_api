@@ -17,7 +17,8 @@ create or replace package ndfl6_headers_api is
     x_header_id  out ndfl6_headers_t.header_id%type,
     p_start_date date,
     p_end_date   date,
-    p_spr_id     number default null
+    p_spr_id     number default null,
+    p_is_force   boolean default false
   );
   
   procedure set_state(

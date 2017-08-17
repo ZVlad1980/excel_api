@@ -45,7 +45,8 @@ create or replace package body ndfl_report_api is
   procedure create_header(
     x_header_id  in out nocopy ndfl6_headers_t.header_id%type,
     x_start_date in out nocopy date,
-    x_end_date   in out nocopy date
+    x_end_date   in out nocopy date,
+    p_is_force   in boolean default false
   ) is
   begin
     --
@@ -55,7 +56,8 @@ create or replace package body ndfl_report_api is
     ndfl6_headers_api.create_header(
       x_header_id  => x_header_id,
       p_start_date => x_start_date,
-      p_end_date   => x_end_date
+      p_end_date   => x_end_date,
+      p_is_force   => p_is_force
     );
     --
     commit;
@@ -81,7 +83,8 @@ create or replace package body ndfl_report_api is
     create_header(
       x_header_id  => l_header_id,
       x_start_date => l_start_date,
-      x_end_date   => l_end_date
+      x_end_date   => l_end_date,
+      p_is_force   => true
     );
     --
   exception
@@ -334,24 +337,25 @@ create or replace package body ndfl_report_api is
           order by c.det_charge_type, c.pen_scheme;
       when 'ndfl6_part1_rates_persn' then
         open x_result for
-          select f.last_name,
-                 f.first_name,
-                 f.second_name,
+          select --gp.fk_contragent gf_person,
+                 gp.lastname,
+                 gp.firstname,
+                 gp.secondname,
                  p.tax_calc,
                  p.tax_retained,
                  p.tax_calc - p.tax_retained tax_diff
-          from   (select p.gf_person, sum(p.tax_retained) tax_retained, sum(p.tax_calc) tax_calc 
-                  from   ndfl6_persons_v p 
-                  where  header_id = l_header_id 
-                  and    p.tax_rate = 30 
-                  group by p.gf_person) p,
-                 sp_fiz_litz_lspv_v f
-          where  1=1
-          and    f.gf_person = p.gf_person
+          from   (select p.gf_person,
+                         sum(p.tax_retained) tax_retained,
+                         sum(p.tax_calc) tax_calc
+                  from   ndfl6_persons_v p
+                  where  header_id = l_header_id
+                  and    p.tax_rate = 30
+                  group  by p.gf_person) p,
+                 gazfond.people          gp
+          where  1 = 1
+          and    gp.fk_contragent = p.gf_person
           and    p.tax_calc <> p.tax_retained
-          order by f.last_name,
-                 f.first_name,
-                 f.second_name;
+          order  by gp.lastname, gp.firstname, gp.secondname;
       when 'ndfl6_part2_data' then
         open x_result for
           select p.data_op,

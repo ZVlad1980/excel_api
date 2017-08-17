@@ -62,7 +62,8 @@ create or replace package body ndfl6_headers_api is
     x_header_id  out ndfl6_headers_t.header_id%type,
     p_start_date date,
     p_end_date   date,
-    p_spr_id     number default null
+    p_spr_id     number default null,
+    p_is_force   boolean default false
   ) is
     l_header_row ndfl6_headers_t%rowtype;
   begin
@@ -71,6 +72,13 @@ create or replace package body ndfl6_headers_api is
     l_header_row.spr_id     := p_spr_id   ;
     --
     create_header(l_header_row);
+    --
+    if p_is_force and l_header_row.state = C_HDR_ST_SUCCESS then
+      l_header_row.state := C_HDR_ST_EMPTY;
+      set_state(p_header_id => l_header_row.header_id, p_state => C_HDR_ST_EMPTY);
+      delete from ndfl6_lines_t lin
+      where  lin.header_id = l_header_row.header_id;
+    end if;
     --
     commit;
     --
