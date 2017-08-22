@@ -87,7 +87,7 @@ with flow_cash_hier as (
          f.service_doc,
          f.summa summa_source, --исходная сумма операции
          (select ps.pen_scheme
-          from   sp_pen_schemes_v ps
+          from   sp_fiz_litz_lspv_v ps--sp_pen_schemes_v ps
           where  ps.nom_ips = f.nom_ips
           and    ps.nom_vkl = f.nom_vkl
          ) pen_scheme

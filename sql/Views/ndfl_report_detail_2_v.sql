@@ -1,6 +1,6 @@
 create or replace view ndfl_report_detail_2_v as
   select r.block_num,
-         row_number()over(partition by block_num order by r.operation_date, rc.corrected_date) block_row_num,
+         row_number()over(partition by block_num order by r.operation_date, rc.operation_date) block_row_num,
          r.operation_date,
          r.transfer_date,
          case r.charge_type

@@ -22,11 +22,11 @@ create or replace view ndfl6_revenue_rep_2_v as
                  d.shifr_schet,
                  d.sub_shifr_schet,
                  case
-                   when d.tax_rate = 13 and d.is_correction = 'N' then
+                   when d.tax_rate_op = 13 and d.is_correction = 'N' then
                      d.summa
                  end                  amount_13,
                  case
-                   when d.tax_rate = 30 and d.is_correction = 'N' then
+                   when d.tax_rate_op = 30 and d.is_correction = 'N' then
                      d.summa
                  end                  amount_30
           from   ndfl_dv_sr_lspv_v d

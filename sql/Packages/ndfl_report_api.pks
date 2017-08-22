@@ -72,5 +72,16 @@ create or replace package ndfl_report_api is
     p_load_date varchar2
   );
   
+  function is_tax_return(
+    p_nom_vkl          fnd.dv_sr_lspv.nom_vkl%type,
+    p_nom_ips          fnd.dv_sr_lspv.nom_ips%type,
+    p_date_op          fnd.dv_sr_lspv.data_op%type,
+    p_shifr_schet      fnd.dv_sr_lspv.shifr_schet%type,
+    p_sub_shifr_schet  fnd.dv_sr_lspv.sub_shifr_schet%type,
+    p_ssylka_doc       fnd.dv_sr_lspv.ssylka_doc%type,
+    p_det_charge_type  varchar2,
+    p_amount           fnd.dv_sr_lspv.summa%type
+  ) return varchar2;
+  
 end ndfl_report_api;
 /

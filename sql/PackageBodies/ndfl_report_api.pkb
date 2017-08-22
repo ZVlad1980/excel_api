@@ -146,7 +146,9 @@ create or replace package body ndfl_report_api is
                  r.corr_benefit,
                  r.corr_tax
           from   ndfl_report_detail_v r
-          order  by r.operation_date, r.corrected_date;
+          where  not(r.revenue is null and r.benefit is null and r.tax is null and 
+                     r.corr_revenue is null and r.corr_benefit is null and r.corr_tax is null)
+          order  by r.operation_date, r.block_num, r.block_row_num;
       when 'detail_report_2' then
         open x_result for
           select case when block_row_num = 1 then to_char(r.operation_date, C_DATE_OUT_FMT) end operation_date  ,
@@ -166,11 +168,13 @@ create or replace package body ndfl_report_api is
                  r.corr_revenue_30                                                                              ,
                  r.corr_tax_30
           from   ndfl_report_detail_2_v r
+          where  not(r.revenue_13 is null and r.benefit_13 is null and r.tax_13 is null and 
+                     r.revenue_30 is null and r.tax_30 is null and 
+                     r.corr_revenue_13 is null and r.corr_benefit_13 is null and r.corr_tax_13 is null and
+                     r.corr_revenue_30 is null and r.corr_tax_30 is null)
           order  by r.operation_date  ,
                     r.block_num       ,
-                    --r.charge_code     ,
-                    r.pen_scheme      ,
-                    r.corrected_date; --*/
+                    r.block_row_num   ;
       when 'correcting_report' then
         open x_result for
           select c.corr_quartal,
@@ -272,7 +276,8 @@ create or replace package body ndfl_report_api is
                  end                              det_charge_type,
                  c.pen_scheme     ,
                  nvl(c.revenue, 0)                revenue,
-                 nvl(c.revenue, 0) - 
+                 nvl(c.revenue, 0) -
+                   nvl(c.rev_source, 0) -
                    nvl(c.rev_corr_curr_year, 0)   source_summa,
                  nvl(c.rev_source, 0)             rev_source,
                  nvl(c.rev_corr_curr_year, 0)     rev_corr_curr_year,
@@ -579,12 +584,66 @@ create or replace package body ndfl_report_api is
       x_err_msg := utl_error_api.get_exception;
   end load_employees;
   
+  /**
+   * Функция определяет является ли операция - возвратом налога по заявлению
+   *
+   *  На текущий момент, к таковым относятся:
+   *    - операции коррекции налога по выкупным суммам
+   *    - операции коррекции налога по пенсии, при наличии операции по 83 счету и этому же документу на обратную сумму
+   */
+  function is_tax_return(
+    p_nom_vkl          fnd.dv_sr_lspv.nom_vkl%type,
+    p_nom_ips          fnd.dv_sr_lspv.nom_ips%type,
+    p_date_op          fnd.dv_sr_lspv.data_op%type,
+    p_shifr_schet      fnd.dv_sr_lspv.shifr_schet%type,
+    p_sub_shifr_schet  fnd.dv_sr_lspv.sub_shifr_schet%type,
+    p_ssylka_doc       fnd.dv_sr_lspv.ssylka_doc%type,
+    p_det_charge_type  varchar2,
+    p_amount           fnd.dv_sr_lspv.summa%type
+  ) return varchar2 is
+    --
+    l_result varchar2(1) := 'N';
+    --
+    cursor l_ret_tax_cur is
+      select a.amount
+      from   dv_sr_lspv_acc_v a
+      where  1=1
+      and    a.date_op         < p_date_op        
+      and    a.shifr_schet     = 83
+      and    a.ssylka_doc      = p_ssylka_doc
+      and    a.nom_vkl         = p_nom_vkl        
+      and    a.nom_ips         = p_nom_ips        ;
+    --
+  begin
+    --
+    if p_det_charge_type = 'PENSION' then
+      for i in l_ret_tax_cur loop
+        l_result := case abs(p_amount) when abs(i.amount) then 'Y' else 'N' end;
+        exit;
+      end loop;
+    end if;
+    --
+    return l_result;
+    --
+  exception
+    when others then
+      fix_exception('is_tax_return ' || p_nom_vkl || '/'
+        || p_nom_ips         || '/'
+        || p_date_op         || '/'
+        || p_shifr_schet     || '/'
+        || p_sub_shifr_schet || '/'
+        || p_ssylka_doc      || '/'
+        || p_det_charge_type || '/'
+        || p_amount
+      );
+      return null;
+  end;
   --
 begin
   --
   set_period(
     p_start_date => to_date(20170101, 'yyyymmdd'),
-    p_end_date   => to_date(20170630, 'yyyymmdd')
+    p_end_date   => to_date(20170731, 'yyyymmdd')
   );
   --
   
