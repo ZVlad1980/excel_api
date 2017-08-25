@@ -1,18 +1,13 @@
-
-prompt install create_tables.sql
-@@Tables\create_tables.sql
+prompt install zaprvkl_create_tables.sql
+@@Tables\zaprvkl_create_tables.sql
 show error
 
 prompt install ndfl_accounts_t.sql
 @@Tables\ndfl_accounts_t.sql
 show error
 
-prompt install ndfl6_headers_t.sql
-@@Tables\ndfl6_headers_t.sql
-show error
-
-prompt install ndfl6_lines_t.sql
-@@Tables\ndfl6_lines_t.sql
+prompt install dv_sr_lspv_docs_t.sql
+@@Tables\dv_sr_lspv_docs_t.sql
 show error
 
 prompt install f_ndfl_spisrab_seq.sql
@@ -35,8 +30,8 @@ prompt install zaprvkl_lines_tmp_api.pks
 @@Packages\zaprvkl_lines_tmp_api.pks
 show error
 
-prompt install ndfl6_headers_api.pks
-@@Packages\ndfl6_headers_api.pks
+prompt install dv_sr_lspv_docs_api.pks
+@@Packages\dv_sr_lspv_docs_api.pks
 show error
 
 prompt install ndfl_report_api.pks
@@ -47,92 +42,44 @@ prompt install f_ndfl_load_spisrab_api.pks
 @@Packages\f_ndfl_load_spisrab_api.pks
 show error
 
-prompt Install sp_fiz_litz_lspv_v.sql
-@@Views\sp_fiz_litz_lspv_v.sql
+prompt install gateway_pkg.pks
+@@Packages\gateway_pkg.pks
 show error
 
-prompt Install sp_pen_schemes_v.sql
-@@Views\sp_pen_schemes_v.sql
+prompt install sp_quarters_v.sql
+@@Views\sp_quarters_v.sql
 show error
 
-prompt Install ndfl_dv_sr_lspv_v.sql
-@@Views\ndfl_dv_sr_lspv_v.sql
+prompt install sp_det_charge_types_v.sql
+@@Views\sp_det_charge_types_v.sql
 show error
 
-prompt Install ndfl_dv_sr_lspv_corr_v.sql
-@@Views\ndfl_dv_sr_lspv_corr_v.sql
+prompt install gf_people_v.sql
+@@Views\gf_people_v.sql
 show error
 
-prompt Install ndfl6_revenue_rep_v.sql
-@@Views\ndfl6_revenue_rep_v.sql
-show error
-
-prompt Install ndfl6_revenue_corr_rep_v.sql
-@@Views\ndfl6_revenue_corr_rep_v.sql
-show error
-
-prompt Install ndfl_report_detail_v.sql
-@@Views\ndfl_report_detail_v.sql
-show error
-
-prompt Install ndfl6_revenue_rep_2_v.sql
-@@Views\ndfl6_revenue_rep_2_v.sql
-show error
-
-prompt Install ndfl6_revenue_corr_rep_2_v.sql
-@@Views\ndfl6_revenue_corr_rep_2_v.sql
-show error
-
-prompt Install ndfl_report_detail_2_v.sql
-@@Views\ndfl_report_detail_2_v.sql
-show error
-
-prompt Install ndfl_report_errors_v.sql
-@@Views\ndfl_report_errors_v.sql
-show error
-
-prompt Install ndfl_report_correcting_v.sql
-@@Views\ndfl_report_correcting_v.sql
-show error
-
-prompt Install ndfl6_quarters_v.sql
-@@Views\ndfl6_quarters_v.sql
-show error
-
-prompt Install ndfl6_persons_v.sql
-@@Views\ndfl6_persons_v.sql
-show error
-
-prompt Install ndfl6_lines_v.sql
-@@Views\ndfl6_lines_v.sql
-show error
-
-prompt Install ndfl6_calcs_v.sql
-@@Views\ndfl6_calcs_v.sql
-show error
-
-prompt Install ndfl6_part2_v.sql
-@@Views\ndfl6_part2_v.sql
-show error
-
-prompt install zaprvkl_persons_v.sql
-@@Views\zaprvkl_persons_v.sql
+prompt install zaprvkl_lines_tmp_v.sql
+@@Views\zaprvkl_lines_tmp_v.sql
 show error
 
 prompt install zaprvkl_lines_v.sql
 @@Views\zaprvkl_lines_v.sql
 show error
 
-prompt install zaprvkl_persons_rep_v.sql
-@@Views\zaprvkl_persons_rep_v.sql
+prompt install zaprvkl_lines_translate_v.sql
+@@Views\zaprvkl_lines_translate_v.sql
+show error
+
+prompt install zaprvkl_persons_v.sql
+@@Views\zaprvkl_persons_v.sql
 show error
 
 prompt install zaprvkl_persons_translate_v.sql
 @@Views\zaprvkl_persons_translate_v.sql
 show error
 
-prompt install zaprvkl_lines_translate_v.sql
-@@Views\zaprvkl_lines_translate_v.sql
+prompt install zaprvkl_persons_rep_v.sql
+@@Views\zaprvkl_persons_rep_v.sql
 show error
 
 prompt install zaprvkl_part_rep_v.sql
@@ -143,12 +90,104 @@ prompt install zaprvkl_full_ident_v.sql
 @@Views\zaprvkl_full_ident_v.sql
 show error
 
-prompt install zaprvkl_lines_tmp_v.sql
-@@Views\zaprvkl_lines_tmp_v.sql
-show error
-
 prompt install zaprvkl_part_ident_v.sql
 @@Views\zaprvkl_part_ident_v.sql
+show error
+
+prompt install dv_sr_lspv_acc_v.sql
+@@Views\dv_sr_lspv_acc_v.sql
+show error
+
+prompt install dv_sr_lspv_corr_v.sql
+@@Views\dv_sr_lspv_corr_v.sql
+show error
+
+prompt install dv_sr_lspv_all_v.sql
+@@Views\dv_sr_lspv_all_v.sql
+show error
+
+prompt install sp_pen_schemes_v.sql
+@@Views\sp_pen_schemes_v.sql
+show error
+
+prompt install sp_fiz_litz_lspv_v.sql
+@@Views\sp_fiz_litz_lspv_v.sql
+show error
+
+prompt install dv_sr_lspv_docs_src_v.sql
+@@Views\dv_sr_lspv_docs_src_v.sql
+show error
+
+prompt install vyplach_posob_non_ident_v.sql
+@@Views\vyplach_posob_non_ident_v.sql
+show error
+
+prompt install sp_fiz_lits_non_ident_v.sql
+@@Views\sp_fiz_lits_non_ident_v.sql
+show error
+
+prompt install sp_no_residents_v.sql
+@@Views\sp_no_residents_v.sql
+show error
+
+prompt install dv_sr_lspv_errors_v.sql
+@@Views\dv_sr_lspv_errors_v.sql
+show error
+
+prompt install dv_sr_lspv_docs_v.sql
+@@Views\dv_sr_lspv_docs_v.sql
+show error
+
+prompt install dv_sr_lspv_docs_pers_v.sql
+@@Views\dv_sr_lspv_docs_pers_v.sql
+show error
+
+prompt install dv_sr_lspv_pers_v.sql
+@@Views\dv_sr_lspv_pers_v.sql
+show error
+
+prompt install dv_sr_lspv_det_v.sql
+@@Views\dv_sr_lspv_det_v.sql
+show error
+
+prompt install ndfl6_report_detail_v.sql
+@@Views\ndfl6_report_detail_v.sql
+show error
+
+prompt install ndfl6_report_detail2_v.sql
+@@Views\ndfl6_report_detail2_v.sql
+show error
+
+prompt install ndfl6_tax_returns_v.sql
+@@Views\ndfl6_tax_returns_v.sql
+show error
+
+prompt install ndfl6_report_correcting_v.sql
+@@Views\ndfl6_report_correcting_v.sql
+show error
+
+prompt install ndfl6_part1_general_v.sql
+@@Views\ndfl6_part1_general_v.sql
+show error
+
+prompt install ndfl6_part1_rates_13_wo_bb_v.sql
+@@Views\ndfl6_part1_rates_13_wo_bb_v.sql
+show error
+
+prompt install ndfl6_part1_rates_13_bb_v.sql
+@@Views\ndfl6_part1_rates_13_bb_v.sql
+show error
+
+prompt install ndfl6_part1_rates_30_v.sql
+@@Views\ndfl6_part1_rates_30_v.sql
+show error
+
+prompt install ndfl6_part1_rates_30_persns_v.sql
+@@Views\ndfl6_part1_rates_30_persns_v.sql
+show error
+
+prompt install ndfl6_part2_v.sql
+@@Views\ndfl6_part2_v.sql
 show error
 
 prompt install utl_error_api.pkb
@@ -175,8 +214,12 @@ prompt install ndfl_report_api.pkb
 @@PackageBodies\ndfl_report_api.pkb
 show error
 
-prompt install ndfl6_headers_api.pkb
-@@PackageBodies\ndfl6_headers_api.pkb
+prompt install dv_sr_lspv_docs_api.pkb
+@@PackageBodies\dv_sr_lspv_docs_api.pkb
+show error
+
+prompt install gateway_pkg.pkb
+@@PackageBodies\gateway_pkg.pkb
 show error
 
 prompt Install grants.sql

@@ -3,6 +3,7 @@ create or replace package utl_error_api is
   -- Author  : V.ZHURAVOV
   -- Created : 25.07.2017 10:26:58
   -- Purpose : API обработки ошибок
+  G_EXCEPTION exception;
   
   procedure init_exceptions;
   

@@ -5,8 +5,7 @@ create or replace package f_ndfl_load_spisrab_api is
   -- Purpose : 
   
   procedure load_from_tmp(
-    p_load_date date,
-    p_header_id ndfl6_headers_t.header_id%type
+    p_load_date date
   );
   
 

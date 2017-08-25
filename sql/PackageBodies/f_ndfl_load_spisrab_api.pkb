@@ -26,13 +26,13 @@ create or replace package body f_ndfl_load_spisrab_api is
    */
   function get_quarter_code(
     p_date date
-  ) return ndfl6_quarters_v.code%type is
-    l_result ndfl6_quarters_v.code%type;
+  ) return sp_quarters_v.code%type is
+    l_result sp_quarters_v.code%type;
   begin
     --
     select q.code
     into   l_result
-    from   ndfl6_quarters_v q
+    from   sp_quarters_v q
     where  extract(month from p_date) between q.month_start and q.month_end;
     --
     return l_result;
@@ -280,27 +280,21 @@ create or replace package body f_ndfl_load_spisrab_api is
    * Процедура идентификации сотрудников фонда по базе участников фонда
    */
   procedure identify_residents(
-    p_year       integer,
-    p_header_id  ndfl6_headers_t.header_id%type
+    p_year       integer
   ) is
   begin
     --
+    dv_sr_lspv_docs_api.set_period(p_year => p_year);
+    --
     update f_ndfl_load_spisrab s
     set    s.nalres_status = 
-           nvl(
-             (select case max(p.tax_rate)
-                       when 30 then
-                         0
-                       else
-                         1
-                     end
-              from   ndfl6_lines_t     p
-              where  p.gf_person = s.gf_person
-              and    p.header_id = p_header_id
-              group by p.gf_person
-             ),
-             1
-           )
+             case
+               when s.gf_person is not null and 
+                 exists(select 1 from sp_no_residents_v  p where p.gf_person = s.gf_person) then
+                 0
+               else
+                 1
+             end
     where  1=1
     and    s.god = p_year;
     --
@@ -314,8 +308,7 @@ create or replace package body f_ndfl_load_spisrab_api is
    * Процедура идентификации сотрудников фонда по базе участников фонда
    */
   procedure identify_employees(
-    p_year       integer,
-    p_header_id  ndfl6_headers_t.header_id%type
+    p_year       integer
   ) is
   begin
     --
@@ -326,8 +319,7 @@ create or replace package body f_ndfl_load_spisrab_api is
     identify_gf_person(p_year => p_year);
     --
     identify_residents(
-      p_year      => p_year,
-      p_header_id => p_header_id
+      p_year      => p_year
     );
     --
   exception
@@ -341,15 +333,16 @@ create or replace package body f_ndfl_load_spisrab_api is
    *   с последующей идентификацией по базе участников фонда
    */
   procedure load_from_tmp(
-    p_load_date  date,
-    p_header_id  ndfl6_headers_t.header_id%type
+    p_load_date  date
   ) is
     l_year    integer;
-    l_quarter ndfl6_quarters_v.code%type;
+    l_quarter sp_quarters_v.code%type;
   begin
     --
     l_year    := extract(year from p_load_date);
     l_quarter := get_quarter_code(p_date => p_load_date);
+    --
+    zaprvkl_lines_tmp_api.flush_to_table;
     --
     load_from_tmp(
       p_year    => l_year,
@@ -357,8 +350,7 @@ create or replace package body f_ndfl_load_spisrab_api is
     );
     --
     identify_employees(
-      p_year      => l_year,
-      p_header_id => p_header_id
+      p_year      => l_year
     );
     --
   exception
