@@ -114,6 +114,21 @@ create or replace package body ndfl_report_api is
                  end err_description
           from   dv_sr_lspv_errors_v r
           order by r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
+      when 'tax_diff_report' then
+        open l_result for
+          select d.gf_person,
+                 p.lastname, 
+                 p.firstname, 
+                 p.secondname, 
+                 d.tax_rate,
+                 d.accounts_cnt,
+                 d.tax_calc,
+                 d.tax_retained
+          from   dv_sr_lspv_tax_diff_v d,
+                 gf_people_v       p
+          where  1=1
+          and    p.fk_contragent = d.gf_person
+          order by d.tax_diff;
       when 'ndfl6_part1_general_data' then
         open l_result for
           select d.total_persons,

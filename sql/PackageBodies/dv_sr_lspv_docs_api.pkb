@@ -64,6 +64,25 @@ create or replace package body dv_sr_lspv_docs_api is
   end set_period;
   
   /**
+   *
+   */
+  function  get_last_update_date(p_year in number) return timestamp is
+    l_result timestamp;
+  begin
+    --
+    select max(p.created_at) last_update --to_char(max(p.created_at), 'dd.mm.yyyy hh24:mi:ss') last_update
+    into   l_result
+    from   DV_SR_LSPV_PRC_T p
+    where  extract(year from p.end_date) = p_year;
+    --
+    return l_result;
+    --
+  exception
+    when others then
+      fix_exception($$plsql_line, 'get_last_update_date(' || p_year || ')');
+      raise;
+  end get_last_update_date;
+  /**
    */
   function create_process return dv_sr_lspv_prc_t.id%type is
     pragma autonomous_transaction;

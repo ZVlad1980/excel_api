@@ -25,6 +25,11 @@ create or replace package dv_sr_lspv_docs_api is
     p_start_date date,
     p_end_date   date
   );
+  
+  /**
+   */
+  function  get_last_update_date(p_year in number) return timestamp;
+    
   /**
    * Процедура synchronize синхронизирует таблицу dv_sr_lspv_docs_t данными из таблицы fnd.dv_sr_lspv
    *  за указанный год (p_year)

@@ -190,6 +190,10 @@ prompt install ndfl6_part2_v.sql
 @@Views\ndfl6_part2_v.sql
 show error
 
+prompt install dv_sr_lspv_tax_diff_v.sql
+@@Views\dv_sr_lspv_tax_diff_v.sql
+show error
+
 prompt install utl_error_api.pkb
 @@PackageBodies\utl_error_api.pkb
 show error

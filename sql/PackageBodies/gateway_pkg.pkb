@@ -61,6 +61,7 @@ create or replace package body gateway_pkg is
   ) is
   begin
     --
+    --
     utl_error_api.init_exceptions;
     --
     dv_sr_lspv_docs_api.synchronize(
