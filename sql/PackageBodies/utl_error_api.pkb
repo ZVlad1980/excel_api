@@ -136,7 +136,19 @@ create or replace package body utl_error_api is
     return l_result;
     --
   end get_exception;
-
+  
+  /**
+   *
+   */
+  function get_error_msg return varchar2 is
+    l_result varchar2(4000);
+  begin
+    if g_exception_stack is not null and g_exception_stack.exists(1) then
+      l_result := g_exception_stack(1).err_msg;
+    end if;
+    --
+    return nvl(l_result, 'Неопознанная ошибка');
+  end get_error_msg;
   /**
    *
    *

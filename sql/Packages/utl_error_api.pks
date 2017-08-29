@@ -23,5 +23,11 @@ create or replace package utl_error_api is
   
   function get_exception_full return varchar2;
 
+  
+  /**
+   *
+   */
+  function get_error_msg return varchar2;
+  
 end utl_error_api;
 /

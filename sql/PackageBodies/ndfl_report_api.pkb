@@ -151,6 +151,10 @@ create or replace package body ndfl_report_api is
           where  t.current_year = 'N'
           order  by t.det_charge_ord_num, t.pen_scheme;
       when 'ndfl6_part1_rates_data' then
+        /*
+        TODO: owner="V.Zhuravov" category="Optimize" priority="1 - High" created="28.08.2017"
+        text="Доработать курсор"
+        */
         open l_result for
           select d.tax_rate,
                  sum(d.revenue)  revenue       ,

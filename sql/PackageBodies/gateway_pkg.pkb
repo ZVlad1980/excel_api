@@ -74,7 +74,7 @@ create or replace package body gateway_pkg is
     when others then
       --
       fix_exception;
-      x_err_msg :=  utl_error_api.get_exception;
+      x_err_msg :=  utl_error_api.get_error_msg;
       --
   end synhr_dv_sr_lspv_docs;
   
@@ -106,7 +106,7 @@ create or replace package body gateway_pkg is
     when others then
       --
       fix_exception;
-      x_err_msg := utl_error_api.get_exception;
+      x_err_msg := utl_error_api.get_error_msg;
       --
   end get_report;
   
@@ -129,7 +129,7 @@ create or replace package body gateway_pkg is
   exception
     when others then
       fix_exception('load_employees(p_load_date => ' || p_load_date);
-      x_err_msg := utl_error_api.get_exception;
+      x_err_msg := utl_error_api.get_error_msg;
   end load_employees;
   
   /**
@@ -171,7 +171,6 @@ create or replace package body gateway_pkg is
   exception
     when others then
       fix_exception('load_employees(p_last_name => ' || p_last_name);
-      --x_err_msg := utl_error_api.get_exception;
   end load_employees;
   
 end gateway_pkg;
