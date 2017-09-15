@@ -7,17 +7,17 @@ select tt.excel_id,
        tt.birth_date_str,
        row_number() over (
            partition by
-             translate(tt.last_name, '®', '≈'),
-             translate(tt.first_name, '®', '≈'),
-             translate(tt.second_name, '®-', '≈ '),
+             translate(tt.last_name, '–Å', '–ï'),
+             translate(tt.first_name, '–Å', '–ï'),
+             translate(tt.second_name, '–Å-', '–ï '),
              tt.birth_date
            order by tt.last_name
          )                      double_row_num,
        first_value(tt.excel_id) over (
            partition by
-             translate(tt.last_name, '®', '≈'),
-             translate(tt.first_name, '®', '≈'),
-             translate(tt.second_name, '®-', '≈ '),
+             translate(tt.last_name, '–Å', '–ï'),
+             translate(tt.first_name, '–Å', '–ï'),
+             translate(tt.second_name, '–Å-', '–ï '),
              tt.birth_date
            order by tt.last_name
          )                      double_id,

@@ -3,13 +3,13 @@ create or replace package body gateway_pkg is
   C_DATE_FMT     constant varchar2(20) := 'dd.mm.yyyy';
 
   
-  -- Строки символов для замены
+  -- РЎС‚СЂРѕРєРё СЃРёРјРІРѕР»РѕРІ РґР»СЏ Р·Р°РјРµРЅС‹
   C_SRC_CHR  constant varchar2(200) := 'AOPEHBCXMK';
-  C_DEST_CHR constant varchar2(200) := 'АОРЕНВСХМК';
+  C_DEST_CHR constant varchar2(200) := 'РђРћР Р•РќР’РЎРҐРњРљ';
   
   -- Private type declarations
    /**
-   * Обвертки обработки ошибок
+   * РћР±РІРµСЂС‚РєРё РѕР±СЂР°Р±РѕС‚РєРё РѕС€РёР±РѕРє
    */
   procedure fix_exception(p_msg varchar2 default null) is
   begin
@@ -19,8 +19,8 @@ create or replace package body gateway_pkg is
   end;
   
   /**
-   * Функция конвертирования строки в дату (возвращает null в случае ошибки)
-   *  Дата ожидается в формате ГГГГММДД
+   * Р¤СѓРЅРєС†РёСЏ РєРѕРЅРІРµСЂС‚РёСЂРѕРІР°РЅРёСЏ СЃС‚СЂРѕРєРё РІ РґР°С‚Сѓ (РІРѕР·РІСЂР°С‰Р°РµС‚ null РІ СЃР»СѓС‡Р°Рµ РѕС€РёР±РєРё)
+   *  Р”Р°С‚Р° РѕР¶РёРґР°РµС‚СЃСЏ РІ С„РѕСЂРјР°С‚Рµ Р“Р“Р“Р“РњРњР”Р”
    */
   function to_date$(p_date_str varchar2) return date is
   begin
@@ -31,12 +31,12 @@ create or replace package body gateway_pkg is
   end to_date$;
   
   /**
-   * Функция подготовки строки имени (ФИО) для обработки
-   *  Преобразования:
-   *    - удаление начальных, хвостовых и двойных пробелов пробелов
-   *    - верхний регистр
-   *    - трансляция латиницы и 0
-   *    - удаление любых символов кроме кириллицы
+   * Р¤СѓРЅРєС†РёСЏ РїРѕРґРіРѕС‚РѕРІРєРё СЃС‚СЂРѕРєРё РёРјРµРЅРё (Р¤РРћ) РґР»СЏ РѕР±СЂР°Р±РѕС‚РєРё
+   *  РџСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ:
+   *    - СѓРґР°Р»РµРЅРёРµ РЅР°С‡Р°Р»СЊРЅС‹С…, С…РІРѕСЃС‚РѕРІС‹С… Рё РґРІРѕР№РЅС‹С… РїСЂРѕР±РµР»РѕРІ РїСЂРѕР±РµР»РѕРІ
+   *    - РІРµСЂС…РЅРёР№ СЂРµРіРёСЃС‚СЂ
+   *    - С‚СЂР°РЅСЃР»СЏС†РёСЏ Р»Р°С‚РёРЅРёС†С‹ Рё 0
+   *    - СѓРґР°Р»РµРЅРёРµ Р»СЋР±С‹С… СЃРёРјРІРѕР»РѕРІ РєСЂРѕРјРµ РєРёСЂРёР»Р»РёС†С‹
    */
    function prepare_str$(p_str varchar2) return varchar2 is
    begin
@@ -53,7 +53,7 @@ create or replace package body gateway_pkg is
    end prepare_str$;
    
    /**
-   * Процедура запускает синхронизацию таблицу dv_sr_lspv_docs_t
+   * РџСЂРѕС†РµРґСѓСЂР° Р·Р°РїСѓСЃРєР°РµС‚ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ С‚Р°Р±Р»РёС†Сѓ dv_sr_lspv_docs_t
    */
   procedure synhr_dv_sr_lspv_docs(
     x_err_msg    out varchar2,
@@ -79,13 +79,13 @@ create or replace package body gateway_pkg is
   end synhr_dv_sr_lspv_docs;
   
   /**
-   * Процедура get_report возвращает курсор с данными отчета
+   * РџСЂРѕС†РµРґСѓСЂР° get_report РІРѕР·РІСЂР°С‰Р°РµС‚ РєСѓСЂСЃРѕСЂ СЃ РґР°РЅРЅС‹РјРё РѕС‚С‡РµС‚Р°
    * 
-   * @param x_result      - курсор с данными
-   * @param x_err_msg     - сообщение об ошибке
-   * @param p_report_code - код отчета
-   * @param p_from_date   - дата начала выборки в формате YYYYMMDD
-   * @param p_end_date    - дата окончания выборки в формате YYYYMMDD
+   * @param x_result      - РєСѓСЂСЃРѕСЂ СЃ РґР°РЅРЅС‹РјРё
+   * @param x_err_msg     - СЃРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ
+   * @param p_report_code - РєРѕРґ РѕС‚С‡РµС‚Р°
+   * @param p_from_date   - РґР°С‚Р° РЅР°С‡Р°Р»Р° РІС‹Р±РѕСЂРєРё РІ С„РѕСЂРјР°С‚Рµ YYYYMMDD
+   * @param p_end_date    - РґР°С‚Р° РѕРєРѕРЅС‡Р°РЅРёСЏ РІС‹Р±РѕСЂРєРё РІ С„РѕСЂРјР°С‚Рµ YYYYMMDD
    *
    */
   procedure get_report(
@@ -111,8 +111,8 @@ create or replace package body gateway_pkg is
   end get_report;
   
   /**
-   * Процедура load_employees запускает загрузки сотрудников в f_ndfl_load_spisrab
-   *   (из tmp таблицы, см. процедуру add_line)
+   * РџСЂРѕС†РµРґСѓСЂР° load_employees Р·Р°РїСѓСЃРєР°РµС‚ Р·Р°РіСЂСѓР·РєРё СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ РІ f_ndfl_load_spisrab
+   *   (РёР· tmp С‚Р°Р±Р»РёС†С‹, СЃРј. РїСЂРѕС†РµРґСѓСЂСѓ add_line)
    */
   procedure load_employees(
     x_err_msg   out varchar2,
@@ -133,15 +133,15 @@ create or replace package body gateway_pkg is
   end load_employees;
   
   /**
-   * Процедура load_employees добавляет персональные данные в tmp таблицу
-   *   Вызывает API 
+   * РџСЂРѕС†РµРґСѓСЂР° load_employees РґРѕР±Р°РІР»СЏРµС‚ РїРµСЂСЃРѕРЅР°Р»СЊРЅС‹Рµ РґР°РЅРЅС‹Рµ РІ tmp С‚Р°Р±Р»РёС†Сѓ
+   *   Р’С‹Р·С‹РІР°РµС‚ API 
    *
-   * @param p_last_name   - фамилия
-   * @param p_first_name  - имя
-   * @param p_second_name - отчество
-   * @param p_birth_date  - дата рождения в формате ДД.ММ.ГГГГ
-   * @param p_snils       - СНИЛС
-   * @param p_inn         - ИНН
+   * @param p_last_name   - С„Р°РјРёР»РёСЏ
+   * @param p_first_name  - РёРјСЏ
+   * @param p_second_name - РѕС‚С‡РµСЃС‚РІРѕ
+   * @param p_birth_date  - РґР°С‚Р° СЂРѕР¶РґРµРЅРёСЏ РІ С„РѕСЂРјР°С‚Рµ Р”Р”.РњРњ.Р“Р“Р“Р“
+   * @param p_snils       - РЎРќРР›РЎ
+   * @param p_inn         - РРќРќ
    *
    */
   procedure load_employees(

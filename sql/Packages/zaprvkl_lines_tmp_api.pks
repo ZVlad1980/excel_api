@@ -2,7 +2,7 @@ create or replace package zaprvkl_lines_tmp_api is
 
   -- Author  : V.ZHURAVOV
   -- Created : 25.07.2017 9:28:37
-  -- Purpose : API tmp таблицы (загрузка данных из Excel)
+  -- Purpose : API tmp С‚Р°Р±Р»РёС†С‹ (Р·Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С… РёР· Excel)
   
   procedure purge;
   

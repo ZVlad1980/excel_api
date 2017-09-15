@@ -5,11 +5,11 @@ create or replace package ndfl_report_api is
   -- Purpose : 
   
   /**
-   * Функция get_report возвращает курсор с данными отчета
+   * Р¤СѓРЅРєС†РёСЏ get_report РІРѕР·РІСЂР°С‰Р°РµС‚ РєСѓСЂСЃРѕСЂ СЃ РґР°РЅРЅС‹РјРё РѕС‚С‡РµС‚Р°
    * 
-   * @param p_report_code - код отчета
-   * @param p_from_date   - дата начала выборки в формате YYYYMMDD
-   * @param p_end_date    - дата окончания выборки в формате YYYYMMDD
+   * @param p_report_code - РєРѕРґ РѕС‚С‡РµС‚Р°
+   * @param p_from_date   - РґР°С‚Р° РЅР°С‡Р°Р»Р° РІС‹Р±РѕСЂРєРё РІ С„РѕСЂРјР°С‚Рµ YYYYMMDD
+   * @param p_end_date    - РґР°С‚Р° РѕРєРѕРЅС‡Р°РЅРёСЏ РІС‹Р±РѕСЂРєРё РІ С„РѕСЂРјР°С‚Рµ YYYYMMDD
    *
    */
   function get_report(

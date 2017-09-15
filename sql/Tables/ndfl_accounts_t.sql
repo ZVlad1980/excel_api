@@ -14,25 +14,25 @@ create table ndfl_accounts_t (
 begin
   merge into ndfl_accounts_t a
     using ( with options(charge_type, det_charge_type, tax_rate, shifr_schet, sub_shifr_schet, max_nom_vkl, sub_shifr_grp) as(
-              select 'REVENUE' ,  'PENSION',   13,  60,  0,  991       , 1 from dual union all --пенсия от 3-х лиц
-              select 'REVENUE' ,  'PENSION',   13,  60,  1,  991       , 1 from dual union all --пенсия от 3-х лиц
-              select 'REVENUE' ,  'PENSION',   13,  60,  2,  991       , 1 from dual union all --пенсия от 3-х лиц
-              select 'REVENUE' ,  'PENSION',   13,  60,  3,  991       , 1 from dual union all --пенсия от 3-х лиц
-              select 'REVENUE' ,  'PENSION',   13,  60,  4,  991       , 1 from dual union all --пенсия от 3-х лиц
-              select 'REVENUE' ,  'PENSION',   13,  60,  5,  991       , 1 from dual union all --пенсия от 3-х лиц
-              select 'TAX'     ,  'PENSION',   13,  85,  0,  991       , 0 from dual union all --13 налог на пенсию от 3-х лиц
-              select 'TAX'     ,  'PENSION',   30,  85,  1,  991       , 0 from dual union all --30 налог на пенсию от 3-х лиц
-              select 'REVENUE' ,  'BUYBACK',   13,  55,  0,  9999999999, 1 from dual union all --выкупные суммы
-              select 'REVENUE' ,  'BUYBACK',   13,  55,  1,  9999999999, 1 from dual union all --выкупные суммы
-              select 'TAX'     ,  'BUYBACK',   13,  85,  2,  9999999999, 0 from dual union all --13 налог на выкуп
-              select 'TAX'     ,  'BUYBACK',   30,  85,  3,  9999999999, 0 from dual union all --30 налог на выкуп
-              select 'REVENUE' ,  'RITUAL' ,   13,  62,  0,  9999999999, 1 from dual union all --ритуальные выплаты
-              select 'TAX'     ,  'RITUAL' ,   13,  86,  0,  9999999999, 0 from dual union all --13 налог на ритуальные услуги
-              select 'TAX'     ,  'RITUAL' ,   30,  86,  1,  9999999999, 0 from dual union all --30 налог на ритуальные услуги
-              select 'TAX_CORR',  'PENSION',   13,  83,  0,  9999999999, 1 from dual union all --Переплата (задолженность) по ПН с пенсий за прошедший год
-              -- + вычеты!
+              select 'REVENUE' ,  'PENSION',   13,  60,  0,  991       , 1 from dual union all --РїРµРЅСЃРёСЏ РѕС‚ 3-С… Р»РёС†
+              select 'REVENUE' ,  'PENSION',   13,  60,  1,  991       , 1 from dual union all --РїРµРЅСЃРёСЏ РѕС‚ 3-С… Р»РёС†
+              select 'REVENUE' ,  'PENSION',   13,  60,  2,  991       , 1 from dual union all --РїРµРЅСЃРёСЏ РѕС‚ 3-С… Р»РёС†
+              select 'REVENUE' ,  'PENSION',   13,  60,  3,  991       , 1 from dual union all --РїРµРЅСЃРёСЏ РѕС‚ 3-С… Р»РёС†
+              select 'REVENUE' ,  'PENSION',   13,  60,  4,  991       , 1 from dual union all --РїРµРЅСЃРёСЏ РѕС‚ 3-С… Р»РёС†
+              select 'REVENUE' ,  'PENSION',   13,  60,  5,  991       , 1 from dual union all --РїРµРЅСЃРёСЏ РѕС‚ 3-С… Р»РёС†
+              select 'TAX'     ,  'PENSION',   13,  85,  0,  991       , 0 from dual union all --13 РЅР°Р»РѕРі РЅР° РїРµРЅСЃРёСЋ РѕС‚ 3-С… Р»РёС†
+              select 'TAX'     ,  'PENSION',   30,  85,  1,  991       , 0 from dual union all --30 РЅР°Р»РѕРі РЅР° РїРµРЅСЃРёСЋ РѕС‚ 3-С… Р»РёС†
+              select 'REVENUE' ,  'BUYBACK',   13,  55,  0,  9999999999, 1 from dual union all --РІС‹РєСѓРїРЅС‹Рµ СЃСѓРјРјС‹
+              select 'REVENUE' ,  'BUYBACK',   13,  55,  1,  9999999999, 1 from dual union all --РІС‹РєСѓРїРЅС‹Рµ СЃСѓРјРјС‹
+              select 'TAX'     ,  'BUYBACK',   13,  85,  2,  9999999999, 0 from dual union all --13 РЅР°Р»РѕРі РЅР° РІС‹РєСѓРї
+              select 'TAX'     ,  'BUYBACK',   30,  85,  3,  9999999999, 0 from dual union all --30 РЅР°Р»РѕРі РЅР° РІС‹РєСѓРї
+              select 'REVENUE' ,  'RITUAL' ,   13,  62,  0,  9999999999, 1 from dual union all --СЂРёС‚СѓР°Р»СЊРЅС‹Рµ РІС‹РїР»Р°С‚С‹
+              select 'TAX'     ,  'RITUAL' ,   13,  86,  0,  9999999999, 0 from dual union all --13 РЅР°Р»РѕРі РЅР° СЂРёС‚СѓР°Р»СЊРЅС‹Рµ СѓСЃР»СѓРіРё
+              select 'TAX'     ,  'RITUAL' ,   30,  86,  1,  9999999999, 0 from dual union all --30 РЅР°Р»РѕРі РЅР° СЂРёС‚СѓР°Р»СЊРЅС‹Рµ СѓСЃР»СѓРіРё
+              select 'TAX_CORR',  'PENSION',   13,  83,  0,  9999999999, 1 from dual union all --РџРµСЂРµРїР»Р°С‚Р° (Р·Р°РґРѕР»Р¶РµРЅРЅРѕСЃС‚СЊ) РїРѕ РџРќ СЃ РїРµРЅСЃРёР№ Р·Р° РїСЂРѕС€РµРґС€РёР№ РіРѕРґ
+              -- + РІС‹С‡РµС‚С‹!
               select 'BENEFIT', 
-                     null, --статья дохода (пенсия, выкуп или наследование/ритуалка) зависит от операции дохода 
+                     null, --СЃС‚Р°С‚СЊСЏ РґРѕС…РѕРґР° (РїРµРЅСЃРёСЏ, РІС‹РєСѓРї РёР»Рё РЅР°СЃР»РµРґРѕРІР°РЅРёРµ/СЂРёС‚СѓР°Р»РєР°) Р·Р°РІРёСЃРёС‚ РѕС‚ РѕРїРµСЂР°С†РёРё РґРѕС…РѕРґР° 
                      13,
                      t.shifr_schet,
                      t.sub_shifr_schet,

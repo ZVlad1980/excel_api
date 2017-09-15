@@ -1,8 +1,8 @@
 create or replace view zaprvkl_persons_translate_v as
   select p.person_id,
-         translate(p.last_name,   '®', '≈') last_name, 
-         translate(p.first_name,  '®', '≈') first_name,
-         translate(p.second_name, '®', '≈') second_name,
+         translate(p.last_name,   '–Å', '–ï') last_name, 
+         translate(p.first_name,  '–Å', '–ï') first_name,
+         translate(p.second_name, '–Å', '–ï') second_name,
          p.birth_date,
          p.pen_scheme,
          p.sex,

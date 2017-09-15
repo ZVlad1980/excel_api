@@ -147,7 +147,7 @@ create or replace package body utl_error_api is
       l_result := g_exception_stack(1).err_msg;
     end if;
     --
-    return nvl(l_result, 'Неопознанная ошибка');
+    return nvl(l_result, 'РќРµРѕРїРѕР·РЅР°РЅРЅР°СЏ РѕС€РёР±РєР°');
   end get_error_msg;
   /**
    *

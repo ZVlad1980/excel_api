@@ -34,7 +34,7 @@ create or replace package body zaprvkl_headers_tapi is
   end slct;
   
   /**
-   * Функции обвертки для глобальных констант
+   * Р¤СѓРЅРєС†РёРё РѕР±РІРµСЂС‚РєРё РґР»СЏ РіР»РѕР±Р°Р»СЊРЅС‹С… РєРѕРЅСЃС‚Р°РЅС‚
    */
   function get_hdr_sts_created return varchar2 is begin return G_HDR_STS_CREATED; end get_hdr_sts_created;
   function get_hdr_sts_process return varchar2 is begin return G_HDR_STS_PROCESS; end get_hdr_sts_process;

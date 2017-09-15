@@ -4,7 +4,7 @@ create or replace package zaprvkl_headers_tapi is
   -- Created : 21.06.2017 17:31:46
   -- Purpose : Table API for table zaprvkl_headers_t
   
-  --Статусы процесса обработки 
+  --РЎС‚Р°С‚СѓСЃС‹ РїСЂРѕС†РµСЃСЃР° РѕР±СЂР°Р±РѕС‚РєРё 
   G_HDR_STS_CREATED constant varchar2(1) := 'C'; --Created
   G_HDR_STS_READY   constant varchar2(1) := 'R'; --Ready
   G_HDR_STS_PROCESS constant varchar2(1) := 'P'; --Process
@@ -12,7 +12,7 @@ create or replace package zaprvkl_headers_tapi is
   G_HDR_STS_ERROR   constant varchar2(1) := 'E'; --Error
   
   /**
-   * Функции обвертки для глобальных констант
+   * Р¤СѓРЅРєС†РёРё РѕР±РІРµСЂС‚РєРё РґР»СЏ РіР»РѕР±Р°Р»СЊРЅС‹С… РєРѕРЅСЃС‚Р°РЅС‚
    */
   function get_hdr_sts_created return varchar2 deterministic;
   function get_hdr_sts_process return varchar2 deterministic;

@@ -12,7 +12,7 @@ create or replace package body f_ndfl_load_spisrab_api is
   type g_identified_list_type is table of g_identified_rec_type;
   
   /**
-   * Обвертки обработки ошибок
+   * РћР±РІРµСЂС‚РєРё РѕР±СЂР°Р±РѕС‚РєРё РѕС€РёР±РѕРє
    */
   procedure fix_exception(p_msg varchar2 default null) is
   begin
@@ -22,7 +22,7 @@ create or replace package body f_ndfl_load_spisrab_api is
   end;
   
   /**
-   * Функция возвращает код квартала 6НДФЛ по дате
+   * Р¤СѓРЅРєС†РёСЏ РІРѕР·РІСЂР°С‰Р°РµС‚ РєРѕРґ РєРІР°СЂС‚Р°Р»Р° 6РќР”Р¤Р› РїРѕ РґР°С‚Рµ
    */
   function get_quarter_code(
     p_date date
@@ -44,7 +44,7 @@ create or replace package body f_ndfl_load_spisrab_api is
   end get_quarter_code;
   
   /**
-   * Процедура загрузки списка из таблицы zaprvkl_lines_tmp
+   * РџСЂРѕС†РµРґСѓСЂР° Р·Р°РіСЂСѓР·РєРё СЃРїРёСЃРєР° РёР· С‚Р°Р±Р»РёС†С‹ zaprvkl_lines_tmp
    */
   procedure load_from_tmp(
     p_year    integer,
@@ -120,8 +120,8 @@ create or replace package body f_ndfl_load_spisrab_api is
   end update_identified_list;
   
   /**
-   * Процедура идентификации сотрудников фонда по
-   *   данным предыдущего года (fnd.f_ndfl_load_spisrab)
+   * РџСЂРѕС†РµРґСѓСЂР° РёРґРµРЅС‚РёС„РёРєР°С†РёРё СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ С„РѕРЅРґР° РїРѕ
+   *   РґР°РЅРЅС‹Рј РїСЂРµРґС‹РґСѓС‰РµРіРѕ РіРѕРґР° (fnd.f_ndfl_load_spisrab)
    */
   procedure identify_prev_year(
     p_year    integer
@@ -175,7 +175,7 @@ create or replace package body f_ndfl_load_spisrab_api is
   end identify_prev_year;
   
   /**
-   * Процедура идентификации сотрудников фонда по таблице
+   * РџСЂРѕС†РµРґСѓСЂР° РёРґРµРЅС‚РёС„РёРєР°С†РёРё СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ С„РѕРЅРґР° РїРѕ С‚Р°Р±Р»РёС†Рµ
    *   GAZFOND.PEOPLE
    */
   procedure identify_gf_person(
@@ -220,7 +220,7 @@ create or replace package body f_ndfl_load_spisrab_api is
   end identify_gf_person;
   
   /**
-   * Процедура идентификации сотрудников фонда по таблице
+   * РџСЂРѕС†РµРґСѓСЂР° РёРґРµРЅС‚РёС„РёРєР°С†РёРё СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ С„РѕРЅРґР° РїРѕ С‚Р°Р±Р»РёС†Рµ
    *  FND.SP_FIZ_LITS
    */
   procedure identify_fiz_lits(
@@ -277,7 +277,7 @@ create or replace package body f_ndfl_load_spisrab_api is
   end identify_fiz_lits;
   
   /**
-   * Процедура идентификации сотрудников фонда по базе участников фонда
+   * РџСЂРѕС†РµРґСѓСЂР° РёРґРµРЅС‚РёС„РёРєР°С†РёРё СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ С„РѕРЅРґР° РїРѕ Р±Р°Р·Рµ СѓС‡Р°СЃС‚РЅРёРєРѕРІ С„РѕРЅРґР°
    */
   procedure identify_residents(
     p_year       integer
@@ -305,7 +305,7 @@ create or replace package body f_ndfl_load_spisrab_api is
   end identify_residents;
   
   /**
-   * Процедура идентификации сотрудников фонда по базе участников фонда
+   * РџСЂРѕС†РµРґСѓСЂР° РёРґРµРЅС‚РёС„РёРєР°С†РёРё СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ С„РѕРЅРґР° РїРѕ Р±Р°Р·Рµ СѓС‡Р°СЃС‚РЅРёРєРѕРІ С„РѕРЅРґР°
    */
   procedure identify_employees(
     p_year       integer
@@ -329,8 +329,8 @@ create or replace package body f_ndfl_load_spisrab_api is
   end identify_employees;
   
   /**
-   * Процедура загрузки списка сотрудников из таблицы zaprvkl_lines_tmp
-   *   с последующей идентификацией по базе участников фонда
+   * РџСЂРѕС†РµРґСѓСЂР° Р·Р°РіСЂСѓР·РєРё СЃРїРёСЃРєР° СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ РёР· С‚Р°Р±Р»РёС†С‹ zaprvkl_lines_tmp
+   *   СЃ РїРѕСЃР»РµРґСѓСЋС‰РµР№ РёРґРµРЅС‚РёС„РёРєР°С†РёРµР№ РїРѕ Р±Р°Р·Рµ СѓС‡Р°СЃС‚РЅРёРєРѕРІ С„РѕРЅРґР°
    */
   procedure load_from_tmp(
     p_load_date  date

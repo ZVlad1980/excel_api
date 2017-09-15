@@ -14,7 +14,7 @@ create or replace view zaprvkl_persons_rep_v as
          add_months(
            p.data_rogd, 
            case
-             when upper(p.pol) in ('Ì', 'M') then
+             when upper(p.pol) in ('Ðœ', 'M') then
                60
              else
                55

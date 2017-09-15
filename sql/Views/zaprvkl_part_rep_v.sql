@@ -51,11 +51,11 @@ select c.header_id,
        p.is_disabled,
        case
          when p.is_disabled = 'Y' then
-           'Инвалид'
+           'РРЅРІР°Р»РёРґ'
          when p.rasch_pen is not null then
-           'Пенсионер'
+           'РџРµРЅСЃРёРѕРЅРµСЂ'
          else
-           'Участник'
+           'РЈС‡Р°СЃС‚РЅРёРє'
        end person_type
 from   cross_lines            c,
        zaprvkl_persons_rep_v p
