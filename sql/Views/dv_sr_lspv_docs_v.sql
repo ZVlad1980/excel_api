@@ -27,7 +27,8 @@ create or replace view dv_sr_lspv_docs_v as
          d.source_benefit, 
          d.source_tax, 
          d.process_id, 
-         d.is_tax_return
+         d.is_tax_return,
+         max(case when d.type_op = -1 then 1 else 0 end)over(partition by d.ssylka_doc, d.nom_vkl, d.nom_ips) is_corrected
   from   dv_sr_lspv_docs_t  d,
          sp_no_residents_v  nn
   where  1=1

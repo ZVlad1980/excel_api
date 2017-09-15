@@ -67,3 +67,5 @@ create index dv_sr_lspv_docs_i6 on dv_sr_lspv_docs_t(process_id)
 /
 create index dv_sr_lspv_docs_i7 on dv_sr_lspv_docs_t(is_delete)
 /
+create index dv_sr_lspv_docs_i8 on dv_sr_lspv_docs_t(ssylka_doc, nom_vkl, nom_ips)
+/

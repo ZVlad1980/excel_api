@@ -1,6 +1,6 @@
 create or replace package body ndfl_report_api is
   
-  C_DATE_OUT_FMT constant varchar2(20) := 'dd.mm.yyyy';
+  --C_DATE_OUT_FMT constant varchar2(20) := 'dd.mm.yyyy';
   
   /**
    * Обвертки обработки ошибок
@@ -32,6 +32,31 @@ create or replace package body ndfl_report_api is
     dv_sr_lspv_docs_api.set_period(p_end_date);
     --
     case p_report_code
+      when 'tax_retained_report' then
+        open l_result for
+          select dc.describe || ', схема ' || ps.name payment_descr,
+                 d.tax_retained_13,
+                 d.tax_retained_30,
+                 null                                 dummy_col,
+                 d.tax_wo_corr_13,
+                 d.tax_corr_13,
+                 d.tax_wo_corr_30,
+                 d.tax_corr_30
+          from   ndfl_report_tax_retained_v d,
+                 sp_det_charge_types_v      dc,
+                 sp_pen_schemes_v           ps
+          where  1=1
+          and    ps.code(+) = d.pen_scheme_code
+          and    dc.det_charge_type(+) = d.det_charge_type
+          order by 
+            case d.det_charge_type when 'PENSION' then 1 when 'RITUAL' then 2 else 3 end,
+            d.pen_scheme_code;
+      when 'tax_retained_report2' then
+        open l_result for
+          select 'TAX_RETAINED_DATE' key, (select sum(d.tax_retained) from ndfl6_part2_v d)     value from dual union all
+          select 'TAX_NOT_RETAINED'  key, (select sum(d.tax_diff) from dv_sr_lspv_tax_diff_v d) value from dual union all
+          select 'TAX_RETURN'        key, (select d.tax_return from ndfl6_part1_general_v d)    value from dual union all
+          select 'TAX_RETURN_83'     key, (select sum(d.amount) from dv_sr_lspv_83_v d)           value from dual;
       when 'detail_report' then
         open l_result for
           select r.date_op,
@@ -111,7 +136,8 @@ create or replace package body ndfl_report_api is
                      'Не определен GF_PERSON участника (см. sp_fiz_lits_non_ident_v)'
                    when 4 then
                      'Не определен GF_PERSON получателя пособия (см. vyplach_posob_non_ident_v)'
-                 end err_description
+                 end err_description,
+                 r.fio
           from   dv_sr_lspv_errors_v r
           order by r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
       when 'tax_diff_report' then

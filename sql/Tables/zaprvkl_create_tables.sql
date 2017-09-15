@@ -11,7 +11,7 @@ create global temporary table zaprvkl_lines_tmp(
   snils          varchar2(14), 
   inn            varchar2(15)
 ) on commit preserve rows;
-
+--
 create table zaprvkl_headers_t(
   id int generated as identity    primary key,
   investor_id      number(10),
@@ -19,8 +19,8 @@ create table zaprvkl_headers_t(
   create_at        timestamp      default systimestamp,
   created_by       varchar2(32)   default user,
   last_update_at   timestamp      default systimestamp,
-  fl_force_stop    varchar2(1),                    -- Флаг форсированной остановки
-  err_msg          varchar2(2000)                  --сообщение об ошибке
+  fl_force_stop    varchar2(1),                    -- Р¤Р»Р°Рі С„РѕСЂСЃРёСЂРѕРІР°РЅРЅРѕР№ РѕСЃС‚Р°РЅРѕРІРєРё
+  err_msg          varchar2(2000)                  --СЃРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ
 );
 --
 create table zaprvkl_lines_t(
@@ -36,8 +36,9 @@ create table zaprvkl_lines_t(
   snils       varchar2(255),
   inn         varchar2(255),
   double_id   int,
-  err_msg     varchar2(255) --сообщение об ошибке
+  err_msg     varchar2(255) --СЃРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ
 );
+--
 alter table zaprvkl_lines_t add constraint zaprvkl_lines_hdr_fk foreign key (header_id) references zaprvkl_headers_t(id) on delete cascade;
 --
 create index zaprvkl_lines_hdr_idx on zaprvkl_lines_t(header_id, status);
@@ -49,9 +50,9 @@ create table zaprvkl_cross_t(
   status    varchar2(1), --(F)ull identification, (P)art identification
   diff_name varchar2(20)
 );
+--
 alter table zaprvkl_cross_t add constraint zaprvkl_cross_line_fk foreign key (line_id) references zaprvkl_lines_t(id) on delete cascade;
---alter table zaprvkl_cross_t drop constraint zaprvkl_cross_sts_chk check (status in ('F', 'P'));
 --
 create index zaprvkl_cross_hdr_idx on zaprvkl_cross_t(header_id, line_id, status)
--- расскоментить на бою !!! alter table zaprvkl_cross_t add constraint zaprvkl_cross_person_fk foreign key (line_id) references fnd.sp_fiz_lits(ssylka)
+-- СЂР°СЃСЃРєРѕРјРµРЅС‚РёС‚СЊ РЅР° Р±РѕСЋ !!! alter table zaprvkl_cross_t add constraint zaprvkl_cross_person_fk foreign key (line_id) references fnd.sp_fiz_lits(ssylka)
 /

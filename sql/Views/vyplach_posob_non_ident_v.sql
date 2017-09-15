@@ -39,7 +39,7 @@ create or replace view vyplach_posob_non_ident_v as
     --
     and    a.charge_type = 'REVENUE'
     and    a.det_charge_type = 'RITUAL'
-    and    a.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_start_date
+    and    a.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
   )
   select rr.nom_vkl,
          rr.nom_ips,

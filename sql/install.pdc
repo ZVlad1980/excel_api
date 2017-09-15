@@ -186,12 +186,24 @@ prompt install ndfl6_part1_rates_30_persns_v.sql
 @@Views\ndfl6_part1_rates_30_persns_v.sql
 show error
 
+prompt install dv_sr_lspv_corr_ops_v.sql
+@@Views\dv_sr_lspv_corr_ops_v.sql
+show error
+
 prompt install ndfl6_part2_v.sql
 @@Views\ndfl6_part2_v.sql
 show error
 
 prompt install dv_sr_lspv_tax_diff_v.sql
 @@Views\dv_sr_lspv_tax_diff_v.sql
+show error
+
+prompt install ndfl_report_tax_retained_v.sql
+@@Views\ndfl_report_tax_retained_v.sql
+show error
+
+prompt install dv_sr_lspv_83_v.sql
+@@Views\dv_sr_lspv_83_v.sql
 show error
 
 prompt install utl_error_api.pkb
