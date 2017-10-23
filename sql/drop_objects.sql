@@ -12,7 +12,9 @@ drop VIEW SP_LSPV_FZ_PEN_SCHEMES_V;
 
 */
 declare
+  C_MODE_DROP    constant boolean := false;
   C_MAX_REPEATED constant number := 3;
+  --
   l_drop_exc boolean := true;
   l_loop     number := 0;
 begin
@@ -28,7 +30,8 @@ begin
                      o.*
               from   user_objects o
               where  object_type not in
-                     ('INDEX', 'PACKAGE BODY')
+                     ('INDEX', 'PACKAGE BODY', 'LOB')
+              and    object_name not like 'ISEQ$$%'
               and    object_name not in
                      ('CASH_FLOW_CORRECTS_T',
                        'DV_SR_LSPV_CORRECTION_T',
@@ -38,21 +41,22 @@ begin
                        'F6NDFL_LOAD_SUMPOSTAVKE',
                        'F6NDFL_LOAD_SVED',
                        'FIZ_LITS_LSPV_ALL',
-                       'F_NDFL_LOAD_SPISRAB',
-                       'ZAPRVKL_CROSS_T',
-                       'ZAPRVKL_HEADERS_T',
-                       'ZAPRVKL_LINES_T',
-                       'ZAPRVKL_LINES_TMP')
+                       'F_NDFL_LOAD_SPISRAB')
               order  by object_type, object_name) loop
       begin
         dbms_output.put(o.cmd_drop || ' ... ');
-        execute immediate o.cmd_drop;
-        dbms_output.put_line('Ok');
+        if C_MODE_DROP then
+          execute immediate o.cmd_drop;
+          dbms_output.put_line('Ok');
+        else
+          dbms_output.put_line('Mode drop false');
+        end if;
       exception
         when others then
           l_drop_exc := true;
           dbms_output.put_line('Fail: ' || sqlerrm);
       end;
     end loop;
+    exit when not C_MODE_DROP;
   end loop;
 end;

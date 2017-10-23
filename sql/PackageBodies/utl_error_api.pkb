@@ -144,10 +144,17 @@ create or replace package body utl_error_api is
     l_result varchar2(4000);
   begin
     if g_exception_stack is not null and g_exception_stack.exists(1) then
-      l_result := g_exception_stack(1).err_msg;
+      l_result := substr(
+        g_exception_stack(1).err_msg ||
+          g_exception_stack(1).backtrace ||
+          g_exception_stack(1).call_stack ||
+          g_exception_stack(1).error_stack,
+        1,
+        2000
+      );
     end if;
     --
-    return nvl(l_result, 'РќРµРѕРїРѕР·РЅР°РЅРЅР°СЏ РѕС€РёР±РєР°');
+    return nvl(l_result, 'Неопознанная ошибка');
   end get_error_msg;
   /**
    *

@@ -296,16 +296,16 @@ create or replace package body dv_sr_lspv_docs_api is
   procedure synchronize(p_year in number) is
     procedure stats_ is
     begin
-      dbms_stats.gather_table_stats(user, upper('dv_sr_lspv_docs_t'));
+      dbms_stats.gather_table_stats('FND', upper('dv_sr_lspv_docs_t'));
       return;
-      dbms_stats.gather_index_stats(user, upper('dv_sr_lspv_docs_i1'));
-      dbms_stats.gather_index_stats(user, upper('dv_sr_lspv_docs_i2'));
-      dbms_stats.gather_index_stats(user, upper('dv_sr_lspv_docs_i3'));
-      dbms_stats.gather_index_stats(user, upper('dv_sr_lspv_docs_i4'));
-      dbms_stats.gather_index_stats(user, upper('dv_sr_lspv_docs_i5'));
-      dbms_stats.gather_index_stats(user, upper('dv_sr_lspv_docs_i6'));
-      dbms_stats.gather_index_stats(user, upper('dv_sr_lspv_docs_i7'));
-      dbms_stats.gather_index_stats(user, upper('dv_sr_lspv_docs_u1'));
+      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i1'));
+      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i2'));
+      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i3'));
+      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i4'));
+      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i5'));
+      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i6'));
+      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i7'));
+      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_u1'));
     end;
   begin
     --

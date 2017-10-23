@@ -1,4 +1,4 @@
-create or replace package body gateway_pkg is
+create or replace package body gateway_user_pkg is
 
   C_DATE_FMT     constant varchar2(20) := 'dd.mm.yyyy';
 
@@ -51,32 +51,6 @@ create or replace package body gateway_pkg is
          C_DEST_CHR
        );
    end prepare_str$;
-   
-   /**
-   * Процедура запускает синхронизацию таблицу dv_sr_lspv_docs_t
-   */
-  procedure synhr_dv_sr_lspv_docs(
-    x_err_msg    out varchar2,
-    p_end_date   in  varchar2
-  ) is
-  begin
-    --
-    --
-    utl_error_api.init_exceptions;
-    --
-    dv_sr_lspv_docs_api.synchronize(
-      p_year => to_number(
-                  extract(year from to_date(p_end_date, C_DATE_FMT))
-                )
-    );
-    --
-  exception
-    when others then
-      --
-      fix_exception;
-      x_err_msg :=  utl_error_api.get_error_msg;
-      --
-  end synhr_dv_sr_lspv_docs;
   
   /**
    * Процедура get_report возвращает курсор с данными отчета
@@ -89,25 +63,22 @@ create or replace package body gateway_pkg is
    *
    */
   procedure get_report(
-    x_result    out sys_refcursor, 
-    x_err_msg   out varchar2,
-    p_report_code   varchar2,
-    p_from_date     varchar2,
-    p_end_date      varchar2
+    x_result      out sys_refcursor, 
+    x_err_msg     out varchar2,
+    p_report_code     varchar2,
+    p_from_date       varchar2,
+    p_end_date        varchar2
   ) is
   begin
     --
-    x_result := ndfl_report_api.get_report(
-      p_report_code => p_report_code, 
-      p_end_date    => to_date(p_end_date, C_DATE_FMT)
+    gateway_pkg.get_report(
+      x_result      => x_result     ,
+      x_err_msg     => x_err_msg    ,
+      p_report_code => p_report_code,
+      p_from_date   => p_from_date  ,
+      p_end_date    => p_end_date   
     );
     --
-  exception
-    when others then
-      --
-      fix_exception;
-      x_err_msg := utl_error_api.get_error_msg;
-      --
   end get_report;
   
   /**
@@ -120,16 +91,11 @@ create or replace package body gateway_pkg is
   ) is
   begin
     --
-    utl_error_api.init_exceptions;
-    --
-    f_ndfl_load_spisrab_api.load_from_tmp(
-      p_load_date => to_date(p_load_date, C_DATE_FMT)
+    gateway_pkg.load_employees(
+      x_err_msg   => x_err_msg  ,
+      p_load_date => p_load_date
     );
     --
-  exception
-    when others then
-      fix_exception('load_employees(p_load_date => ' || p_load_date);
-      x_err_msg := utl_error_api.get_error_msg;
   end load_employees;
   
   /**
@@ -152,40 +118,18 @@ create or replace package body gateway_pkg is
     p_snils        varchar2,
     p_inn          varchar2
   ) is
-    l_line zaprvkl_lines_tmp%rowtype;
-    e_exc  exception;
   begin
     --
-    utl_error_api.init_exceptions;
-    --
-    l_line.last_name   := prepare_str$(p_last_name    ) ;
-    l_line.first_name  := prepare_str$(p_first_name   ) ;
-    l_line.second_name := prepare_str$(p_second_name  ) ;
-    l_line.birth_date  := to_date$(p_birth_date       ) ;
-    --
-    if not (
-        l_line.last_name   is not null and
-        l_line.first_name  is not null and
-        l_line.second_name is not null and
-        l_line.birth_date  is not null
-      ) then
-      fix_exception('load_employees.' || $$PLSQL_LINE || '. ФИО и дата рождения д.б. заполнены!');
-      raise e_exc;
-    end if;
-    
-    
-    --
-    l_line.snils       := prepare_str$(p_snils        ) ;
-    l_line.inn         := prepare_str$(p_inn          ) ;
-    --
-    zaprvkl_lines_tmp_api.add_line(
-      p_line => l_line
+    gateway_pkg.load_employees(
+      p_last_name   => p_last_name  ,
+      p_first_name  => p_first_name ,
+      p_second_name => p_second_name,
+      p_birth_date  => p_birth_date ,
+      p_snils       => p_snils      ,
+      p_inn         => p_inn        
     );
     --
-  exception
-    when others then
-      fix_exception('load_employees(p_last_name => ' || p_last_name);
   end load_employees;
   
-end gateway_pkg;
+end gateway_user_pkg;
 /
