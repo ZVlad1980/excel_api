@@ -3,7 +3,7 @@ create or replace package body ndfl_report_api is
   --C_DATE_OUT_FMT constant varchar2(20) := 'dd.mm.yyyy';
   
   /**
-   * РћР±РІРµСЂС‚РєРё РѕР±СЂР°Р±РѕС‚РєРё РѕС€РёР±РѕРє
+   * Обвертки обработки ошибок
    */
   procedure fix_exception(p_msg varchar2 default null) is
   begin
@@ -13,11 +13,11 @@ create or replace package body ndfl_report_api is
   end;
   
   /**
-   * Р¤СѓРЅРєС†РёСЏ get_report РІРѕР·РІСЂР°С‰Р°РµС‚ РєСѓСЂСЃРѕСЂ СЃ РґР°РЅРЅС‹РјРё РѕС‚С‡РµС‚Р°
+   * Функция get_report возвращает курсор с данными отчета
    * 
-   * @param p_report_code - РєРѕРґ РѕС‚С‡РµС‚Р°
-   * @param p_from_date   - РґР°С‚Р° РЅР°С‡Р°Р»Р° РІС‹Р±РѕСЂРєРё РІ С„РѕСЂРјР°С‚Рµ YYYYMMDD
-   * @param p_end_date    - РґР°С‚Р° РѕРєРѕРЅС‡Р°РЅРёСЏ РІС‹Р±РѕСЂРєРё РІ С„РѕСЂРјР°С‚Рµ YYYYMMDD
+   * @param p_report_code - код отчета
+   * @param p_from_date   - дата начала выборки в формате YYYYMMDD
+   * @param p_end_date    - дата окончания выборки в формате YYYYMMDD
    *
    */
   function get_report(
@@ -34,7 +34,7 @@ create or replace package body ndfl_report_api is
     case p_report_code
       when 'tax_retained_report' then
         open l_result for
-          select dc.describe || ', СЃС…РµРјР° ' || ps.name payment_descr,
+          select dc.describe || ', схема ' || ps.name payment_descr,
                  d.tax_retained_13,
                  d.tax_retained_30,
                  null                                 dummy_col,
@@ -129,13 +129,13 @@ create or replace package body ndfl_report_api is
                  r.amount,
                  case r.error_code
                    when 1 then
-                     'РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ СЃСЃС‹Р»РєР° РЅР° РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰СѓСЋ РѕРїРµСЂР°С†РёСЋ'
+                     'Отсутствует ссылка на корректирующую операцию'
                    when 2 then
-                     'РЎСѓРјРјР° РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰РµР№ РѕРїРµСЂР°С†РёРё (' || r.amount || ') РЅРµ РїРѕР»РЅРѕСЃС‚СЊСЋ Р·Р°РєСЂС‹РІР°РµС‚ СЃСѓРјРјСѓ РєРѕСЂСЂРµРєС‚РёСЂСѓРµРјС‹С… РѕРїРµСЂР°С†РёР№ (' || r.source_amount || ')'
+                     'Сумма корректирующей операции (' || r.amount || ') не полностью закрывает сумму корректируемых операций (' || r.source_amount || ')'
                    when 3 then
-                     'РќРµ РѕРїСЂРµРґРµР»РµРЅ GF_PERSON СѓС‡Р°СЃС‚РЅРёРєР° (СЃРј. sp_fiz_lits_non_ident_v)'
+                     'Не определен GF_PERSON участника (см. sp_fiz_lits_non_ident_v)'
                    when 4 then
-                     'РќРµ РѕРїСЂРµРґРµР»РµРЅ GF_PERSON РїРѕР»СѓС‡Р°С‚РµР»СЏ РїРѕСЃРѕР±РёСЏ (СЃРј. vyplach_posob_non_ident_v)'
+                     'Не определен GF_PERSON получателя пособия (см. vyplach_posob_non_ident_v)'
                  end err_description,
                  r.fio
           from   dv_sr_lspv_errors_v r
@@ -164,14 +164,14 @@ create or replace package body ndfl_report_api is
           from   ndfl6_part1_general_v d;
       when 'ndfl6_recalc_curr_year' then
         open l_result for
-          select t.det_charge_describe || ' СЃС…. ' || t.pen_scheme describe,
+          select t.det_charge_describe || ' сх. ' || t.pen_scheme describe,
                  abs(t.tax_returned) tax_returned
           from   ndfl6_tax_returns_v t
           where  t.current_year = 'Y'
           order  by t.det_charge_ord_num, t.pen_scheme;
       when 'ndfl6_recalc_prev_year' then
         open l_result for
-          select t.det_charge_describe || ' СЃС…. ' || t.pen_scheme describe,
+          select t.det_charge_describe || ' сх. ' || t.pen_scheme describe,
                  abs(t.tax_returned) tax_returned
           from   ndfl6_tax_returns_v t
           where  t.current_year = 'N'
@@ -179,7 +179,7 @@ create or replace package body ndfl_report_api is
       when 'ndfl6_part1_rates_data' then
         /*
         TODO: owner="V.Zhuravov" category="Optimize" priority="1 - High" created="28.08.2017"
-        text="Р”РѕСЂР°Р±РѕС‚Р°С‚СЊ РєСѓСЂСЃРѕСЂ"
+        text="Доработать курсор"
         */
         open l_result for
           select d.tax_rate,
@@ -228,10 +228,10 @@ create or replace package body ndfl_report_api is
                    when d.tax_diff <> 0 then
                      case 
                        when d.tax_diff < 1 then
-                         'РЅРµРґРѕРїР»Р°С‚Р°'
+                         'недоплата'
                        when d.tax_diff > -1 then
-                         'РїРµСЂРµРїР»Р°С‚Р°'
-                     end || ': ' || to_char(abs(d.tax_diff)) || ' СЂСѓР±., СЃРј. РЅРёР¶Рµ'
+                         'переплата'
+                     end || ': ' || to_char(abs(d.tax_diff)) || ' руб., см. ниже'
                  end diff_descr
           from   ndfl6_part1_rates_30_v d
           order by d.det_charge_ord_num, d.pen_scheme_code;
@@ -253,7 +253,7 @@ create or replace package body ndfl_report_api is
                  d.revenue,
                  d.tax_retained
           from   ndfl6_part2_v d
-          where  nvl(abs(d.revenue), 0) + nvl(abs(d.tax_retained), 0) <> 0
+          where  coalesce(d.revenue, 0) > 0 or + coalesce(d.tax_retained, 0) > 0
           order by d.date_doc;
       when 'ndfl6_employees_report' then
         open l_result for
@@ -279,15 +279,15 @@ create or replace package body ndfl_report_api is
                             where  upper(sfl.familiya) = upper(emp.familiya)
                             and    sfl.gf_person = emp.gf_person
                            ) then
-                     'РЈС‡Р°СЃС‚РЅРёРє'
+                     'Участник'
                     else
-                     'РќРµСѓС‡Р°СЃС‚РЅРёРє'
+                     'Неучастник'
                   end participant,
                  case
                     when rev.revenue > 0 then
-                     'Р”Р°'
+                     'Да'
                     else
-                     'РќРµС‚'
+                     'Нет'
                   end is_revenue,
                  (select listagg(ps.pen_scheme, ', ') within group(order by ps.pen_scheme)
                   from   (select fl.gf_person, fl.pen_scheme
@@ -304,7 +304,7 @@ create or replace package body ndfl_report_api is
           and    emp.god = extract(year from p_end_date)
           order  by emp.familiya, emp.imya, emp.otchestvo, emp.data_rozhd;
       else
-        fix_exception('get_report('||p_report_code || '): РќРµРёР·РІРµСЃС‚РЅС‹Р№ РєРѕРґ РѕС‚С‡РµС‚Р°');
+        fix_exception('get_report('||p_report_code || '): Неизвестный код отчета');
         raise utl_error_api.G_EXCEPTION;
     end case;
     --

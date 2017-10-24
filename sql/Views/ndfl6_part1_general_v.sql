@@ -11,9 +11,8 @@ create or replace view ndfl6_part1_general_v as
          d.tax_retained,
          null tax_not_retained,
          abs(d.tax_return) tax_return
-  from   (select max(d.date_op) date_op,
-                 sum(case when not(coalesce(d.type_op, 0) = -1 and coalesce(d.is_tax_return, 'N') = 'Y') then d.tax end) tax_retained,
-                 sum(case when d.type_op = -1 and d.is_tax_return = 'Y' then d.tax end) tax_return
+  from   (select sum(case when d.year_op = d.year_doc then d.tax_retained end) tax_retained,
+                 sum(d.tax_return) tax_return
           from   dv_sr_lspv_docs_v d
          ) d
 /
