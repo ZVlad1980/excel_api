@@ -47,7 +47,7 @@ create or replace package body ndfl_report_api is
                  sp_pen_schemes_v           ps
           where  1=1
           and    ps.code(+) = d.pen_scheme_code
-          and    dc.det_charge_type(+) = d.det_charge_type
+          and    dc.det_charge_type = d.det_charge_type
           order by 
             case d.det_charge_type when 'PENSION' then 1 when 'RITUAL' then 2 else 3 end,
             d.pen_scheme_code;
@@ -117,6 +117,7 @@ create or replace package body ndfl_report_api is
                  c.first_name,
                  c.second_name
           from   ndfl6_report_correcting_v c
+          where  coalesce(c.amount, 0) <> 0
           order by c.date_op, c.last_name, c.first_name, c.second_name, c.nom_vkl, c.nom_ips, c.date_doc, c.shifr_schet, c.sub_shifr_schet;
       when 'error_report' then
         open l_result for
