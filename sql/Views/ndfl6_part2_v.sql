@@ -1,7 +1,9 @@
 create or replace view ndfl6_part2_v as
   select d.date_doc,
-         sum(case when not(d.type_op = -1 and d.year_op <> d.year_doc) then d.revenue end)     revenue,
-         sum(case when not(d.type_op = -1 and nvl(d.is_tax_return, 'N') = 'Y') then d.tax end) tax_retained
+         sum(d.revenue_curr_year) revenue,
+         sum(d.tax_retained)      tax_retained,
+         sum(d.tax_retained_old)  tax_retained_old
   from   dv_sr_lspv_docs_v d
+  where  d.date_doc >= dv_sr_lspv_docs_api.get_start_date
   group by d.date_doc
 /

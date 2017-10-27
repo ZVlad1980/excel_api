@@ -254,7 +254,7 @@ create or replace package body ndfl_report_api is
                  d.revenue,
                  d.tax_retained
           from   ndfl6_part2_v d
-          where  nvl(abs(d.revenue), 0) + nvl(abs(d.tax_retained), 0) <> 0
+          where  coalesce(d.revenue, 0) > 0 or + coalesce(d.tax_retained, 0) > 0
           order by d.date_doc;
       when 'ndfl6_employees_report' then
         open l_result for
