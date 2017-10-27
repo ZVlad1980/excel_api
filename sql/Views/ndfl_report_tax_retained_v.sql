@@ -37,7 +37,7 @@ create or replace view ndfl_report_tax_retained_v as
                coalesce(t.tax_accruing, coalesce(d.tax, 0)) + coalesce(case when d.year_op = d.year_doc then d.source_tax end, 0)
              end
          )          tax_corr_30
-  from   dv_sr_lspv_docs_v d,
+  from   dv_sr_lspv_docs_w d,
          tax_accruve       t
   where  t.id(+) = d.id
   group by d.det_charge_type, d.pen_scheme_code
