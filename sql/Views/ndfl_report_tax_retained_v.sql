@@ -4,6 +4,20 @@ create or replace view ndfl_report_tax_retained_v as
            o.id,
            o.tax_accruing
     from   dv_sr_lspv_corr_ops_v o
+  ),
+  dv_sr_lspv_docs_w as (
+    select d.id,
+           d.year_op,
+           d.year_doc,
+           d.det_charge_type,
+           d.pen_scheme_code,
+           d.tax_rate_op,
+           d.tax,
+           d.source_tax,
+           d.type_op,
+           d.is_tax_return,
+           max(case when d.type_op = -1 then 1 else 0 end)over(partition by d.ssylka_doc, d.nom_vkl, d.nom_ips) is_corrected
+    from   dv_sr_lspv_docs_v d
   )
   select d.det_charge_type,
          d.pen_scheme_code,
