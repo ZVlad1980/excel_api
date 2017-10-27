@@ -1,5 +1,9 @@
 create or replace view dv_sr_lspv_docs_v as
-  with dv_sr_lspv_docs_w as (
+with sp_no_residents_w as (
+    select /*+ materialize*/ nn.gf_person
+    from   sp_no_residents_v  nn
+  ),
+  dv_sr_lspv_docs_w as (
     select d.id, 
            extract(year from d.date_op)            year_op,
            extract(month from d.date_op)           month_op,
@@ -28,10 +32,9 @@ create or replace view dv_sr_lspv_docs_v as
            d.source_benefit, 
            d.source_tax, 
            d.process_id, 
-           d.is_tax_return,
-           max(case when d.type_op = -1 then 1 else 0 end)over(partition by d.ssylka_doc, d.nom_vkl, d.nom_ips) is_corrected
+           d.is_tax_return
     from   dv_sr_lspv_docs_t  d,
-           sp_no_residents_v  nn
+           sp_no_residents_w  nn
     where  1=1
     and    nn.gf_person(+) = d.gf_person
     and    d.is_delete is null
@@ -69,7 +72,6 @@ create or replace view dv_sr_lspv_docs_v as
          d.source_benefit, 
          d.source_tax, 
          d.process_id, 
-         d.is_tax_return,
-         d.is_corrected
+         d.is_tax_return
   from   dv_sr_lspv_docs_w d
 /
