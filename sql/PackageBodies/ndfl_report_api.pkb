@@ -32,6 +32,27 @@ create or replace package body ndfl_report_api is
     dv_sr_lspv_docs_api.set_period(p_end_date);
     --
     case p_report_code
+      when 'ndfl2_tax_corr' then
+        open l_result for
+          select case 
+                   when coalesce(c.spr_revenue_corr, 0) - coalesce(c.revenue_corr, 0) < .01  and
+                        coalesce(c.spr_tax_corr, 0) - coalesce(c.tax_corr, 0) < .01 then null
+                   else       'Требуется справка'
+                 end state,
+                 c.year_doc, 
+                 c.gf_person, 
+                 c.fio, 
+                 c.spr_nom, 
+                 c.spr_corr_num, 
+                 c.spr_date, 
+                 c.spr_revenue, 
+                 c.spr_tax, 
+                 c.spr_revenue_corr,
+                 c.spr_tax_corr, 
+                 c.revenue_corr, 
+                 c.tax_corr
+          from   ndfl2_corr_spr_rep_v c
+          order by c.fio, c.year_doc;
       when 'tax_retained_report' then
         open l_result for
           select dc.describe || ', схема ' || ps.name payment_descr,
