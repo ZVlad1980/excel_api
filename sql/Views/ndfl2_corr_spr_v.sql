@@ -48,8 +48,8 @@ create or replace view ndfl2_corr_spr_v as
     select n.fk_contragent,
            n.god          ,
            n.spr_id,
-           n.r_xmlid,
            n.kod_na,
+           case when n.row_num = n.row_cnt then n.r_xmlid  end r_xml_id,
            case when n.row_num = n.row_cnt then n.nom_spr  end nom_spr,
            case when n.row_num = n.row_cnt then n.nom_korr end nom_korr,
            case when n.row_num = n.row_cnt then n.data_dok end data_dok,
@@ -65,6 +65,7 @@ create or replace view ndfl2_corr_spr_v as
          c.birth_date,
          c.revenue        revenue_corr,
          c.tax_return     tax_corr,
+         case when max(n.r_xml_id) is not null then 'Y' else 'N' end exists_xml,
          max(n.nom_spr)   spr_nom,
          max(n.nom_korr)  spr_corr_num,
          max(n.data_dok)  spr_date,
@@ -88,6 +89,4 @@ create or replace view ndfl2_corr_spr_v as
            c.revenue,
            c.tax_return
 /
-/*  order by c.gf_person,
-           c.year_doc*/
            

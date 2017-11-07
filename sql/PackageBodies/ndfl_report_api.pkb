@@ -35,9 +35,9 @@ create or replace package body ndfl_report_api is
       when 'ndfl2_tax_corr' then
         open l_result for
           select case 
-                   when coalesce(c.spr_revenue_corr, 0) - coalesce(c.revenue_corr, 0) < .01  and
-                        coalesce(c.spr_tax_corr, 0) - coalesce(c.tax_corr, 0) < .01 then null
-                   else       'Требуется справка'
+                   when coalesce(c.spr_revenue_corr, 0) - coalesce(c.revenue_corr, 0) > .01  or
+                        coalesce(c.spr_tax_corr, 0) - coalesce(c.tax_corr, 0) > .01 then 'Требуется корректирующая справка'
+                   when c.exists_xml = 'N' then 'Последняя справка не отправлена'
                  end state,
                  c.year_doc, 
                  c.gf_person, 
