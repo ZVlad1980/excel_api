@@ -123,7 +123,6 @@ create or replace package body f2ndfl_arh_spravki_api is
     --
     l_dummy := fxndfl_util.ZapolnGRAZHD_poUdLichn(pGod => p_globals.GOD);
     init_; fxndfl_util.Load_Vychety;
-    fxndfl_util.calc_benefit_usage(p_spr_id => p_globals.SPRID);
     init_; fxndfl_util.Load_Itogi_Pensia;
     init_; fxndfl_util.Load_Itogi_Posob_bezIspr;
     init_; fxndfl_util.Load_Itogi_Vykup_bezIspr;
@@ -150,6 +149,7 @@ create or replace package body f2ndfl_arh_spravki_api is
     init_; fxndfl_util.KopirSprItog_vArhiv(pKodNA => p_globals.KODNA, pGod => p_globals.GOD);
     init_; fxndfl_util.KopirSprMes_vArhiv(pKodNA => p_globals.KODNA, pGod => p_globals.GOD);
     init_; fxndfl_util.KopirSprVych_vArhiv(pKodNA => p_globals.KODNA, pGod => p_globals.GOD);
+    fxndfl_util.calc_benefit_usage(p_spr_id => p_globals.SPRID);
     --
   exception
     when others then
@@ -369,7 +369,41 @@ create or replace package body f2ndfl_arh_spravki_api is
       fix_exception($$PLSQL_LINE);
       raise;
   end copy_reference;
-
+  
+  /**
+   * Процедура check_synchr_load проверяет синхронизацию данных в таблицах F2NDFL_LOAD и F2NDFL_ARH
+   *  Если данные не синхронны - выбрасывает исключение
+   */
+  procedure check_synch_load(
+    p_ref_arh in out nocopy f2ndfl_arh_spravki%rowtype
+  ) is
+    l_num_corr_load f2ndfl_load_spravki.nom_korr%type;
+  begin
+    --Пока только наличие справки
+    begin
+      select max(s.nom_korr)
+      into   l_num_corr_load
+      from   f2ndfl_load_spravki s
+      where  1 = 1
+      and    s.nom_spr = p_ref_arh.nom_spr
+      and    s.god = p_ref_arh.god
+      and    s.kod_na = p_ref_arh.kod_na;
+    exception
+      when no_data_found then
+        fix_exception($$PLSQL_LINE, 'Для справки ' || p_ref_arh.nom_spr || '/' || p_ref_arh.nom_korr || ' ('||p_ref_arh.id||') нет данных в таблице F2NDFL_LOAD_SPRAVKI');
+        raise;
+    end;
+    --
+    if l_num_corr_load <> p_ref_arh.nom_korr then
+      fix_exception($$PLSQL_LINE, 'Для справки ' || p_ref_arh.nom_spr || '/' || p_ref_arh.nom_korr || ' ('||p_ref_arh.id||') номер последней корректировки не совпадает с F2NDFL_LOAD_SPRAVKI: ' || l_num_corr_load);
+      raise no_data_found;
+    end if;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end check_synch_load;
   /**
    * Процедура create_reference_corr создания корректирующей справки 2НДФЛ
    *
@@ -395,7 +429,9 @@ create or replace package body f2ndfl_arh_spravki_api is
       p_contragent_id => p_contragent_id 
     );
     --
-    plog('Current spr_id = ' || l_ref_curr.id);
+    plog('Current spr_id = ' || l_ref_curr.id || ', nom_spr = ' || l_ref_curr.nom_spr || ', nom_korr = ' || l_ref_curr.nom_korr);
+    --
+    check_synch_load(p_ref_arh => l_ref_curr);
     --
     l_ref_new := copy_reference(
       p_ref_src => l_ref_curr

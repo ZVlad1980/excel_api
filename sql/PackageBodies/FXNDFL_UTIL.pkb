@@ -5957,16 +5957,16 @@ cursor cPBS is
                          and ds.NOM_VKL<991          -- и пенсия не своя
                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                         and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
-                         and ds.DATA_OP >= dTermBeg  -- исправление сделано в этом году
-                         and ds.DATA_OP <  dTermEnd
-                connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
-                         and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
-                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
-                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
-                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC                    
+                         and ds.SERVICE_DOC = -1       -- коррекция (начинаем поиск с -1)
+                         and ds.DATA_OP >= dTermBeg    -- исправление сделано в отчетном периоде
+                         and ds.DATA_OP <  dTermEnd    --
+                connect by   PRIOR ds.NOM_VKL = ds.NOM_VKL   -- поиск по цепочке исправлений до
+                         and PRIOR ds.NOM_IPS = ds.NOM_IPS    -- неправильного начисления
+                         and PRIOR ds.SHIFR_SCHET = ds.SHIFR_SCHET
+                         and PRIOR ds.SUB_SHIFR_SCHET = ds.SUB_SHIFR_SCHET
+                         and PRIOR ds.SSYLKA_DOC = ds.SERVICE_DOC                    
  group by sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, sfl.DATA_ROGD, sfl.DOC_TIP, sfl.DOC_SER1||' '||sfl.DOC_SER2||' '||sfl.DOC_NOM
- having  min(ds.DATA_OP) >= dTermBeg; -- исправлена выплата, первоначально сделанная в этом году
+ having  min(ds.DATA_OP) > dTermBeg ; -- исправлена выплата, первоначально сделанная в отчетном периоде
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -6124,14 +6124,14 @@ cursor cPBS is
                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                          and ds.DATA_OP >= dTermBeg  -- исправление сделано в этом году
-                         and ds.DATA_OP <  dTermEnd
+                         --and ds.DATA_OP <  dTermEnd -- RFC_3779, убрал условие, чтобы подтягивать корректировки последующих периодов
                 connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
                          and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                          and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                          and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                          and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC                    
  group by sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, sfl.DATA_ROGD, sfl.DOC_TIP, sfl.DOC_SER1||' '||sfl.DOC_SER2||' '||sfl.DOC_NOM
- having  min(ds.DATA_OP) >= dTermBeg; -- исправлена выплата, первоначально сделанная в этом году
+ having  min(ds.DATA_OP) between dTermBeg and (dTermEnd - .00001); -- исправлена выплата, первоначально сделанная в этом году
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -6324,7 +6324,7 @@ cursor cPBS is
                        and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                        and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                     group by vrp.SSYLKA, vrp.SSYLKA_POLUCH, vrp.GF_PERSON, vrp.NAL_REZIDENT  
-                    having min(ds.SERVICE_DOC)<>0 or max(ds.SERVICE_DOC) <> 0                             
+                    having (min(ds.SERVICE_DOC)<>0 or max(ds.SERVICE_DOC) <> 0)
                 ) psb
                 left join gazfond.People      pe  on pe.FK_CONTRAGENT = psb.GF_PERSON  
                 left join gazfond.IDCards     ic  on ic.ID = pe.FK_IDCARD     
@@ -6480,15 +6480,30 @@ dTermBeg date;
 dTermEnd date;
 
 cursor cPBS( pNPStatus in number ) is 
-        Select ls.SSYLKA, extract(MONTH from ds.DATA_OP) MES, sum(ds.SUMMA) DOH_SUM
-            from DV_SR_LSPV ds 
-                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
-                 inner join F2NDFL_LOAD_SPRAVKI ls on lspv.SSYLKA_FL=ls.SSYLKA 
-            where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus     
-              and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-              and ds.DATA_OP>=dTermBeg and ds.DATA_OP<dTermEnd and ds.SHIFR_SCHET=60 and ds.SERVICE_DOC=0
-        group by ls.SSYLKA, extract(MONTH from ds.DATA_OP)        
-        order by ls.SSYLKA, extract(MONTH from ds.DATA_OP);
+        select ls.ssylka,
+               extract(month from ds.data_op) mes,
+               sum(ds.summa) doh_sum
+        from   dv_sr_lspv ds
+        inner  join sp_lspv lspv
+        on     lspv.nom_vkl = ds.nom_vkl
+        and    lspv.nom_ips = ds.nom_ips
+        inner  join f2ndfl_load_spravki ls
+        on     lspv.ssylka_fl = ls.ssylka
+        where  ls.kod_na = gl_kodna
+        and    ls.god = gl_god
+        and    ls.tip_dox = gl_tipdox
+        and    ls.nom_korr = gl_nomkor
+        and    ls.storno_flag <> 0
+        and    ls.status_np = pnpstatus
+        and    nvl(ls.r_sprid, -1) = nvl(gl_sprid, nvl(ls.r_sprid, -1))
+        and    ds.data_op >= dtermbeg
+        and    ds.data_op < dtermend
+        and    ds.shifr_schet = 60
+        and    ds.service_doc = 0
+        group  by ls.ssylka,
+                  extract(month from ds.data_op)
+        order  by ls.ssylka,
+                  extract(month from ds.data_op);
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -6845,13 +6860,14 @@ cursor cPBS( pNPStatus in number ) is
                                     start with   ds.SHIFR_SCHET= 55      -- выкупная
                                              and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
                                              and ds.DATA_OP >= dTermBeg  -- исправление сделано в этом году
-                                             and ds.DATA_OP <  dTermEnd
+                                             --and ds.DATA_OP <  dTermEnd --RFC_3779, для подхавата возврата в последующих периодах
                                     connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
                                              and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                              and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                              and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                              and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC
                                 group by lspv.SSYLKA_FL, ds.SUB_SHIFR_SCHET
+                                having min(ds.DATA_OP) between dTermBeg and (dTermEnd - .00001) --RFC_3779
                           ) group by SSYLKA_FL, SUB_SHIFR_SCHET, extract(MONTH from PERVDATA)              
                      ) dvsr                
                     inner join F2NDFL_LOAD_SPRAVKI ls on dvsr.SSYLKA=ls.SSYLKA    
@@ -7020,9 +7036,9 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.DATA_OP >= dTermBeg 
                           and ds.DATA_OP <  dTermEnd 
-                          and ds.SHIFR_SCHET=85 
-                          and ds.SUB_SHIFR_SCHET=(pNPStatus-1) -- для пенсий: 0-резиденты, 1-нерезиденты 
-                          and ds.SERVICE_DOC=0                 -- если <>0, то это должна получиться нулевая сумма для сторно
+                          and ds.SHIFR_SCHET = 85 
+                          and ds.SUB_SHIFR_SCHET = (pNPStatus-1) -- для пенсий: 0-резиденты, 1-нерезиденты 
+                          and ds.SERVICE_DOC = 0                 -- если <>0, то это должна получиться нулевая сумма для сторно
                         group by sp.SSYLKA_FL
                 union all  -- исправления ошибок расчета налога предыдущих периодов  
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED 
@@ -7037,11 +7053,11 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                     Select sp.SSYLKA_FL, -sum(SUMMA) SGD_SUMPRED 
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
-                        where gl_GOD=2016 -- коррекция только для 2016 года
-                          and ds.DATA_OP = to_date('01.01.2017', 'dd.mm.yyyy') 
+                        where 1 = 1--RFC_3779 gl_GOD=2016 -- коррекция только для 2016 года
+                          and ds.DATA_OP >= dTermEnd  --RFC_3779 = to_date('01.01.2017', 'dd.mm.yyyy') 
                           and ds.SHIFR_SCHET=83 
                         group by sp.SSYLKA_FL 
-            ) group by SSYLKA_FL               
+            ) group by SSYLKA_FL
         ) nal on ls.SSYLKA=nal.SSYLKA_FL
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STATUS_NP=pNPStatus
     and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
@@ -7427,7 +7443,7 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
                                and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC                         
                         group by sp.SSYLKA_FL
-                        having min(ds.DATA_OP) >= dTermBeg                         
+                        having min(ds.DATA_OP) between dTermBeg and (dTermEnd - .00001)
                 ) group by SSYLKA_FL               
             ) nal on ls.SSYLKA=nal.SSYLKA_FL        
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=1 and ls.STATUS_NP=pNPStatus
@@ -8458,21 +8474,32 @@ end Parse_xml_izBuh;
   procedure calc_benefit_usage(
     p_spr_id f2ndfl_arh_spravki.id%type
   ) is
+    l_from_date date;
+    l_end_date  date;
   begin
     --
+    update f2ndfl_arh_vych av
+    set    av.vych_sum_ispolz = 
+             least(nvl(av.vych_sum_predost, 0), nvl((
+               select sum(ai.sgd_sum)
+               from   f2ndfl_arh_itogi ai
+               where  ai.r_sprid = av.r_sprid
+             ), 0)
+           )
+    where  av.r_sprid = p_spr_id;
+    --
+    /*
     update f2ndfl_arh_vych av
     set    av.vych_sum_ispolz = (
              select sum(least(d.revenue, d.benefit)) benefit_usage
              from   (
-                      select --lspv.ssylka_fl,
-                             --d.ssylka_doc,
-                             sum(case when d.shifr_schet in (60, 55, 62) then d.summa end) revenue,
+                      select sum(case when d.shifr_schet in (60, 55, 62) then d.summa end) revenue,
                              sum(case when d.shifr_schet > 1000 then d.summa end) benefit
                       from   sp_lspv    lspv,
                              dv_sr_lspv d
                       where  1=1
                       and    (d.shifr_schet in (60, 55, 62) or d.shifr_schet > 1000)
-                      and    d.data_op between to_date(20160101, 'yyyymmdd') and to_date(20161231, 'yyyymmdd')
+                      and    d.data_op between l_from_date and l_end_date
                       and    d.nom_ips = lspv.nom_ips
                       and    d.nom_vkl = lspv.nom_vkl
                       and    lspv.ssylka_fl in (
@@ -8486,12 +8513,11 @@ end Parse_xml_izBuh;
                                and    an.kod_na = s.kod_na
                                and    s.id = p_spr_id
                              )
-                      group by lspv.ssylka_fl,
-                               d.ssylka_doc
+                      group by lspv.ssylka_fl
                     ) d
            )
     where  av.r_sprid = p_spr_id;
-    --
+    --*/
   end calc_benefit_usage;
   
 END FXNDFL_UTIL;
