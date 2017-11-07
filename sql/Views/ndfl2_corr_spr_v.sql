@@ -69,10 +69,10 @@ create or replace view ndfl2_corr_spr_v as
          max(n.nom_spr)   spr_nom,
          max(n.nom_korr)  spr_corr_num,
          max(n.data_dok)  spr_date,
-         sum(case when n.row_num = 1 then t.sum_obl end)     revenue, --облагаемый доход по первой справке
+         sum(case when n.row_num = 1 then t.sgd_sum end)     revenue, --общий доход доход по первой справке
          sum(case when n.row_num = 1 then t.sum_obl_nu end)  tax_retained, --налог удержанный
-         sum(case when n.row_num <> 1 then t.sum_obl end)    revenue_last, --облагаемый доход по последней справке
-         sum(case when n.row_num <> 1 then t.sum_obl_nu end) tax_retained_last --облагаемый доход по последней справке
+         sum(case when n.row_num <> 1 then t.sgd_sum end)    revenue_last, --общий доход по последней справке
+         sum(case when n.row_num <> 1 then t.sum_obl_nu end) tax_retained_last --налог удержанный по последней справке
   from   corr_w           c,
          ndfl_w           n,
          F2NDFL_ARH_ITOGI t
