@@ -8,8 +8,31 @@ gl_TIPDOX  number := Null;
 gl_NOMKOR  number := Null;
 gl_DATAS   date   := Null;
 gl_DATADO  date   := Null;
+-- 03.11.2017 RFC_3779
+gl_SPRID   number       := null;
+gl_NOMSPR  varchar2(10) := Null;
+gl_DATDOK  date         := Null;
+gl_NOMVKL  number       := Null;
+gl_NOMIPS  number       := Null;
+gl_CAID    number       := Null;
+gl_COMMIT  boolean      := true;
 
-procedure InitGlobals( pKODNA in number, pGOD in number, pTIPDOX in number, pNOMKOR in number ) as
+--
+-- 03.11.2017 RFC_3779 - добавил параметры для формирования корр.справок
+--
+procedure InitGlobals( 
+  pKODNA   in number, 
+  pGOD     in number, 
+  pTIPDOX  in number, 
+  pNOMKOR  in number,
+  pSPRID   in number   default null,
+  pNOMSPR  in varchar2 default null,
+  pDATDOK  in date     default null,
+  pNOMVKL  in number   default null,
+  pNOMIPS  in number   default null,
+  pCAID    in number   default null,
+  pCOMMIT  in boolean  default true
+) is
 begin
 
     gl_FLAGDEF  := 1234509876;
@@ -19,6 +42,14 @@ begin
     gl_NOMKOR   := pNOMKOR;
     gl_DATAS    := to_date( '01.01.'||trim(to_char(gl_GOD  ,'0000')), 'dd.mm.yyyy');
     gl_DATADO   := to_date( '01.01.'||trim(to_char(gl_GOD+1,'0000')), 'dd.mm.yyyy');
+    gl_SPRID    := pSPRID ;
+    gl_NOMSPR   := pNOMSPR;
+    gl_DATDOK   := pDATDOK;
+    gl_NOMVKL   := pNOMVKL;
+    gl_NOMIPS   := pNOMIPS;
+    gl_CAID     := pCAID  ;
+    gl_COMMIT   := pCOMMIT;
+    
     
 end InitGlobals;
 
@@ -453,13 +484,12 @@ begin
            set KOL_FL_DOHOD= 0
            where R_SPRID = pSPRID;                              
                           
-           
-         Commit;          
+         if gl_COMMIT then Commit; end if;
                  
 exception
    when OTHERS then
          pErrInfo := SQLERRM;     
-         Rollback;
+         if gl_COMMIT then Rollback; end if;
            
 end Spisok_NalPlat_poLSPV;      
 
@@ -613,7 +643,7 @@ begin
                                
 exception
    when OTHERS then       
-         Rollback;     
+         if gl_COMMIT then Rollback; end if;     
          Raise;
               
 end Spisok_NalPlat_DohodNol;                  
@@ -681,12 +711,12 @@ begin
            set KOL_FL_DOHOD= nKFLUch+nKFLRab-nKFLObs
            where R_SPRID = pSPRID;    
           
-         Commit;          
+         if gl_COMMIT then Commit; end if;          
                  
 exception
    when OTHERS then
          pErrInfo := SQLERRM;     
-         Rollback;
+         if gl_COMMIT then Rollback; end if;
            
 end Raschet_Chisla_NalPlat;
 
@@ -728,12 +758,12 @@ begin
               and sr.KOD_NA=nKodNA and sr.GOD=nGod and sr.KVARTAL_KOD<=nPeriod
           ; 
          
-         Commit;          
+         if gl_COMMIT then Commit; end if;          
                  
 exception
    when OTHERS then
          pErrInfo := SQLERRM;     
-         Rollback;
+         if gl_COMMIT then Rollback; end if;
            
 end Raschet_Chisla_SovpRabNp;
 
@@ -859,13 +889,13 @@ end Oshibki_vSpisNalPlat;
           and    ld.tip_dox = ptipdox
           and    ld.nom_korr = pnomkorr;
       
-        Commit;
+        if gl_COMMIT then Commit; end if;
         return 0;
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return 1;   
            
      end Init_SchetchikSpravok;
@@ -881,14 +911,14 @@ end Oshibki_vSpisNalPlat;
            and GOD=pGod
            and FLAG_OTMENA=0;
            
-        Commit;   
+        if gl_COMMIT then Commit; end if;   
         
         return 0;
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return 1;   
            
      end SbrosIdent_GAZFOND;   
@@ -937,7 +967,7 @@ begin
     from f2NDFL_LOAD_SPRAVKI ls
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=9 and ls.NOM_KORR=gl_NOMKOR;
 
-    Commit;
+    if gl_COMMIT then Commit; end if;
 
 end Load_Numerator;        
      
@@ -961,7 +991,7 @@ end Load_Numerator;
                  and FLAG_OTMENA=0
                  and KOD_NA=1   -- только для ГАЗФОНД
                  and TIP_DOX in (1,3);   -- пенсии и выкупные
-        Commit;
+        if gl_COMMIT then Commit; end if;
         
 */
      
@@ -985,7 +1015,7 @@ end Load_Numerator;
                        where vp.SSYLKA=mod(ns.SSYLKA,100000000) 
                            and vp.NOM_VIPL= trunc(ns.SSYLKA/100000000)+1
                            and vp.SSYLKA_POLUCH>0)>0;
-        Commit;
+        if gl_COMMIT then Commit; end if;
 */        
 
 /*
@@ -1006,7 +1036,7 @@ end Load_Numerator;
                           where vp.SSYLKA=ns.SSYLKA and vp.NOM_VIPL=1
                              and SSYLKA_POLUCH>0
                              and vp.SSYLKA_POLUCH>0) >0;    
-        Commit;
+        if gl_COMMIT then Commit; end if;
 */        
 
 /*
@@ -1021,7 +1051,7 @@ end Load_Numerator;
            and FLAG_OTMENA=0
            and SSYLKA_FL is not Null
            and FK_CONTRAGENT is Null;
-        Commit;   
+        if gl_COMMIT then Commit; end if;   
 */     
 
 
@@ -1032,7 +1062,7 @@ end Load_Numerator;
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return 1;   
            
      end UstIdent_GAZFOND;     
@@ -1080,14 +1110,14 @@ end Load_Numerator;
             
         end loop;
         
-        Commit;
+        if gl_COMMIT then Commit; end if;
     
         return 0;
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return 1;   
            
      end ZapolnINN_izDrSpravki;     
@@ -1101,7 +1131,7 @@ end Load_Numerator;
                ZAM_GRA=GRAZHD
           where GRAZHD is Null
              and KOD_UD_LICHN=21;
-       Commit;
+       if gl_COMMIT then Commit; end if;
        
        /*
        Update   f2NDFL_LOAD_SPRAVKI
@@ -1117,7 +1147,7 @@ end Load_Numerator;
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return 1;   
            
      end ZapolnGRAZHD_poUdLichn;   
@@ -1572,7 +1602,7 @@ loop
        set GRAZHD = trim(to_char(rec.CITIZENSHIP,'000'))
        where SSYLKA=rec.SSYLKA and TIP_DOX=rec.TIP_DOX;        
 end loop;
-Commit;
+if gl_COMMIT then Commit; end if;
 end;      
      */
      
@@ -1793,13 +1823,13 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                        
                 end loop; -- 52 сек
         
-        Commit;
+        if gl_COMMIT then Commit; end if;
         
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            Raise;
    
   end  Numerovat_Spravki;
@@ -1818,11 +1848,11 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
         Delete from f2NDFL_ARH_SPRAVKI sa
             where sa.KOD_NA=pKodNA and sa.GOD=pGod;       
                
-        Commit;
+        if gl_COMMIT then Commit; end if;
         
     exception
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            Raise;
                          
   end Numerovat_Spravki_OTKAT;
@@ -1865,9 +1895,9 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                
     end loop;
 
- -- Commit;
+ -- if gl_COMMIT then Commit; end if;
  -- exception
- --    when OTHERS then Rollback; Raise;  
+ --    when OTHERS then if gl_COMMIT then Rollback; end if; Raise;  
     
   end Numerovat_KorSpravki;
   
@@ -1890,14 +1920,14 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
        where NOM_SPR is not Null
           and KOD_NA=pKodNA and GOD=pGod;    
        
-       Commit;
+       if gl_COMMIT then Commit; end if;
        
        return 0;
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return 1;
               
   end  KopirSpr_vArhiv;    
@@ -1923,7 +1953,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                                      inner join f2NDFL_LOAD_SPRAVKI ls
                                         on ls.KOD_NA=it.KOD_NA and ls.GOD=it.GOD and ls.SSYLKA=it.SSYLKA and ls.TIP_DOX=it.TIP_DOX and ls.NOM_KORR=it.NOM_KORR
                                      inner join f2NDFL_ARH_NOMSPR ns 
-                                        on ns.KOD_NA=it.KOD_NA and ns.GOD=it.GOD and ns.SSYLKA=it.SSYLKA and ns.TIP_DOX=it.TIP_DOX and ns.FLAG_OTMENA=0 and it.NOM_KORR=0
+                                        on ns.KOD_NA=it.KOD_NA and ns.GOD=it.GOD and ns.SSYLKA=it.SSYLKA and ns.TIP_DOX=it.TIP_DOX and ns.FLAG_OTMENA=0 --and it.NOM_KORR=0 --RFC_3779 - для создания полноценных корректировок
                                      left join (
                                         Select KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, KOD_STAVKI, sum(SGD_VYCH_PRED) SGD_VYCH
                                         from(
@@ -1941,6 +1971,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                                      on vc.KOD_NA=it.KOD_NA and vc.GOD=it.GOD and vc.SSYLKA=it.SSYLKA and vc.TIP_DOX=it.TIP_DOX 
                                         and vc.NOM_KORR=it.NOM_KORR and vc.KOD_STAVKI=it.KOD_STAVKI
                                  where it.KOD_NA=pKodNA and it.GOD=pGod and it.KOD_STAVKI=13 
+                                 and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
                              ) group by R_SPRID   
                         )   
                     )     
@@ -1957,6 +1988,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                          inner join f2NDFL_ARH_NOMSPR ns 
                             on ns.KOD_NA=it.KOD_NA and ns.GOD=it.GOD and ns.SSYLKA=it.SSYLKA and ns.TIP_DOX=it.TIP_DOX and ns.FLAG_OTMENA=0 and it.NOM_KORR=0
                      where it.KOD_NA=pKodNA and it.GOD=pGod and it.KOD_STAVKI=30  
+                     and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
                      group by ls.R_SPRID                       
                 ) rs 
         union all
@@ -1967,15 +1999,16 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                     on ns.KOD_NA=it.KOD_NA and ns.GOD=it.GOD and ns.SSYLKA=it.SSYLKA and ns.TIP_DOX=it.TIP_DOX and ns.FLAG_OTMENA=0 and it.NOM_KORR=0
                  inner join f2NDFL_ARH_SPRAVKI ar on ns.KOD_NA=ar.KOD_NA and ns.GOD=ar.GOD and ar.NOM_SPR=ns.NOM_SPR   
              where it.KOD_NA=pKodNA and it.GOD=pGod and it.KOD_STAVKI=35  
+             and   nvl(ar.id, -1) = nvl(gl_SPRID, nvl(ar.id, -1))
         ;
 
-       Commit;
+       if gl_COMMIT then Commit; end if;
        
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            Raise;
               
   end  KopirSprItog_vArhiv;    
@@ -1988,14 +2021,15 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
             Select ls.R_SPRID, MO.KOD_STAVKI, MO.MES, MO.DOH_KOD_GNI, sum( MO.DOH_SUM ) DOHSUM, MO.VYCH_KOD_GNI, sum( MO.VYCH_SUM ) VYCHSUM
                 from f2NDFL_LOAD_MES mo
                         inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
-                where mo.KOD_NA=pKodNA and mo.GOD=pGod 
+                where mo.KOD_NA=pKodNA and mo.GOD=pGod
+                and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
                 group by  ls.R_SPRID, mo.KOD_STAVKI, mo.MES, mo.DOH_KOD_GNI, mo.VYCH_KOD_GNI;  
-       Commit;
+       if gl_COMMIT then Commit; end if;
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            Raise;
               
   end KopirSprMes_vArhiv;
@@ -2010,14 +2044,15 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
             from f2NDFL_LOAD_VYCH mo
                     inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
             where mo.KOD_NA=pKodNA and mo.GOD=pGod 
+            and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
             group by  ls.R_SPRID, mo.KOD_STAVKI, mo.VYCH_KOD_GNI;
             
-       Commit;
+       if gl_COMMIT then Commit; end if;
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            Raise;
               
   end  KopirSprVych_vArhiv;
@@ -2031,7 +2066,8 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
             Select ls.R_SPRID, MO.KOD_STAVKI, MO.SCHET_KRATN, MO.NOMER_UVED, MO.DATA_UVED, MO.IFNS_KOD, MO.UVED_TIP_VYCH
             from f2NDFL_LOAD_UVED mo
                     inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
-            where mo.KOD_NA=pKodNA and mo.GOD=pGod;
+            where mo.KOD_NA=pKodNA and mo.GOD=pGod
+            and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
             /*           
             Select a2.ID, MO.KOD_STAVKI, MO.SCHET_KRATN, MO.NOMER_UVED, MO.DATA_UVED, MO.IFNS_KOD, MO.UVED_TIP_VYCH
             from f2NDFL_LOAD_UVED mo
@@ -2039,13 +2075,13 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
                     inner join f2NDFL_ARH_SPRAVKI a2 on a2.KOD_NA=ns.KOD_NA and a2.GOD=ns.GOD and a2.NOM_SPR=ns.NOM_SPR and a2.NOM_KORR=mo.NOM_KORR
             where mo.KOD_NA=pKodNA and mo.GOD=pGod;
             */
-       Commit;
+       if gl_COMMIT then Commit; end if;
        return 0;
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return 1;
               
   end KopirSprUved_vArhiv;
@@ -2083,13 +2119,13 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
 
        --  остались разные адреса из разных оисточников для одной справки
 
-       Commit;
+       if gl_COMMIT then Commit; end if;
 
         
      exception
         
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            Raise;
               
   end KopirSprAdres_vArhiv;  
@@ -2132,13 +2168,13 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
                  values ( nXMLID, 'NO_NDFL'||trim(to_char(pForma))||'_'||rNALAG.IFNS||'_'||rNALAG.IFNS||'_'||rNALAG.INN||rNALAG.KPP||'_'||to_char(SYSDATE,'YYYYMMDD')||'_'||trim(to_char(nXMLID,'0000000000')),
                              pForma,  frmFmt, rNALAG.OKTMO, rNALAG.INN, rNALAG.KPP, rNALAG.NAZV, rNALAG.PHONE, rNALAG.IFNS, pGOD, 4, 1 );
                  if pCommit<>0 then 
-                    Commit;
+                    if gl_COMMIT then Commit; end if;
                     end if;
                  return  nXMLID;   
    
     exception
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return Null;             
  
  end Zareg_XML;  
@@ -2165,14 +2201,14 @@ procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in numb
                                        set R_XMLID =  nXMLID
                                        where R_XMLID is Null  and  to_number(NOM_SPR)>= vFirstSN  and to_number(NOM_SPR)<= vLastSN;        
                            end loop;
-                       Commit;   
+                       if gl_COMMIT then Commit; end if;   
                  else 
                        Raise_application_Error( -20001, 'Параметр pForma не равен 2.' ); 
              end case;
    
     exception
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            Raise;
  
  end RaspredSpravki_poXML;  
@@ -2213,14 +2249,14 @@ procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in numb
                     ( KOD_NA, GOD, PERIOD,      NOM_KORR, PO_MESTU, R_SPRID )
            values( pKodNA,  pGod, pKodPeriod, pNomKorr,    pPoMestu,    nSPRID    );
      
-     Commit;
+     if gl_COMMIT then Commit; end if;
      
         pErrInfo := Null;
         pSprId   := nSPRID;
         
  exception
     when OTHERS then 
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            pErrInfo :=  'Создние записи о новой справке в таблице загрузок. '||SQLERRM;     
            pSprId   :=  Null;
            
@@ -2241,12 +2277,12 @@ procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in numb
                     ( KOD_NA, GOD, PERIOD,      NOM_KORR, PO_MESTU, R_SPRID )
            values( pKodNA,  pGod, pKodPeriod, pNomKorr,    pPoMestu,    nSPRID    );
      
-     Commit;
+     if gl_COMMIT then Commit; end if;
      return Null;
      
      exception
         when OTHERS then
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
            return 'Создние записи о новой справке в таблице загрузок. '||SQLERRM;
  
  end Sozdat_Spravku_f6;
@@ -2333,12 +2369,12 @@ END;
     ; 
     
    pErrInfo := Null;
-   Commit;
+   if gl_COMMIT then Commit; end if;
      
  exception
         when OTHERS then
            pErrInfo := 'ОШИБКА: '||ErrPref||SQLERRM;
-           Rollback;
+           if gl_COMMIT then Rollback; end if;
  end Kopir_SprF6_vArhiv;
  
 /*  
@@ -5223,11 +5259,11 @@ null;
                         ) group by SSYLKA_DOC, SERVICE_DOC, DATA_OP                                
                 );
 
-      Commit;  
+      if gl_COMMIT then Commit; end if;  
  */      
    exception 
       when OTHERS then
-            Rollback;
+            if gl_COMMIT then Rollback; end if;
             Raise;    
    end f6_ZagrSvedDoc; 
    
@@ -5325,7 +5361,7 @@ begin
     vErrPref := 'Выборка доходов по датам.';
     ZaPeriodPoDatam( cPoDatam , pErrInfo, pSPRID );                            -- проверено 1 кв 2017 18-04-2017    
     if pErrInfo is not Null then 
-       Rollback;
+       if gl_COMMIT then Rollback; end if;
        return;
        end if;
        
@@ -5343,12 +5379,12 @@ begin
     Close cPoDatam;            
        
     pErrInfo := Null;
-    Commit; 
+    if gl_COMMIT then Commit; end if; 
  
 exception
     when OTHERS then 
         pErrInfo := vErrPref||' '||SQLERRM;  
-        Rollback;
+        if gl_COMMIT then Rollback; end if;
 end ZagruzTabl_poLSPV;   
 
 
@@ -5846,6 +5882,8 @@ cursor cPBS is
                and ds.DATA_OP <  dTermEnd
                and ds.SHIFR_SCHET=60  -- пенсии
                and ds.NOM_VKL < 991   -- кроме пенсий из личных средств
+               and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+               and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
             group by ds.NOM_VKL, ds.NOM_IPS   
             having min(ds.SERVICE_DOC)=0 and max(ds.SERVICE_DOC)=0 ); -- без коррекций
 
@@ -5868,14 +5906,14 @@ begin
         Insert into F2NDFL_LOAD_SPRAVKI (
             KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, DATA_DOK, NOM_SPR, KVARTAL, 
             PRIZNAK, INN_FL, INN_INO, STATUS_NP, GRAZHD, FAMILIYA, IMYA, OTCHESTVO, 
-            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV) 
+            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV, R_SPRID) 
         values( gl_KODNA,
                 gl_GOD,
                 aPBS(i).SSYLKA,
                 gl_TIPDOX,
                 gl_NOMKOR,
-                Null     /* DATA_DOK */,
-                Null     /* NOM_SPR */,
+                gl_DATDOK,--Null     /* DATA_DOK */,
+                gl_NOMSPR, --Null     /* NOM_SPR */,
                 4        /* KVARTAL */,  -- для 2-НДФЛ всегда за год
                 1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
@@ -5889,10 +5927,11 @@ begin
                 aPBS(i).DOC_TIP,
                 aPBS(i).SER_NOM_DOC,
                 0 /* STORNO_FLAG */,
-                0 /* STORNO_DOXPRAV */  ); 
+                0 /* STORNO_DOXPRAV */  ,
+                gl_SPRID); 
         end loop;
     Close cPBS;
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Pensionery_bez_Storno;
 
@@ -5916,6 +5955,8 @@ cursor cPBS is
                 where  ds.SERVICE_DOC<>0
                 start with   ds.SHIFR_SCHET= 60      -- пенсия
                          and ds.NOM_VKL<991          -- и пенсия не своя
+                         and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+                         and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                          and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
                          and ds.DATA_OP >= dTermBeg  -- исправление сделано в этом году
                          and ds.DATA_OP <  dTermEnd
@@ -5946,14 +5987,14 @@ begin
         Insert into F2NDFL_LOAD_SPRAVKI (
             KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, DATA_DOK, NOM_SPR, KVARTAL, 
             PRIZNAK, INN_FL, INN_INO, STATUS_NP, GRAZHD, FAMILIYA, IMYA, OTCHESTVO, 
-            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV) 
+            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV, R_SPRID) 
         values( gl_KODNA,
                 gl_GOD,
                 aPBS(i).SSYLKA,
                 gl_TIPDOX,
                 gl_NOMKOR,
-                Null     /* DATA_DOK */,
-                Null     /* NOM_SPR */,
+                gl_DATDOK,--Null     /* DATA_DOK */,
+                gl_NOMSPR, --Null     /* NOM_SPR */,
                 4        /* KVARTAL */,
                 1        /* PRIZNAK */,
                 aPBS(i).INN,
@@ -5967,10 +6008,11 @@ begin
                 aPBS(i).DOC_TIP,
                 aPBS(i).SER_NOM_DOC,
                 1 /* STORNO_FLAG */,
-                aPBS(i).STORNO_DOXPRAV ); 
+                aPBS(i).STORNO_DOXPRAV ,
+                gl_SPRID); 
         end loop;
     Close cPBS;
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Pensionery_so_Storno;
 
@@ -6006,6 +6048,8 @@ cursor cPBS is
             where  ds.data_op >= dtermbeg
             and    ds.data_op < dtermend
             and    ds.shifr_schet = 55 -- выкупные
+            and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+            and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
             group  by ds.nom_vkl,
                       ds.nom_ips
             having min(ds.service_doc) = 0 and max(ds.service_doc) = 0); -- без коррекций
@@ -6029,14 +6073,14 @@ begin
         Insert into F2NDFL_LOAD_SPRAVKI (
             KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, DATA_DOK, NOM_SPR, KVARTAL, 
             PRIZNAK, INN_FL, INN_INO, STATUS_NP, GRAZHD, FAMILIYA, IMYA, OTCHESTVO, 
-            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV) 
+            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV, R_SPRID) 
         values( gl_KODNA,
                 gl_GOD,
                 aPBS(i).SSYLKA,
                 gl_TIPDOX,
                 gl_NOMKOR,
-                Null     /* DATA_DOK */,
-                Null     /* NOM_SPR */,
+                gl_DATDOK,--Null     /* DATA_DOK */,
+                gl_NOMSPR, --Null     /* NOM_SPR */,
                 4        /* KVARTAL */,  -- для 2-НДФЛ всегда за год
                 1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
@@ -6050,10 +6094,11 @@ begin
                 aPBS(i).DOC_TIP,
                 aPBS(i).SER_NOM_DOC,
                 0 /* STORNO_FLAG */,
-                0 /* STORNO_DOXPRAV */  ); 
+                0 /* STORNO_DOXPRAV */  ,
+                gl_SPRID); 
         end loop;
     Close cPBS;
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Vykupnye_bez_Pravok;
 
@@ -6076,6 +6121,8 @@ cursor cPBS is
                 where  ds.SERVICE_DOC<>0
                 start with   ds.SHIFR_SCHET= 55      -- пенсия
                          and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
+                         and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+                         and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                          and ds.DATA_OP >= dTermBeg  -- исправление сделано в этом году
                          and ds.DATA_OP <  dTermEnd
                 connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
@@ -6105,14 +6152,14 @@ begin
         Insert into F2NDFL_LOAD_SPRAVKI (
             KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, DATA_DOK, NOM_SPR, KVARTAL, 
             PRIZNAK, INN_FL, INN_INO, STATUS_NP, GRAZHD, FAMILIYA, IMYA, OTCHESTVO, 
-            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV) 
+            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV, R_SPRID) 
         values( gl_KODNA,
                 gl_GOD,
                 aPBS(i).SSYLKA,
                 gl_TIPDOX,
                 gl_NOMKOR,
-                Null     /* DATA_DOK */,
-                Null     /* NOM_SPR */,
+                gl_DATDOK,--Null     /* DATA_DOK */,
+                gl_NOMSPR, --Null     /* NOM_SPR */,
                 4        /* KVARTAL */,
                 1        /* PRIZNAK */,
                 aPBS(i).INN,
@@ -6126,10 +6173,11 @@ begin
                 aPBS(i).DOC_TIP,
                 aPBS(i).SER_NOM_DOC,
                 1 /* STORNO_FLAG */,
-                aPBS(i).STORNO_DOXPRAV ); 
+                aPBS(i).STORNO_DOXPRAV ,
+                gl_SPRID); 
         end loop;
     Close cPBS;
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Vykupnye_s_Ipravlen; 
 
@@ -6160,23 +6208,26 @@ cursor cPBS is
                  inner join dv_sr_lspv ds
                   on   ds.nom_vkl = lspv.nom_vkl
                   and  ds.nom_ips = lspv.nom_ips
-                 inner join (select data_vypl,
-                                    ssylka,
-                                    ssylka_doc,
-                                    nom_vipl,
-                                    ssylka_poluch,
-                                    gf_person,
-                                    nal_rezident
-                             from   vyplach_posob
-                             where  tip_vypl = 1010
-                             and    nom_vipl = 1
-                             and    data_vypl >= dtermbeg
-                             and    data_vypl < dtermend) vrp
+                 inner join (select vp.data_vypl,
+                                    vp.ssylka,
+                                    vp.ssylka_doc,
+                                    vp.nom_vipl,
+                                    vp.ssylka_poluch,
+                                    vp.gf_person,
+                                    vp.nal_rezident
+                             from   vyplach_posob vp
+                             where  vp.tip_vypl = 1010
+                             and    vp.nom_vipl = 1
+                             and    vp.data_vypl >= dtermbeg
+                             and    vp.data_vypl < dtermend
+                             and    vp.gf_person = nvl(gl_CAID, vp.gf_person)) vrp
                   on   vrp.ssylka = lspv.ssylka_fl
                   and  vrp.ssylka_doc = ds.ssylka_doc
                 where  ds.data_op >= dtermbeg
                 and    ds.data_op < dtermend
                 and    ds.shifr_schet = 62 -- ритуалки и наследуемые суммы  
+                and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+                and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                 group  by vrp.ssylka,
                           vrp.ssylka_poluch,
                           vrp.gf_person,
@@ -6213,14 +6264,14 @@ begin
         Insert into F2NDFL_LOAD_SPRAVKI (
             KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, DATA_DOK, NOM_SPR, KVARTAL, 
             PRIZNAK, INN_FL, INN_INO, STATUS_NP, GRAZHD, FAMILIYA, IMYA, OTCHESTVO, 
-            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV) 
+            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV, R_SPRID) 
         values( gl_KODNA,
                 gl_GOD,
                 aPBS(i).SSYLKA,
                 gl_TIPDOX,
                 gl_NOMKOR,
-                Null     /* DATA_DOK */,
-                Null     /* NOM_SPR */,
+                gl_DATDOK,--Null     /* DATA_DOK */,
+                gl_NOMSPR, --Null     /* NOM_SPR */,
                 4        /* KVARTAL */,  -- для 2-НДФЛ всегда за год
                 1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
@@ -6234,10 +6285,11 @@ begin
                 aPBS(i).DOC_TIP,
                 aPBS(i).SER_NOM_DOC,
                 0 /* STORNO_FLAG */,
-                0 /* STORNO_DOXPRAV */  ); 
+                0 /* STORNO_DOXPRAV */  ,
+                gl_SPRID); 
         end loop;
     Close cPBS;
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
   end Load_Posobiya_bez_Pravok; 
 
@@ -6259,23 +6311,26 @@ cursor cPBS is
                     from SP_LSPV lspv 
                         inner join DV_SR_LSPV ds on ds.NOM_VKL=lspv.NOM_VKL and ds.NOM_IPS=lspv.NOM_IPS 
                         inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, NOM_VIPL, SSYLKA_POLUCH, GF_PERSON, NAL_REZIDENT   
-                                        from VYPLACH_POSOB 
+                                        from VYPLACH_POSOB vp
                                         where TIP_VYPL=1010
                                           and NOM_VIPL=1   
-                                          and DATA_VYPL >= to_date('01.01.2016') 
-                                          and DATA_VYPL  < to_date('01.01.2017')
+                                          and DATA_VYPL >= dTermBeg
+                                          and DATA_VYPL  < dTermEnd
+                                          and vp.GF_PERSON = nvl(gl_CAID, vp.gf_person)
                                    ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC   
-                    where  ds.DATA_OP >= to_date('01.01.2016')
-                       and ds.DATA_OP <  to_date('01.01.2017')
-                       and ds.SHIFR_SCHET=62  -- ритуалки и наследуемые суммы  
+                    where  ds.DATA_OP >= dTermBeg
+                       and ds.DATA_OP <  dTermEnd
+                       and ds.SHIFR_SCHET = 62  -- ритуалки и наследуемые суммы  
+                       and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+                       and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                     group by vrp.SSYLKA, vrp.SSYLKA_POLUCH, vrp.GF_PERSON, vrp.NAL_REZIDENT  
-                    having min(ds.SERVICE_DOC)<>0 or max(ds.SERVICE_DOC)<>0                             
+                    having min(ds.SERVICE_DOC)<>0 or max(ds.SERVICE_DOC) <> 0                             
                 ) psb
-                left join gazfond.People pe on pe.FK_CONTRAGENT=psb.GF_PERSON  
-                left join gazfond.IDCards ic on ic.ID=pe.FK_IDCARD     
-                left join gazfond.Contragents ca on ca.ID=psb.GF_PERSON  
-                left join SP_INN_FIZ_LITS ifl on ifl.SSYLKA=psb.SSYLKA_POLUCH                         
-                left join SP_RITUAL_POS sr on sr.SSYLKA=psb.SSYLKA;
+                left join gazfond.People      pe  on pe.FK_CONTRAGENT = psb.GF_PERSON  
+                left join gazfond.IDCards     ic  on ic.ID = pe.FK_IDCARD     
+                left join gazfond.Contragents ca  on ca.ID = psb.GF_PERSON  
+                left join SP_INN_FIZ_LITS     ifl on ifl.SSYLKA = psb.SSYLKA_POLUCH                         
+                left join SP_RITUAL_POS       sr  on sr.SSYLKA = psb.SSYLKA;
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -6296,14 +6351,14 @@ begin
         Insert into F2NDFL_LOAD_SPRAVKI (
             KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, DATA_DOK, NOM_SPR, KVARTAL, 
             PRIZNAK, INN_FL, INN_INO, STATUS_NP, GRAZHD, FAMILIYA, IMYA, OTCHESTVO, 
-            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV) 
+            DATA_ROZHD, KOD_UD_LICHN, SER_NOM_DOC, STORNO_FLAG, STORNO_DOXPRAV, R_SPRID) 
         values( gl_KODNA,
                 gl_GOD,
                 aPBS(i).SSYLKA,
                 gl_TIPDOX,
                 gl_NOMKOR,
-                Null     /* DATA_DOK */,
-                Null     /* NOM_SPR */,
+                gl_DATDOK,--Null     /* DATA_DOK */,
+                gl_NOMSPR, --Null     /* NOM_SPR */,
                 4        /* KVARTAL */,  -- для 2-НДФЛ всегда за год
                 1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
@@ -6317,10 +6372,11 @@ begin
                 aPBS(i).DOC_TIP,
                 aPBS(i).SER_NOM_DOC,
                 1 /* STORNO_FLAG */,
-                aPBS(i).SUMPOS /* STORNO_DOXPRAV */  ); 
+                aPBS(i).SUMPOS /* STORNO_DOXPRAV */  ,
+                gl_SPRID); 
         end loop;
     Close cPBS;
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
   end Load_Posobiya_s_Ipravlen; 
   
@@ -6331,14 +6387,29 @@ dTermBeg date;
 dTermEnd date;
 
 cursor cPBS( pNPStatus in number ) is 
-        Select ls.SSYLKA, extract(MONTH from ds.DATA_OP) MES, sum(ds.SUMMA) DOH_SUM
-        from DV_SR_LSPV ds
-          inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
-          inner join f2NDFL_LOAD_SPRAVKI ls on ls.SSYLKA=sp.SSYLKA_FL
-        where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG=0 and ls.STATUS_NP=pNPStatus
-          and ds.DATA_OP>=dTermBeg and ds.DATA_OP<dTermEnd and ds.SHIFR_SCHET=60
-        group by ls.SSYLKA, extract(MONTH from ds.DATA_OP)
-        order by ls.SSYLKA, extract(MONTH from ds.DATA_OP);
+        select ls.ssylka,
+               extract(month from ds.data_op) mes,
+               sum(ds.summa) doh_sum
+        from   dv_sr_lspv ds
+        inner  join sp_lspv sp
+          on   sp.nom_vkl = ds.nom_vkl
+          and  sp.nom_ips = ds.nom_ips
+        inner  join f2ndfl_load_spravki ls
+          on   ls.ssylka = sp.ssylka_fl
+        where  ls.kod_na = gl_kodna
+        and    ls.god = gl_god
+        and    ls.tip_dox = gl_tipdox
+        and    ls.nom_korr = gl_nomkor
+        and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+        and    ls.storno_flag = 0
+        and    ls.status_np = pnpstatus
+        and    ds.data_op >= dtermbeg
+        and    ds.data_op < dtermend
+        and    ds.shifr_schet = 60
+        group  by ls.ssylka,
+                  extract(month from ds.data_op)
+        order  by ls.ssylka,
+                  extract(month from ds.data_op);
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -6398,7 +6469,7 @@ begin
         end loop;
     Close cPBS;
         
-    Commit;
+    if gl_COMMIT then Commit; end if;
 
 end Load_MesDoh_Pensia_bezIspr;
 
@@ -6414,6 +6485,7 @@ cursor cPBS( pNPStatus in number ) is
                  inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                  inner join F2NDFL_LOAD_SPRAVKI ls on lspv.SSYLKA_FL=ls.SSYLKA 
             where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus     
+              and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
               and ds.DATA_OP>=dTermBeg and ds.DATA_OP<dTermEnd and ds.SHIFR_SCHET=60 and ds.SERVICE_DOC=0
         group by ls.SSYLKA, extract(MONTH from ds.DATA_OP)        
         order by ls.SSYLKA, extract(MONTH from ds.DATA_OP);
@@ -6448,7 +6520,8 @@ begin
                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC
                  ) dvsr                
                 inner join F2NDFL_LOAD_SPRAVKI ls on dvsr.SSYLKA_FL=ls.SSYLKA    
-            where ls.KOD_NA=1 and ls.GOD=2016 and ls.TIP_DOX=1 and ls.NOM_KORR=0 and ls.STORNO_FLAG<>0
+            where ls.KOD_NA=gl_KODNA and ls.GOD=gl_god and ls.TIP_DOX=1 and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0
+            and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
             group by dvsr.SSYLKA_FL   
             having sum(dvsr.SUMMA)<>0
         );  
@@ -6508,7 +6581,7 @@ begin
         end loop;
     Close cPBS;
         
-    Commit;
+    if gl_COMMIT then Commit; end if;
 
 end Load_MesDoh_Pensia_sIspravl;
 
@@ -6533,6 +6606,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ls.god = gl_god
         and    ls.tip_dox = gl_tipdox
         and    ls.nom_korr = gl_nomkor
+        and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         and    ls.storno_flag = 0
         and    ls.status_np = pnpstatus
         and    ds.data_op >= dtermbeg
@@ -6603,7 +6677,7 @@ begin
         end loop;
     Close cPBS;
         
-    Commit;
+    if gl_COMMIT then Commit; end if;
 
 end Load_MesDoh_Posob_bezIspr;
 
@@ -6658,6 +6732,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ls.god = gl_god
         and    ls.tip_dox = gl_tipdox
         and    ls.nom_korr = gl_nomkor
+        and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         and    ls.storno_flag = 0
         and    ls.status_np = pnpstatus
         and    ds.data_op >= dtermbeg
@@ -6736,7 +6811,7 @@ begin
         end loop;
     Close cPBS;
         
-    Commit;
+    if gl_COMMIT then Commit; end if;
 
 end Load_MesDoh_Vykup_bezIspr;
 
@@ -6753,6 +6828,7 @@ cursor cPBS( pNPStatus in number ) is
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                          inner join F2NDFL_LOAD_SPRAVKI ls on lspv.SSYLKA_FL=ls.SSYLKA 
                     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus    
+                        and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
                         and ds.SHIFR_SCHET= 55      -- выкупная
                         and ds.DATA_OP >= dTermBeg  
                         and ds.DATA_OP <  dTermEnd
@@ -6779,7 +6855,8 @@ cursor cPBS( pNPStatus in number ) is
                           ) group by SSYLKA_FL, SUB_SHIFR_SCHET, extract(MONTH from PERVDATA)              
                      ) dvsr                
                     inner join F2NDFL_LOAD_SPRAVKI ls on dvsr.SSYLKA=ls.SSYLKA    
-                where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus               
+                where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus
+                and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         ) where DOH_SUM<>0
           order by SSYLKA, MES, SUB_SHIFR_SCHET;
 
@@ -6849,7 +6926,7 @@ begin
         end loop;
     Close cPBS;
         
-    Commit;
+    if gl_COMMIT then Commit; end if;
 
 end Load_MesDoh_Vykup_sIspravl;
   
@@ -6863,18 +6940,22 @@ dTermEnd date;
 begin
 
     CheckGlobals;
-    dTermBeg  := gl_DATAS;
+    dTermBeg  := gl_DATAS ;
     dTermEnd  := gl_DATADO;
     gl_TIPDOX := 1; -- пенсии
 
     Insert into F2NDFL_LOAD_VYCH 
           ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
     Select ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, 
-           extract(MONTH from ds.DATA_OP), ds.SHIFR_SCHET, sum(ds.SUMMA), 13
+           extract(MONTH from ds.DATA_OP), 
+           decode(ds.SHIFR_SCHET, 1031, 101, 1021, 103, 1025, 104, 1029, 105, ds.SHIFR_SCHET), 
+           --04.11.2017 RFC_3779 ds.SHIFR_SCHET
+           sum(ds.SUMMA), 13
     from F2NDFL_LOAD_SPRAVKI ls
          inner join SP_LSPV sp on sp.SSYLKA_FL=ls.SSYLKA
          inner join DV_SR_LSPV ds on ds.NOM_VKL=sp.NOM_VKL and ds.NOM_IPS=sp.NOM_IPS
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR
+      and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
       and ls.STATUS_NP=1          -- резиденты
       and ds.SHIFR_SCHET>1000     -- вычеты
       and ds.DATA_OP >= dTermBeg  -- за год
@@ -6886,18 +6967,22 @@ begin
     Insert into F2NDFL_LOAD_VYCH 
           ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
     Select ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, 
-           extract(MONTH from ds.DATA_OP), ds.SHIFR_SCHET, sum(ds.SUMMA), 13
+           extract(MONTH from ds.DATA_OP), 
+           decode(ds.SHIFR_SCHET, 1031, 101, 1021, 103, 1025, 104, 1029, 105, ds.SHIFR_SCHET), 
+           --04.11.2017 RFC_3779 ds.SHIFR_SCHET
+           sum(ds.SUMMA), 13
     from F2NDFL_LOAD_SPRAVKI ls
          inner join SP_LSPV sp on sp.SSYLKA_FL=ls.SSYLKA
          inner join DV_SR_LSPV ds on ds.NOM_VKL=sp.NOM_VKL and ds.NOM_IPS=sp.NOM_IPS
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR
+      and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
       and ls.STATUS_NP=1          -- резиденты
       and ds.SHIFR_SCHET>1000     -- вычеты
       and ds.DATA_OP >= dTermBeg  -- за год
       and ds.DATA_OP <  dTermEnd
     group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), ds.SHIFR_SCHET;    
     
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Vychety;
 
@@ -6953,12 +7038,13 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where gl_GOD=2016 -- коррекция только для 2016 года
-                          and ds.DATA_OP = to_date('01.01.2017') 
+                          and ds.DATA_OP = to_date('01.01.2017', 'dd.mm.yyyy') 
                           and ds.SHIFR_SCHET=83 
                         group by sp.SSYLKA_FL 
             ) group by SSYLKA_FL               
         ) nal on ls.SSYLKA=nal.SSYLKA_FL
-    where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STATUS_NP=pNPStatus;
+    where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STATUS_NP=pNPStatus
+    and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -7029,7 +7115,7 @@ begin
         end loop;
     Close cPBS;   
     
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Itogi_Pensia;  
 
@@ -7066,12 +7152,13 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                      inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                 where ds.DATA_OP >= dTermBeg 
                   and ds.DATA_OP <  dTermEnd 
-                  and ds.SHIFR_SCHET=86 
-                  and ds.SUB_SHIFR_SCHET=(pNPStatus-1) -- для пособий: 0-резиденты, 1-нерезиденты 
-                  and ds.SERVICE_DOC=0                 -- это данные без исправлений STORNO_FLAG=0
+                  and ds.SHIFR_SCHET = 86 
+                  and ds.SUB_SHIFR_SCHET = (pNPStatus - 1) -- для пособий: 0-резиденты, 1-нерезиденты 
+                  and ds.SERVICE_DOC = 0                   -- это данные без исправлений STORNO_FLAG=0
                 group by sp.SSYLKA_FL             
             ) nal on ls.SSYLKA=nal.SSYLKA_FL    
-    where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=0 and ls.STATUS_NP=pNPStatus;
+    where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=0 and ls.STATUS_NP=pNPStatus
+    and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -7142,7 +7229,7 @@ begin
         end loop;
     Close cPBS;   
     
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Itogi_Posob_bezIspr; 
 
@@ -7209,7 +7296,8 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
   and    ls.tip_dox = gl_tipdox
   and    ls.nom_korr = gl_nomkor
   and    storno_flag = 0
-  and    ls.status_np = pnpstatus;
+  and    ls.status_np = pnpstatus
+  and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
 
 
 type tPBS is table of cPBS%rowtype;
@@ -7281,7 +7369,7 @@ begin
         end loop;
     Close cPBS;   
     
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Itogi_Vykup_bezIspr;   
 
@@ -7342,7 +7430,8 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
                         having min(ds.DATA_OP) >= dTermBeg                         
                 ) group by SSYLKA_FL               
             ) nal on ls.SSYLKA=nal.SSYLKA_FL        
-    where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=1 and ls.STATUS_NP=pNPStatus;
+    where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=1 and ls.STATUS_NP=pNPStatus
+    and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
 
 
 type tPBS is table of cPBS%rowtype;
@@ -7414,7 +7503,7 @@ begin
         end loop;
     Close cPBS;   
     
-    Commit;
+    if gl_COMMIT then Commit; end if;
     
 end Load_Itogi_Vykup_sIspravl;  
 
@@ -7489,7 +7578,7 @@ begin
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where pGOD=2016 -- коррекция только для 2016 года
                           and sp.SSYLKA_FL=pSSYLKA
-                          and ds.DATA_OP = to_date('01.01.2017') 
+                          and ds.DATA_OP = to_date('01.01.2017', 'dd.mm.yyyy') 
                           and ds.SHIFR_SCHET=83 
                         group by sp.SSYLKA_FL
                 );            
@@ -7594,11 +7683,11 @@ begin
          inner join f2NDFL_LOAD_SPRAVKI ls on ls.SSYLKA=ga.SSYLKA and ls.TIP_DOX=ga.TIP_DOX and ls.NOM_SPR=ga.SPRNOM
     where ga.STR_KOD<>643  and ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD;    
   
-    Commit;
+    if gl_COMMIT then Commit; end if;
 
 Exception
     when OTHERS then
-        Rollback;
+        if gl_COMMIT then Rollback; end if;
         Raise;    
   
 end Load_Adresa_INO; 
@@ -7705,11 +7794,11 @@ begin
              inner join f2NDFL_LOAD_SPRAVKI ls on ls.SSYLKA=ga.SSYLKA and ls.TIP_DOX=ga.TIP_DOX and ls.NOM_SPR=ga.SPRNOM
         where ga.STR_KOD=643 and ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and regexp_like( ga.ULI_GNK, '\d{17}' );            
           
-    Commit;      
+    if gl_COMMIT then Commit; end if;      
     
 Exception
     when OTHERS then
-        Rollback;
+        if gl_COMMIT then Rollback; end if;
         Raise;        
     
 end Load_Adresa_vRF;  
@@ -7757,11 +7846,11 @@ begin
         where ga.STR_KOD=643 and ga.FL_ULIS=pGOD
           and ls.KOD_NA=1 and ls.GOD=pGOD and regexp_like( ga.ULI_GNK, '\d{17}' );            
           
-    Commit;      
+    if gl_COMMIT then Commit; end if;      
     
 Exception
     when OTHERS then
-        Rollback;
+        if gl_COMMIT then Rollback; end if;
         Raise;        
     
 end Kopir_Adresa_vRF_izSOOTV;  
@@ -8223,6 +8312,87 @@ exception
     x_err_info := l_err_info;
 end Parse_xml_izBuh;
 
+--
+-- 03.11.2017 RFC_3779 - выделил копирование справки и адреса в отдельную функцию
+--
+  function copy_ref_2ndfl(
+    p_ref_row in out nocopy f2ndfl_arh_spravki%rowtype
+  ) return f2ndfl_arh_spravki.id%type is
+    l_result f2ndfl_arh_spravki.id%type;
+  begin
+    --
+    insert into fnd.f2ndfl_arh_spravki
+      (kod_na,
+       data_dok,
+       nom_spr,
+       god,
+       nom_korr,
+       kvartal,
+       priznak_s,
+       inn_fl,
+       inn_ino,
+       status_np,
+       grazhd,
+       familiya,
+       imya,
+       otchestvo,
+       data_rozhd,
+       kod_ud_lichn,
+       ser_nom_doc)
+    values
+      (p_ref_row.kod_na,
+       p_ref_row.data_dok,
+       p_ref_row.nom_spr,
+       p_ref_row.god,
+       p_ref_row.nom_korr,
+       p_ref_row.kvartal,
+       p_ref_row.priznak_s,
+       p_ref_row.inn_fl,
+       p_ref_row.inn_ino,
+       p_ref_row.status_np,
+       p_ref_row.grazhd,
+       p_ref_row.familiya,
+       p_ref_row.imya,
+       p_ref_row.otchestvo,
+       p_ref_row.data_rozhd,
+       p_ref_row.kod_ud_lichn,
+       p_ref_row.ser_nom_doc)
+    returning id into l_result;
+    --
+    -- Копируем адрес
+    --
+    insert into fnd.f2ndfl_arh_adr
+      (r_sprid,
+       kod_str,
+       adr_ino,
+       pindex,
+       kod_reg,
+       rayon,
+       gorod,
+       punkt,
+       ulitsa,
+       dom,
+       kor,
+       kv)
+      select l_result,
+             a.kod_str,
+             a.adr_ino,
+             a.pindex,
+             a.kod_reg,
+             a.rayon,
+             a.gorod,
+             a.punkt,
+             a.ulitsa,
+             a.dom,
+             a.kor,
+             a.kv
+      from   fnd.f2ndfl_arh_adr a
+      where  a.r_sprid = p_ref_row.id;
+    --
+    return l_result;
+    --
+  end copy_ref_2ndfl;
+  
 -- Добавить корректирующую справку на основе существующей по году и ссылке ФЛ    
   procedure Kopir_SprF2_dlya_KORR( pNOMSPRAV in varchar2, pGod in number) is 
     iCount number(3) := 0;
@@ -8231,66 +8401,21 @@ end Parse_xml_izBuh;
   begin
   
     for sr in (
-                select s.* from fnd.f2ndfl_arh_spravki s 
---                inner join fnd.SP_FIZ_LITS f on f.SSYLKA= pSSYLKA  
---                inner join fnd.f2ndfl_arh_nomspr n 
---                    on 
---                      n.kod_NA   = s.kod_NA and
---                      n.nom_spr  = s.nom_spr and 
---                      n.god      = s.god and 
---                      n.god      = pGod and 
---                      n.fk_CONTRAGENT = f.GF_PERSON   
-                where 
-                      s.NOM_SPR  = pNOMSPRAV
+                select s.*
+                from   fnd.f2ndfl_arh_spravki s
+                where s.NOM_SPR  = pNOMSPRAV
                   and s.GOD      = pGod   
-                  and s.nom_korr = (select max(s1.nom_korr) from fnd.f2ndfl_arh_spravki s1 
-                                        where s1.god = pGod and s1.nom_spr = s.nom_spr )
+                  and s.nom_korr = (
+                        select max(s1.nom_korr)
+                        from   fnd.f2ndfl_arh_spravki s1 
+                        where  s1.god = pGod 
+                        and    s1.nom_spr = s.nom_spr 
+                      )
       ) loop
       
-      -- Получить данные о справке или о последней корректировке 
-      -- БНА, зачем, когда в переменной цикла это уже есть?
-      --select s.* into sr from fnd.f2ndfl_arh_spravki s where s.id = sr.id;
-      
-      -- Добавить новую корректировку в fnd.f2ndfl_arh_spravki 
-      insert into fnd.f2ndfl_arh_spravki(
-        r_xmlid,
-        kod_na,
-        data_dok,
-        nom_spr,
-        god,
-        nom_korr,
-        kvartal,
-        priznak_s,
-        inn_fl,
-        inn_ino,
-        status_np,
-        grazhd,
-        familiya,
-        imya,
-        otchestvo,
-        data_rozhd,
-        kod_ud_lichn,
-        ser_nom_doc
-      ) values (
-        null /*sr.R_XMLID пачка будет новая*/,
-        sr.kod_na,
-        trunc(sysdate) /* sr.DATA_DOK */,
-        sr.nom_spr,
-        sr.god,
-        sr.nom_korr + 1,
-        sr.kvartal,
-        sr.priznak_s,
-        sr.inn_fl,
-        sr.inn_ino,
-        sr.status_np,
-        sr.grazhd,
-        sr.familiya,
-        sr.imya,
-        sr.otchestvo,
-        sr.data_rozhd,
-        sr.kod_ud_lichn,
-        sr.ser_nom_doc
-      ) returning id into s_id_new;
+      sr.nom_korr := sr.nom_korr + 1;
+      sr.data_dok := trunc(sysdate);
+      s_id_new := copy_ref_2ndfl(p_ref_row => sr);
 
       -- Добавить записи из предыдущей версии справки или корректировки в итоговую таблицу
         insert into fnd.f2ndfl_arh_itogi(
@@ -8322,16 +8447,52 @@ end Parse_xml_izBuh;
             from fnd.f2ndfl_arh_vych v 
             where v.r_sprid = sr.id;      
 
-      -- Добавить записи из прошлой справки или корректировки в итоговую таблицу
-        insert into fnd.f2ndfl_arh_adr(
-                r_sprid,kod_str,adr_ino,pindex,kod_reg,rayon,gorod,punkt,ulitsa,dom,kor,kv)
-        select  s_id_new, a.kod_str, a.adr_ino, a.pindex, a.kod_reg, a.rayon, a.gorod, a.punkt, a.ulitsa, a.dom, a.kor, a.kv 
-            from fnd.f2ndfl_arh_adr a 
-            where a.r_sprid = sr.id;
-      
     end loop;
     
   end Kopir_SprF2_dlya_KORR;
 
+
+--
+-- RFC_3779: рассчитывает и обновляет сумму использованных вычетов в таблице F2NDFL_ARH_VYCH
+--
+  procedure calc_benefit_usage(
+    p_spr_id f2ndfl_arh_spravki.id%type
+  ) is
+  begin
+    --
+    update f2ndfl_arh_vych av
+    set    av.vych_sum_ispolz = (
+             select sum(least(d.revenue, d.benefit)) benefit_usage
+             from   (
+                      select --lspv.ssylka_fl,
+                             --d.ssylka_doc,
+                             sum(case when d.shifr_schet in (60, 55, 62) then d.summa end) revenue,
+                             sum(case when d.shifr_schet > 1000 then d.summa end) benefit
+                      from   sp_lspv    lspv,
+                             dv_sr_lspv d
+                      where  1=1
+                      and    (d.shifr_schet in (60, 55, 62) or d.shifr_schet > 1000)
+                      and    d.data_op between to_date(20160101, 'yyyymmdd') and to_date(20161231, 'yyyymmdd')
+                      and    d.nom_ips = lspv.nom_ips
+                      and    d.nom_vkl = lspv.nom_vkl
+                      and    lspv.ssylka_fl in (
+                               select an.ssylka
+                               from   f2ndfl_arh_spravki s,
+                                      f2ndfl_arh_nomspr  an
+                               where  1=1
+                               and    an.ssylka = an.ssylka_fl
+                               and    an.nom_spr = s.nom_spr
+                               and    an.god = s.god
+                               and    an.kod_na = s.kod_na
+                               and    s.id = p_spr_id
+                             )
+                      group by lspv.ssylka_fl,
+                               d.ssylka_doc
+                    ) d
+           )
+    where  av.r_sprid = p_spr_id;
+    --
+  end calc_benefit_usage;
+  
 END FXNDFL_UTIL;
 /

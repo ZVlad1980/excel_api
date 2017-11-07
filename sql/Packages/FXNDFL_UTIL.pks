@@ -66,7 +66,22 @@ function TestArhivBlok( pSPRID in number ) return number;
 
 -- утановка значениий глоабльных переменных
 -- для уменьшения длины списка параметров
-procedure InitGlobals( pKODNA in number, pGOD in number, pTIPDOX in number, pNOMKOR in number );
+--
+-- 03.11.2017 RFC_3779 - добавил параметры для формирования корр.справок
+--
+procedure InitGlobals( 
+  pKODNA   in number, 
+  pGOD     in number, 
+  pTIPDOX  in number, 
+  pNOMKOR  in number,
+  pSPRID   in number   default null,
+  pNOMSPR  in varchar2 default null,
+  pDATDOK  in date     default null,
+  pNOMVKL  in number   default null,
+  pNOMIPS  in number   default null,
+  pCAID    in number   default null,
+  pCOMMIT  in boolean  default true
+);
 
 -- загрузить список налогоплательщиков
 -- (шапки справок 2-НДФЛ)
@@ -317,5 +332,20 @@ procedure Parse_xml_izBuh(
 -- конец 6-НДФЛ 
 -- ---------------------------------- ====  6-НДФЛ ==== ----------------------------------
 
+
+--
+-- RFC_3779: выделил копирование справки и адреса в отдельную функцию
+--
+  function copy_ref_2ndfl(
+    p_ref_row in out nocopy f2ndfl_arh_spravki%rowtype
+  ) return f2ndfl_arh_spravki.id%type;
+
+--
+-- RFC_3779: рассчитывает и обновляет сумму использованных вычетов в таблице F2NDFL_ARH_VYCH
+--
+  procedure calc_benefit_usage(
+    p_spr_id f2ndfl_arh_spravki.id%type
+  );
+  
 END FXNDFL_UTIL;
 /
