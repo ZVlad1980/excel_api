@@ -1,17 +1,18 @@
-create or replace package body utl_error_api is
+create or replace noneditionable package body utl_error_api is
 
   type g_exception_rec_type is record (
     routine     varchar2(200),
     params      varchar2(2000),
     err_msg     varchar2(2000),
+    err_code    number,
     error_stack varchar2(2000),
     backtrace   varchar2(2000),
     call_stack  varchar2(2000)
   );
   type g_exception_stack_type is table of g_exception_rec_type;
-  
+
   g_exception_stack g_exception_stack_type;
-  
+
   /**
    *
    *
@@ -40,6 +41,7 @@ create or replace package body utl_error_api is
     g_exception_stack(g_exception_stack.count).routine     := p_routine;
     g_exception_stack(g_exception_stack.count).params      := p_params ;
     g_exception_stack(g_exception_stack.count).err_msg     := p_err_msg;
+    g_exception_stack(g_exception_stack.count).err_code    := nvl(sqlcode, 0);
     g_exception_stack(g_exception_stack.count).error_stack := substr(dbms_utility.format_error_stack, 1, 2000);
     g_exception_stack(g_exception_stack.count).backtrace   := substr(dbms_utility.format_error_backtrace, 1, 2000);
     g_exception_stack(g_exception_stack.count).call_stack  := substr(dbms_utility.format_call_stack, 1, 2000);
@@ -59,8 +61,8 @@ create or replace package body utl_error_api is
     --
     if p_params is not null and p_params.count > 0 then
       for i in 1..p_params.count / 2 loop
-        l_result := l_result || 
-          case when l_result is not null then ',' || chr(10) end || 
+        l_result := l_result ||
+          case when l_result is not null then ',' || chr(10) end ||
           p_params(i * 2 - 1) || ' => ' || p_params(i * 2);
       end loop;
     end if;
@@ -97,8 +99,8 @@ create or replace package body utl_error_api is
   ) is
   begin
     fix_exception(
-      p_routine => null, 
-      p_params  => null, 
+      p_routine => null,
+      p_params  => null,
       p_err_msg => p_err_msg
     );
   end fix_exception;
@@ -118,7 +120,7 @@ create or replace package body utl_error_api is
     ) is
     begin
       if p_msg is not null then
-        l_result := l_result || substr(p_msg, 1, 2000) || chr(10);
+        l_result := l_result || substr(p_msg, 1, (2000 - length(l_result))) || chr(10);
       end if;
     end push_;
     --
@@ -128,40 +130,31 @@ create or replace package body utl_error_api is
       push_(g_exception_stack(p_ind).routine    );
       push_(g_exception_stack(p_ind).params     );
       push_(g_exception_stack(p_ind).err_msg    );
-      push_(g_exception_stack(p_ind).error_stack);
-      push_(g_exception_stack(p_ind).backtrace  );
       push_(g_exception_stack(p_ind).call_stack );
+      if g_exception_stack(p_ind).err_code <> 0 then
+        push_(g_exception_stack(p_ind).error_stack);
+        push_(g_exception_stack(p_ind).backtrace  );
+      end if;
     end if;
     --
     return l_result;
     --
   end get_exception;
-  
+
   /**
    *
    */
   function get_error_msg return varchar2 is
     l_result varchar2(4000);
   begin
-    if g_exception_stack is not null and g_exception_stack.exists(1) then
-      l_result := substr(
-        g_exception_stack(1).err_msg ||
-          g_exception_stack(1).backtrace ||
-          g_exception_stack(1).call_stack ||
-          g_exception_stack(1).error_stack,
-        1,
-        2000
-      );
-    end if;
-    --
-    return nvl(l_result, 'Неопознанная ошибка');
+    return get_exception(1);
   end get_error_msg;
   /**
    *
    *
    *
    */
-  function get_exception_full 
+  function get_exception_full
     return varchar2 is
     --
     l_result varchar2(32767);
@@ -176,6 +169,6 @@ create or replace package body utl_error_api is
     return l_result;
     --
   end get_exception_full;
-  
+
 end utl_error_api;
 /
