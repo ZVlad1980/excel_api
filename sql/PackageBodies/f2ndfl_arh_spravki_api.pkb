@@ -3,16 +3,17 @@ create or replace package body f2ndfl_arh_spravki_api is
   C_PACKAGE_NAME constant varchar2(32) := $$plsql_unit;
   
   type g_util_par_type is record (
-    KODNA   number        ,
-    GOD     number        ,
-    TIPDOX  number        ,
-    NOMKOR  number        ,
-    SPRID   number        ,
-    NOMSPR  varchar2(10)  ,
-    DATDOK  date          ,
-    NOMVKL  number        ,
-    NOMIPS  number        ,
-    CAID    number        
+    KODNA     number        ,
+    GOD       number        ,
+    TIPDOX    number        ,
+    NOMKOR    number        ,
+    SPRID     number        ,
+    NOMSPR    varchar2(10)  ,
+    DATDOK    date          ,
+    NOMVKL    number        ,
+    NOMIPS    number        ,
+    CAID      number        ,
+    SRC_SPRID number
   );
   --
   
@@ -97,6 +98,12 @@ create or replace package body f2ndfl_arh_spravki_api is
         init_; fxndfl_util.Load_Vykupnye_s_Ipravlen;
         init_; fxndfl_util.Load_MesDoh_Vykup_bezIspr;
         init_; fxndfl_util.Load_MesDoh_Vykup_sIspravl;
+      when 9 then
+        fxndfl_util.copy_load_employees(
+          p_src_ref_id  => p_globals.SRC_SPRID,
+          p_corr_ref_id => p_globals.SPRID,
+          p_nom_corr    => p_globals.NOMKOR
+        );
       else
         plog('Необрабатываемый тип дохода: ' || p_rev_type);
         --ошибки нет - просто игнорим
@@ -122,6 +129,10 @@ create or replace package body f2ndfl_arh_spravki_api is
   begin
     --
     l_dummy := fxndfl_util.ZapolnGRAZHD_poUdLichn(pGod => p_globals.GOD);
+    fxndfl_util.copy_load_address(
+      p_src_ref_id => p_globals.SRC_SPRID,
+      p_nom_corr   => p_globals.NOMKOR
+    );
     init_; fxndfl_util.Load_Vychety;
     init_; fxndfl_util.Load_Itogi_Pensia;
     init_; fxndfl_util.Load_Itogi_Posob_bezIspr;
@@ -165,7 +176,8 @@ create or replace package body f2ndfl_arh_spravki_api is
    *
    */
   procedure calc_reference(
-    p_ref_row     in out nocopy f2ndfl_arh_spravki%rowtype
+    p_ref_row     in out nocopy f2ndfl_arh_spravki%rowtype,
+    p_src_ref_id  in f2ndfl_arh_spravki.id%type
   ) is
   cursor l_revenue_types_cur is
       select an.tip_dox       rev_type      ,
@@ -177,7 +189,7 @@ create or replace package body f2ndfl_arh_spravki_api is
              sp_lspv           ls
       where  1=1
       --
-      and    ls.ssylka_fl = an.ssylka
+      and    ls.ssylka_fl(+) = an.ssylka
       --
       and    an.nom_spr = p_ref_row.nom_spr
       and    an.god     = p_ref_row.god
@@ -187,12 +199,13 @@ create or replace package body f2ndfl_arh_spravki_api is
     --
   begin
     --
-    l_globals.KODNA  := p_ref_row.kod_na;
-    l_globals.GOD    := p_ref_row.god;
-    l_globals.NOMKOR := p_ref_row.nom_korr;
-    l_globals.SPRID  := p_ref_row.id;
-    l_globals.NOMSPR := p_ref_row.nom_spr;
-    l_globals.DATDOK := p_ref_row.data_dok;
+    l_globals.KODNA      := p_ref_row.kod_na;
+    l_globals.GOD        := p_ref_row.god;
+    l_globals.NOMKOR     := p_ref_row.nom_korr;
+    l_globals.SPRID      := p_ref_row.id;
+    l_globals.NOMSPR     := p_ref_row.nom_spr;
+    l_globals.DATDOK     := p_ref_row.data_dok;
+    l_globals.SRC_SPRID  := p_src_ref_id;
     --
     for r in l_revenue_types_cur loop
       --
@@ -205,6 +218,7 @@ create or replace package body f2ndfl_arh_spravki_api is
         p_rev_type      => r.rev_type,
         p_globals       => l_globals
       );
+      --
     end loop;
     --
     create_load_total(l_globals);
@@ -446,7 +460,8 @@ create or replace package body f2ndfl_arh_spravki_api is
     plog('New spr_id = ' || l_ref_new.id);
     --
     calc_reference(
-      p_ref_row    => l_ref_new
+      p_ref_row    => l_ref_new,
+      p_src_ref_id => l_ref_curr.id
     );
     --
   exception
