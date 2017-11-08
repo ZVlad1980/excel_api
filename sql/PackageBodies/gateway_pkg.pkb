@@ -52,6 +52,16 @@ create or replace package body gateway_pkg is
        );
    end prepare_str$;
    
+   function to_number$(p_str varchar2) return number is
+     l_delim varchar2(1);
+   begin
+     l_delim := substr(1/2, 1, 1);
+     return to_number(prepare_str$(replace(p_str, case l_delim when '.' then ',' else '.' end, l_delim)));
+   exception
+     when others then
+       fix_exception;
+       raise;
+   end to_number$;
    /**
    * Процедура запускает синхронизацию таблицу dv_sr_lspv_docs_t
    */
@@ -186,6 +196,35 @@ create or replace package body gateway_pkg is
     when others then
       fix_exception('load_employees(p_last_name => ' || p_last_name);
   end load_employees;
+  
+  /**
+   * Процедура create_ndfl2 запускает создание справки 2НДФЛ
+   */
+  procedure create_ndfl2(
+    x_err_msg       out varchar2,
+    p_code_na       in  varchar2,
+    p_year          in  varchar2,
+    p_contragent_id in  varchar2
+  ) is
+  begin
+    --
+    f2ndfl_arh_spravki_api.create_reference_corr(
+      p_code_na       => to_number$(p_code_na),
+      p_year          => to_number$(p_year),
+      p_contragent_id => to_number$(p_contragent_id)
+    );
+    --
+    commit;
+    --
+  exception
+    when others then
+      rollback;
+      fix_exception('create_ndfl2(p_code_na => ' || p_code_na ||
+        ', p_year => ' || p_year || 
+        ', p_contragent_id => ' || p_contragent_id
+      );
+      x_err_msg := utl_error_api.get_error_msg;
+  end create_ndfl2;
   
 end gateway_pkg;
 /

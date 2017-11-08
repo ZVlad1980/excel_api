@@ -39,7 +39,10 @@ create or replace package body ndfl_report_api is
                         coalesce(c.spr_tax_corr, 0) - coalesce(c.tax_corr, 0) > .01 then 'Требуется корректирующая справка'
                    when c.exists_xml = 'N' then 'Последняя справка не отправлена'
                  end state,
-                 c.year_doc, 
+                 c.kod_na,
+                 c.year_doc,
+                 c.gf_person,
+                 c.year_doc,
                  c.gf_person, 
                  c.fio, 
                  c.spr_nom, 
