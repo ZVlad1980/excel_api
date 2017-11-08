@@ -18,13 +18,13 @@ create or replace package f2ndfl_arh_spravki_api is
   /**
    * Процедура create_reference_corr создания корректирующей справки 2НДФЛ
    *
-   * @param p_na_code       - код налогоплательщика (НПФ=1)
+   * @param p_code_na       - код налогоплательщика (НПФ=1)
    * @param p_year          - год, за который надо сформировать корректировку
    * @param p_contragent_id - ID контрагента, по которому формируется справка (CDM.CONTRAGENTS.ID)
    *
    */
   procedure create_reference_corr(
-    p_na_code        f2ndfl_arh_spravki.kod_na%type,
+    p_code_na        f2ndfl_arh_spravki.kod_na%type,
     p_year           f2ndfl_arh_spravki.god%type,
     p_contragent_id  f2ndfl_arh_nomspr.fk_contragent%type
   );

@@ -7773,7 +7773,7 @@ begin
                ga.TXT_DOM F2_DOM, ga.TXT_KOR F2_KOR, ga.TXT_KV F2_KV, ls.NOM_SPR
         from GNI_ADR_SOOTV ga 
              inner join f2NDFL_LOAD_SPRAVKI ls on ls.SSYLKA=ga.SSYLKA and ls.TIP_DOX=ga.TIP_DOX and ls.NOM_SPR=ga.SPRNOM
-        where ga.STR_KOD=643 and ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and regexp_like( ga.PUN_GNK, '\d{13}' ) and not regexp_like( ga.ULI_GNK, '\d{17}' );        
+        where ga.STR_KOD=643 and ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and regexp_like( ga.PUN_GNK, '\d{13}' ) and not regexp_like( ga.ULI_GNK, '\d{17}' );
         
         Insert into f2NDFL_LOAD_ADR (
            KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, TIP_ADR, 
@@ -7808,7 +7808,7 @@ begin
                ga.TXT_DOM F2_DOM, ga.TXT_KOR F2_KOR, ga.TXT_KV F2_KV, ls.NOM_SPR
         from GNI_ADR_SOOTV ga 
              inner join f2NDFL_LOAD_SPRAVKI ls on ls.SSYLKA=ga.SSYLKA and ls.TIP_DOX=ga.TIP_DOX and ls.NOM_SPR=ga.SPRNOM
-        where ga.STR_KOD=643 and ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and regexp_like( ga.ULI_GNK, '\d{17}' );            
+        where ga.STR_KOD=643 and ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and regexp_like( ga.ULI_GNK, '\d{17}' );
           
     if gl_COMMIT then Commit; end if;      
     
@@ -8519,6 +8519,296 @@ end Parse_xml_izBuh;
     where  av.r_sprid = p_spr_id;
     --*/
   end calc_benefit_usage;
+  
+  /**
+   * Процедура copy_load_employees создает копию всех адресов F2NDFL_LOAD_ADR, привязанных к заданной справке 
+   */
+  procedure copy_load_address(
+    p_src_ref_id  f2ndfl_load_spravki.r_sprid%type,
+    p_nom_corr    f2ndfl_load_spravki.nom_korr%type
+  ) is
+  begin
+    --
+    insert into f2ndfl_load_adr(
+      kod_na,
+      god,
+      ssylka,
+      tip_dox,
+      nom_korr,
+      tip_adr,
+      adr_full,
+      pindex,
+      str_nam,
+      reg_nam,
+      reg_skr,
+      ron_nam,
+      ron_skr,
+      gor_nam,
+      gor_skr,
+      pun_nam,
+      pun_skr,
+      uli_nam,
+      uli_skr,
+      dom_txt,
+      kor_txt,
+      kv_txt,
+      str_kod,
+      reg_gnk,
+      ron_gnk,
+      gor_gnk,
+      pun_gnk,
+      uli_gnk,
+      fias_puliguid,
+      fias_domguid,
+      f2_kodstr,
+      f2_kodreg,
+      f2_index,
+      f2_rayon,
+      f2_gorod,
+      f2_punkt,
+      f2_ulitsa,
+      f2_dom,
+      f2_kor,
+      f2_kv,
+      bna_nomspr
+    ) select a.kod_na,
+             a.god,
+             a.ssylka,
+             a.tip_dox,
+             p_nom_corr, ---!!!!
+             a.tip_adr,
+             a.adr_full,
+             a.pindex,
+             a.str_nam,
+             a.reg_nam,
+             a.reg_skr,
+             a.ron_nam,
+             a.ron_skr,
+             a.gor_nam,
+             a.gor_skr,
+             a.pun_nam,
+             a.pun_skr,
+             a.uli_nam,
+             a.uli_skr,
+             a.dom_txt,
+             a.kor_txt,
+             a.kv_txt,
+             a.str_kod,
+             a.reg_gnk,
+             a.ron_gnk,
+             a.gor_gnk,
+             a.pun_gnk,
+             a.uli_gnk,
+             a.fias_puliguid,
+             a.fias_domguid,
+             a.f2_kodstr,
+             a.f2_kodreg,
+             a.f2_index,
+             a.f2_rayon,
+             a.f2_gorod,
+             a.f2_punkt,
+             a.f2_ulitsa,
+             a.f2_dom,
+             a.f2_kor,
+             a.f2_kv,
+             a.bna_nomspr
+      from   f2ndfl_load_spravki s,
+             f2ndfl_load_adr     a
+      where  1=1
+      and    a.nom_korr = s.nom_korr
+      and    a.ssylka = s.ssylka
+      and    a.god = s.god
+      and    a.kod_na = s.kod_na
+      and    s.r_sprid = p_src_ref_id;
+    --
+  end copy_load_address;
+  
+  /**
+   * Процедура copy_load_employees создает копию справок по доходам сотрудников фонда
+   *   Вызывается один раз, для сотрудника фонда!
+   *  Копии создаются в таблицах f2ndfl_load_spravki, f2ndfl_load_mes, f2ndfl_load_itogi, f2ndfl_load_vych
+   */
+  procedure copy_load_employees(
+    p_src_ref_id   f2ndfl_load_spravki.r_sprid%type,
+    p_corr_ref_id  f2ndfl_load_spravki.r_sprid%type,
+    p_nom_corr     f2ndfl_load_spravki.nom_korr%type
+  ) is
+    --
+    C_REVTYP constant number := 9;
+    --
+    procedure copy_spravki_ is
+    begin
+      insert into f2ndfl_load_spravki(
+        kod_na,
+        god,
+        ssylka,
+        tip_dox,
+        nom_korr,
+        data_dok,
+        nom_spr,
+        kvartal,
+        priznak,
+        inn_fl,
+        inn_ino,
+        status_np,
+        grazhd,
+        familiya,
+        imya,
+        otchestvo,
+        data_rozhd,
+        kod_ud_lichn,
+        ser_nom_doc,
+        zam_gra,
+        zam_kul,
+        zam_snd,
+        r_sprid,
+        storno_flag,
+        storno_doxprav
+      )  select ls.kod_na,
+                ls.god,
+                ls.ssylka,
+                ls.tip_dox,
+                p_nom_corr,          --!!!!
+                trunc(sysdate),
+                ls.nom_spr,
+                ls.kvartal,
+                ls.priznak,
+                ls.inn_fl,
+                ls.inn_ino,
+                ls.status_np,
+                ls.grazhd,
+                ls.familiya,
+                ls.imya,
+                ls.otchestvo,
+                ls.data_rozhd,
+                ls.kod_ud_lichn,
+                ls.ser_nom_doc,
+                ls.zam_gra,
+                ls.zam_kul,
+                ls.zam_snd,
+                p_corr_ref_id,       --!!!!
+                ls.storno_flag,
+                ls.storno_doxprav
+         from   f2ndfl_load_spravki ls
+         where  1=1
+         and    ls.tip_dox = C_REVTYP
+         and    ls.r_Sprid = p_src_ref_id;
+    end copy_spravki_;
+    --
+    procedure copy_mes_ is
+    begin
+      insert into f2ndfl_load_mes(
+        kod_na,
+        god,
+        ssylka,
+        tip_dox,
+        nom_korr,
+        mes,
+        doh_kod_gni,
+        doh_sum,
+        vych_kod_gni,
+        vych_sum,
+        kod_stavki,
+        fl_true
+      ) select lm.kod_na,
+               lm.god,
+               lm.ssylka,
+               lm.tip_dox,
+               p_nom_corr,              --!!!!
+               lm.mes,
+               lm.doh_kod_gni,
+               lm.doh_sum,
+               lm.vych_kod_gni,
+               lm.vych_sum,
+               lm.kod_stavki,
+               lm.fl_true
+        from   f2ndfl_load_mes lm
+        where  (lm.kod_na, lm.ssylka, lm.god, lm.nom_korr) in (
+                 select ls.kod_na, ls.ssylka, ls.god, ls.nom_korr
+                 from   f2ndfl_load_spravki ls
+                 where  ls.tip_dox = C_REVTYP
+                 and    ls.r_Sprid = p_src_ref_id
+               );
+    end copy_mes_;
+    --
+    procedure copy_itog_ is
+    begin
+      insert into f2ndfl_load_itogi(
+        kod_na,
+        god,
+        ssylka,
+        tip_dox,
+        nom_korr,
+        kod_stavki,
+        sgd_sum,
+        sum_obl,
+        sum_obl_ni,
+        sum_fiz_avans,
+        sum_obl_nu,
+        sum_nal_per,
+        dolg_na,
+        vzysk_ifns
+      ) select li.kod_na,
+               li.god,
+               li.ssylka,
+               li.tip_dox,
+               p_nom_corr,     --!!!!
+               li.kod_stavki,
+               li.sgd_sum,
+               li.sum_obl,
+               li.sum_obl_ni,
+               li.sum_fiz_avans,
+               li.sum_obl_nu,
+               li.sum_nal_per,
+               li.dolg_na,
+               li.vzysk_ifns
+        from   f2ndfl_load_itogi li
+        where  (li.kod_na, li.ssylka, li.god, li.nom_korr) in (
+                 select ls.kod_na, ls.ssylka, ls.god, ls.nom_korr
+                 from   f2ndfl_load_spravki ls
+                 where  ls.tip_dox = C_REVTYP
+                 and    ls.r_Sprid = p_src_ref_id
+               );
+    end copy_itog_;
+    --
+    procedure copy_vych_ is
+    begin
+      insert into f2ndfl_load_vych(
+        kod_na,
+        god,
+        ssylka,
+        tip_dox,
+        nom_korr,
+        mes,
+        vych_kod_gni,
+        vych_sum,
+        kod_stavki
+      ) select lv.kod_na,
+               lv.god,
+               lv.ssylka,
+               lv.tip_dox,
+               p_nom_corr,
+               lv.mes,
+               lv.vych_kod_gni,
+               lv.vych_sum,
+               lv.kod_stavki
+        from   f2ndfl_load_vych lv
+        where  (lv.kod_na, lv.ssylka, lv.god, lv.nom_korr) in (
+                 select ls.kod_na, ls.ssylka, ls.god, ls.nom_korr
+                 from   f2ndfl_load_spravki ls
+                 where  ls.tip_dox = C_REVTYP
+                 and    ls.r_Sprid = p_src_ref_id
+               );
+    end copy_vych_;
+    --
+  begin
+    --
+    copy_spravki_;
+    copy_mes_;
+    copy_itog_;
+    copy_vych_;
+    --
+  end copy_load_employees;
   
 END FXNDFL_UTIL;
 /

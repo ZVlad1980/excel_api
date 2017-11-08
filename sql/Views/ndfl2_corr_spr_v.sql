@@ -31,7 +31,7 @@ create or replace view ndfl2_corr_spr_v as
            s.nom_spr,
            s.nom_korr,
            s.data_dok,
-           row_number() over(partition by s.kod_na, s.god, s.nom_spr order by s.data_dok) row_num,
+           row_number() over(partition by s.kod_na, s.god, s.nom_spr order by s.data_dok, s.nom_korr) row_num,
            count(1) over(partition by s.kod_na, s.god, s.nom_spr)                          row_cnt
     from   f2ndfl_arh_nomspr   ns,
            f2ndfl_arh_spravki  s
@@ -46,7 +46,7 @@ create or replace view ndfl2_corr_spr_v as
   ),
   ndfl_w as (
     select n.fk_contragent,
-           n.god          ,
+           n.god   ,
            n.spr_id,
            n.kod_na,
            case when n.row_num = n.row_cnt then n.r_xmlid  end r_xml_id,
@@ -58,6 +58,7 @@ create or replace view ndfl2_corr_spr_v as
     where  n.row_num in (1, n.row_cnt)
   )
   select c.gf_person,
+         n.kod_na,
          c.year_doc,
          c.last_name,
          c.first_name,
@@ -81,6 +82,7 @@ create or replace view ndfl2_corr_spr_v as
   and    n.fk_contragent(+) = c.gf_person
   and    n.god(+)           = c.year_doc
   group by c.gf_person,
+           n.kod_na,
            c.year_doc,
            c.last_name,
            c.first_name,
@@ -89,4 +91,3 @@ create or replace view ndfl2_corr_spr_v as
            c.revenue,
            c.tax_return
 /
-           

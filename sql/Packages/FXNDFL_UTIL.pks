@@ -347,5 +347,25 @@ procedure Parse_xml_izBuh(
     p_spr_id f2ndfl_arh_spravki.id%type
   );
   
+  
+  /**
+   * Процедура copy_load_address создает копию всех адресов F2NDFL_LOAD_ADR, привязанных к заданной справке 
+   */
+  procedure copy_load_address(
+    p_src_ref_id f2ndfl_load_spravki.r_sprid%type,
+    p_nom_corr   f2ndfl_load_spravki.nom_korr%type
+  );
+  
+  /**
+   * Процедура copy_load_employees создает копию справок по доходам сотрудников фонда
+   *   Вызывается один раз, для сотрудника фонда!
+   *  Копии создаются в таблицах f2ndfl_load_spravki, f2ndfl_load_mes, f2ndfl_load_itogi, f2ndfl_load_vych
+   */
+  procedure copy_load_employees(
+    p_src_ref_id   f2ndfl_load_spravki.r_sprid%type,
+    p_corr_ref_id  f2ndfl_load_spravki.r_sprid%type,
+    p_nom_corr     f2ndfl_load_spravki.nom_korr%type
+  );
+  
 END FXNDFL_UTIL;
 /

@@ -111,7 +111,8 @@ create or replace noneditionable package body utl_error_api is
    *
    */
   function get_exception(
-    p_ind integer default 1
+    p_ind  integer default 1,
+    p_mode varchar2 default 'F'
   ) return varchar2 is
     l_result varchar2(32767);
     --
@@ -120,20 +121,24 @@ create or replace noneditionable package body utl_error_api is
     ) is
     begin
       if p_msg is not null then
-        l_result := l_result || substr(p_msg, 1, (2000 - length(l_result))) || chr(10);
+        l_result := l_result || substr(p_msg, 1, (2000 - nvl(length(l_result), 0))) || chr(10);
       end if;
     end push_;
     --
   begin
     --
     if g_exception_stack is not null and g_exception_stack.exists(p_ind) then
-      push_(g_exception_stack(p_ind).routine    );
-      push_(g_exception_stack(p_ind).params     );
-      push_(g_exception_stack(p_ind).err_msg    );
-      push_(g_exception_stack(p_ind).call_stack );
-      if g_exception_stack(p_ind).err_code <> 0 then
-        push_(g_exception_stack(p_ind).error_stack);
-        push_(g_exception_stack(p_ind).backtrace  );
+      if p_mode = 'U' and g_exception_stack(p_ind).err_msg is not null then
+        push_(g_exception_stack(p_ind).err_msg    );
+      else
+        push_(g_exception_stack(p_ind).routine    );
+        push_(g_exception_stack(p_ind).params     );
+        push_(g_exception_stack(p_ind).err_msg    );
+        push_(g_exception_stack(p_ind).call_stack );
+        if g_exception_stack(p_ind).err_code <> 0 then
+          push_(g_exception_stack(p_ind).error_stack);
+          push_(g_exception_stack(p_ind).backtrace  );
+        end if;
       end if;
     end if;
     --
@@ -145,9 +150,8 @@ create or replace noneditionable package body utl_error_api is
    *
    */
   function get_error_msg return varchar2 is
-    l_result varchar2(4000);
   begin
-    return get_exception(1);
+    return get_exception(1, 'U');
   end get_error_msg;
   /**
    *

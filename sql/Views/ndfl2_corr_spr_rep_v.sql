@@ -1,5 +1,6 @@
 create or replace view ndfl2_corr_spr_rep_v as 
-  select s.year_doc,
+  select s.kod_na,
+         s.year_doc,
          s.gf_person,
          s.last_name || ' ' || s.first_name || ' ' || s.second_name || ' (' || to_char(s.birth_date, 'dd.mm.yyyy') || ')' fio,
          s.spr_nom,

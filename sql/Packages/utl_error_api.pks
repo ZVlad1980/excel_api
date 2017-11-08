@@ -2,7 +2,7 @@ create or replace package utl_error_api is
 
   -- Author  : V.ZHURAVOV
   -- Created : 25.07.2017 10:26:58
-  -- Purpose : API РѕР±СЂР°Р±РѕС‚РєРё РѕС€РёР±РѕРє
+  -- Purpose : API обработки ошибок
   G_EXCEPTION exception;
   
   procedure init_exceptions;
@@ -12,7 +12,8 @@ create or replace package utl_error_api is
   );
   
   function get_exception(
-    p_ind integer default 1
+    p_ind  integer default 1,
+    p_mode varchar2 default 'F'
   ) return varchar2;
   
   procedure fix_exception(
