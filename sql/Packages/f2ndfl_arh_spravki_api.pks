@@ -2,13 +2,13 @@ create or replace package f2ndfl_arh_spravki_api is
 
   -- Author  : V.ZHURAVOV
   -- Created : 02.11.2017 15:54:23
-  -- Purpose : API формирование справок 2НДФЛ
+  -- Purpose : API С„РѕСЂРјРёСЂРѕРІР°РЅРёРµ СЃРїСЂР°РІРѕРє 2РќР”Р¤Р›
   
-  /** ТОКА ДЛЯ ОТЛАДКИ
-   * Процедура calc_reference расчет новой справки
+  /** РўРћРљРђ Р”Р›РЇ РћРўР›РђР”РљР
+   * РџСЂРѕС†РµРґСѓСЂР° calc_reference СЂР°СЃС‡РµС‚ РЅРѕРІРѕР№ СЃРїСЂР°РІРєРё
    *
-   * @param p_ref_row    - справка f2ndfl_arh_spravki%rowtype
-   * @param p_src_ref_id - ID предыдущей справки
+   * @param p_ref_row    - СЃРїСЂР°РІРєР° f2ndfl_arh_spravki%rowtype
+   * @param p_src_ref_id - ID РїСЂРµРґС‹РґСѓС‰РµР№ СЃРїСЂР°РІРєРё
    *
    /
   procedure calc_reference(
@@ -16,11 +16,11 @@ create or replace package f2ndfl_arh_spravki_api is
   );
   --*/
   /**
-   * Процедура create_reference_corr создания корректирующей справки 2НДФЛ
+   * РџСЂРѕС†РµРґСѓСЂР° create_reference_corr СЃРѕР·РґР°РЅРёСЏ РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰РµР№ СЃРїСЂР°РІРєРё 2РќР”Р¤Р›
    *
-   * @param p_code_na       - код налогоплательщика (НПФ=1)
-   * @param p_year          - год, за который надо сформировать корректировку
-   * @param p_contragent_id - ID контрагента, по которому формируется справка (CDM.CONTRAGENTS.ID)
+   * @param p_code_na       - РєРѕРґ РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєР° (РќРџР¤=1)
+   * @param p_year          - РіРѕРґ, Р·Р° РєРѕС‚РѕСЂС‹Р№ РЅР°РґРѕ СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєСѓ
+   * @param p_contragent_id - ID РєРѕРЅС‚СЂР°РіРµРЅС‚Р°, РїРѕ РєРѕС‚РѕСЂРѕРјСѓ С„РѕСЂРјРёСЂСѓРµС‚СЃСЏ СЃРїСЂР°РІРєР° (CDM.CONTRAGENTS.ID)
    *
    */
   procedure create_reference_corr(
