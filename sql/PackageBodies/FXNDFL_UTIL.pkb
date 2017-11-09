@@ -6964,19 +6964,19 @@ begin
           ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
     Select ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, 
            extract(MONTH from ds.DATA_OP), 
-           decode(ds.SHIFR_SCHET, 1031, 101, 1021, 103, 1025, 104, 1029, 105, ds.SHIFR_SCHET), 
-           --04.11.2017 RFC_3779 ds.SHIFR_SCHET
+           td.benefit_code, --RFC_3814 
            sum(ds.SUMMA), 13
     from F2NDFL_LOAD_SPRAVKI ls
          inner join SP_LSPV sp on sp.SSYLKA_FL=ls.SSYLKA
          inner join DV_SR_LSPV ds on ds.NOM_VKL=sp.NOM_VKL and ds.NOM_IPS=sp.NOM_IPS
+         left join  taxdeductions_v td on td.nom_vkl = ds.NOM_VKL and td.nom_ips = ds.NOM_IPS and td.shifr_schet = ds.shifr_schet
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR
       and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
       and ls.STATUS_NP=1          -- резиденты
       and ds.SHIFR_SCHET>1000     -- вычеты
       and ds.DATA_OP >= dTermBeg  -- за год
       and ds.DATA_OP <  dTermEnd
-    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), ds.SHIFR_SCHET;
+    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code;
     
     gl_TIPDOX := 3; -- выкупные
 
@@ -6984,19 +6984,19 @@ begin
           ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
     Select ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, 
            extract(MONTH from ds.DATA_OP), 
-           decode(ds.SHIFR_SCHET, 1031, 101, 1021, 103, 1025, 104, 1029, 105, ds.SHIFR_SCHET), 
-           --04.11.2017 RFC_3779 ds.SHIFR_SCHET
+           td.benefit_code, --RFC_3814 
            sum(ds.SUMMA), 13
     from F2NDFL_LOAD_SPRAVKI ls
          inner join SP_LSPV sp on sp.SSYLKA_FL=ls.SSYLKA
          inner join DV_SR_LSPV ds on ds.NOM_VKL=sp.NOM_VKL and ds.NOM_IPS=sp.NOM_IPS
-    where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR
+         left join  taxdeductions_v td on td.nom_vkl = ds.NOM_VKL and td.nom_ips = ds.NOM_IPS and td.shifr_schet = ds.shifr_schet
+    where ls.KOD_NA = gl_KODNA and ls.GOD = gl_GOD and ls.TIP_DOX = gl_TIPDOX and ls.NOM_KORR = gl_NOMKOR
       and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-      and ls.STATUS_NP=1          -- резиденты
-      and ds.SHIFR_SCHET>1000     -- вычеты
+      and ls.STATUS_NP = 1          -- резиденты
+      and ds.SHIFR_SCHET > 1000     -- вычеты
       and ds.DATA_OP >= dTermBeg  -- за год
       and ds.DATA_OP <  dTermEnd
-    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), ds.SHIFR_SCHET;    
+    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code;    
     
     if gl_COMMIT then Commit; end if;
     
@@ -8634,8 +8634,6 @@ end Parse_xml_izBuh;
     p_nom_corr     f2ndfl_load_spravki.nom_korr%type
   ) is
     --
-    C_REVTYP constant number := 9;
-    --
     procedure copy_spravki_ is
     begin
       insert into f2ndfl_load_spravki(
@@ -8691,7 +8689,7 @@ end Parse_xml_izBuh;
                 ls.storno_doxprav
          from   f2ndfl_load_spravki ls
          where  1=1
-         and    ls.tip_dox = C_REVTYP
+         and    ls.tip_dox = C_REVTYP_EMPL
          and    ls.r_Sprid = p_src_ref_id;
     end copy_spravki_;
     --
@@ -8726,7 +8724,7 @@ end Parse_xml_izBuh;
         where  (lm.kod_na, lm.ssylka, lm.god, lm.nom_korr) in (
                  select ls.kod_na, ls.ssylka, ls.god, ls.nom_korr
                  from   f2ndfl_load_spravki ls
-                 where  ls.tip_dox = C_REVTYP
+                 where  ls.tip_dox = C_REVTYP_EMPL
                  and    ls.r_Sprid = p_src_ref_id
                );
     end copy_mes_;
@@ -8766,7 +8764,7 @@ end Parse_xml_izBuh;
         where  (li.kod_na, li.ssylka, li.god, li.nom_korr) in (
                  select ls.kod_na, ls.ssylka, ls.god, ls.nom_korr
                  from   f2ndfl_load_spravki ls
-                 where  ls.tip_dox = C_REVTYP
+                 where  ls.tip_dox = C_REVTYP_EMPL
                  and    ls.r_Sprid = p_src_ref_id
                );
     end copy_itog_;
@@ -8796,7 +8794,7 @@ end Parse_xml_izBuh;
         where  (lv.kod_na, lv.ssylka, lv.god, lv.nom_korr) in (
                  select ls.kod_na, ls.ssylka, ls.god, ls.nom_korr
                  from   f2ndfl_load_spravki ls
-                 where  ls.tip_dox = C_REVTYP
+                 where  ls.tip_dox = C_REVTYP_EMPL
                  and    ls.r_Sprid = p_src_ref_id
                );
     end copy_vych_;

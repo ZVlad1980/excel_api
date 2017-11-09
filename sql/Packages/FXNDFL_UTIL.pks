@@ -18,6 +18,10 @@ CREATE OR REPLACE PACKAGE FXNDFL_UTIL AS
    1.0        09/02/2016      Anikin       1. Created this package.
 ******************************************************************************/
 
+
+  --Код дохода ЗП
+  C_REVTYP_EMPL constant number := 9;
+
 -- инициализация счетчика справок 
 function Init_SchetchikSpravok( pKodNA in number, pGod in number, pTipDox in number, pNomKorr in number ) return number;
 /* Параметры:

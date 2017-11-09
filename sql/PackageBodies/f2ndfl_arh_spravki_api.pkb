@@ -23,7 +23,9 @@ create or replace package body f2ndfl_arh_spravki_api is
   procedure fix_exception(p_line number, p_msg varchar2 default null) is
   begin
     utl_error_api.fix_exception(
-      p_err_msg => C_PACKAGE_NAME || '(' || p_line || '): ' || ' ' || p_msg
+      p_routine => C_PACKAGE_NAME || '(' || p_line || ')' ,
+      p_params  => null                                   ,
+      p_err_msg => p_msg
     );
   end;
   
@@ -182,7 +184,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   cursor l_revenue_types_cur is
       select an.tip_dox       rev_type      ,
              an.fk_contragent fk_contragent ,
-             an.ssylka        ssylka_sfl    ,
+             an.ssylka        ssylka_fl     ,
              ls.nom_vkl                     ,
              ls.nom_ips
       from   f2ndfl_arh_nomspr an,
@@ -232,7 +234,32 @@ create or replace package body f2ndfl_arh_spravki_api is
   end calc_reference;  
 
   /**
-   * Функция get_reference_last - возвращает номер 2НДФЛ справки
+   * Функция get_reference_row возвращает строку F2NDFL_ARH_SPRAVKI по ID
+   *
+   * @return - 2ndfl_arh_spravka%rowtype
+   *
+   */
+  function get_reference_row(
+    p_ref_id         f2ndfl_arh_spravki.id%type
+  ) return f2ndfl_arh_spravki%rowtype is
+    l_result f2ndfl_arh_spravki%rowtype;
+  begin
+    --
+    select *
+    into   l_result
+    from   f2ndfl_arh_spravki s
+    where  s.id = p_ref_id;
+    --
+    return l_result;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end get_reference_row;
+
+  /**
+   * Функция get_reference_last возвращает номер 2НДФЛ справки по году и контрагенту
    *
    * @param p_kod_na        - код НА
    * @param p_year          - год
@@ -276,17 +303,21 @@ create or replace package body f2ndfl_arh_spravki_api is
   end get_reference_num;
   
   /**
-   * Функция get_reference_last_id
+   * Функция get_reference_last_id возвращает ID справки по году и номеру
+   *  Если справок несколько - возвращает ID последней корректировки
    *
-   * @param  -
+   * @param p_code_na - код НА
+   * @param p_year    - год
+   * @param p_ref_num - номер справки 2НДФЛ
    *
-   * @return - 
+   * @return - f2ndfl_arh_spravki.id%type
    *
    */
   function get_reference_last_id(
     p_code_na   f2ndfl_arh_spravki.kod_na%type,
     p_year      f2ndfl_arh_spravki.god%type,
-    p_ref_num   f2ndfl_arh_spravki.nom_spr%type
+    p_ref_num   f2ndfl_arh_spravki.nom_spr%type,
+    p_load_exists varchar2 default 'Y'
   ) return f2ndfl_arh_spravki.id%type is
     l_result f2ndfl_arh_spravki.id%type;
   begin
@@ -297,7 +328,13 @@ create or replace package body f2ndfl_arh_spravki_api is
     where  1=1
          -- обязательно проверяем наличие справок по типам доходов,
          -- т.к. справка ARH может быть создана и без расчета по доходам
-    and    exists(select 1 from f2ndfl_load_spravki ls where ls.r_sprid = sp.id)
+    and    case 
+             when p_load_exists = 'Y' and 
+                  not exists(select 1 from f2ndfl_load_spravki ls where ls.r_sprid = sp.id) then
+               0
+             else
+               1
+           end  = 1
     and    sp.nom_spr = p_ref_num
     and    sp.god     = p_year
     and    sp.kod_na  = p_code_na;
@@ -332,10 +369,10 @@ create or replace package body f2ndfl_arh_spravki_api is
     p_year           f2ndfl_arh_spravki.god%type,
     p_contragent_id  f2ndfl_arh_nomspr.fk_contragent%type
   ) return f2ndfl_arh_spravki%rowtype is
-    l_result f2ndfl_arh_spravki%rowtype;
+    l_ref_id f2ndfl_arh_spravki.id%type;
   begin
     --
-    l_result.id := get_reference_last_id(
+    l_ref_id := get_reference_last_id(
       p_code_na       => p_code_na       ,
       p_year          => p_year          ,
       p_ref_num       => get_reference_num(
@@ -345,12 +382,7 @@ create or replace package body f2ndfl_arh_spravki_api is
                          )
     );
     --
-    select s.*
-    into   l_result
-    from   f2ndfl_arh_spravki s
-    where  s.id = l_result.id;
-    --
-    return l_result;
+    return get_reference_row(l_ref_id);
     --
   exception
     when others then
@@ -439,9 +471,20 @@ create or replace package body f2ndfl_arh_spravki_api is
   ) is
     l_ref_curr f2ndfl_arh_spravki%rowtype;
     l_ref_new  f2ndfl_arh_spravki%rowtype;
+    e_int      exception;
   begin
     --
     init_exceptions;
+    --
+    if p_year < 2015 or p_year > (extract(year from sysdate) - 1) then
+      fix_exception($$PLSQL_LINE, 'Невозможно создать корректирующую справку за ' || p_year || '. Корректирующие справки 2НДФЛ создаются только начиная с 2015 года.');
+      raise e_int;
+    end if;
+    --
+    if p_code_na <> 1 then
+      fix_exception($$PLSQL_LINE, 'Неизвестный код налогового агента: ' || p_code_na);
+      raise e_int;
+    end if;
     --
     l_ref_curr := get_reference_last(
       p_code_na       => p_code_na       ,
@@ -469,6 +512,248 @@ create or replace package body f2ndfl_arh_spravki_api is
       fix_exception($$PLSQL_LINE);
       raise;
   end create_reference_corr;
+
+  /**
+   * Функция is_employee_ref проверят принадлежность справки сотруднику фонда, 
+   *   не являющемуся контрагентом фонда
+   *
+   * @param p_ref_id - ID справки
+   *
+   * @return - boolean
+   *
+   */
+  function is_employee_ref(
+    p_ref_id f2ndfl_arh_spravki.id%type
+  ) return boolean is
+    l_result int;
+  begin
+    --
+    begin
+      select count(1)
+      into   l_result
+      from   f2ndfl_arh_nomspr an
+      where  1=1
+      and    an.tip_dox <> FXNDFL_UTIL.C_REVTYP_EMPL
+      and    (an.kod_na, an.god, an.nom_spr) in (
+               select s.kod_na, s.god, s.nom_spr
+               from   f2ndfl_arh_spravki s
+               where  s.id = p_ref_id
+             )
+      group by 1;
+    exception
+      when no_data_found then
+        l_result := 0;
+    end;
+    --
+    return l_result = 0;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end is_employee_ref;
+  
+  /**
+   * Процедура purge_load_tbl удаляет записи о заданной справке 2НДФЛ из таблиц F2NDFL_LOAD_
+   *
+   * @param p_ref_row - строка таблицы F2NDFL_ARH_SPRAVKI
+   *
+   */
+  procedure purge_load_tbl(
+    p_ref_row f2ndfl_arh_spravki%rowtype
+  ) is
+    cursor l_revenue_types_cur is
+      select an.tip_dox       rev_type      ,
+             an.fk_contragent fk_contragent ,
+             an.ssylka        ssylka_fl
+      from   f2ndfl_arh_nomspr an
+      where  1=1
+      and    an.tip_dox <> fxndfl_util.C_REVTYP_EMPL
+      and    an.nom_spr = p_ref_row.nom_spr
+      and    an.god     = p_ref_row.god
+      and    an.kod_na  = p_ref_row.kod_na  ;
+    --
+    procedure purge_load_tbl_(
+      p_row l_revenue_types_cur%rowtype
+    ) is
+    begin
+      --
+      delete from f2ndfl_load_adr t
+      where  1 = 1
+      and    t.nom_korr = p_ref_row.nom_korr
+      and    t.tip_dox = p_row.rev_type
+      and    t.ssylka = p_row.ssylka_fl
+      and    t.god = p_ref_row.god
+      and    t.kod_na = p_ref_row.kod_na;
+      --
+      plog('  f2ndfl_load_adr deleted     ' || sql%rowcount || ' row(s)');
+      --
+      delete from f2ndfl_load_itogi t
+      where  1 = 1
+      and    t.nom_korr = p_ref_row.nom_korr
+      and    t.tip_dox = p_row.rev_type
+      and    t.ssylka = p_row.ssylka_fl
+      and    t.god = p_ref_row.god
+      and    t.kod_na = p_ref_row.kod_na;
+      --
+      plog('  f2ndfl_load_itogi deleted   ' || sql%rowcount || ' row(s)');
+      --
+      delete from f2ndfl_load_mes t
+      where  1 = 1
+      and    t.nom_korr = p_ref_row.nom_korr
+      and    t.tip_dox = p_row.rev_type
+      and    t.ssylka = p_row.ssylka_fl
+      and    t.god = p_ref_row.god
+      and    t.kod_na = p_ref_row.kod_na;
+      --
+      plog('  f2ndfl_load_mes deleted     ' || sql%rowcount || ' row(s)');
+      --
+      delete from f2ndfl_load_vych t
+      where  1 = 1
+      and    t.nom_korr = p_ref_row.nom_korr
+      and    t.tip_dox = p_row.rev_type
+      and    t.ssylka = p_row.ssylka_fl
+      and    t.god = p_ref_row.god
+      and    t.kod_na = p_ref_row.kod_na;
+      --
+      plog('  f2ndfl_load_vych deleted    ' || sql%rowcount || ' row(s)');
+      --
+      delete from f2ndfl_load_uved t
+      where  1 = 1
+      and    t.nom_korr = p_ref_row.nom_korr
+      and    t.tip_dox = p_row.rev_type
+      and    t.ssylka = p_row.ssylka_fl
+      and    t.god = p_ref_row.god
+      and    t.kod_na = p_ref_row.kod_na;
+      --
+      plog('  f2ndfl_load_uved deleted    ' || sql%rowcount || ' row(s)');
+      --
+      delete from f2ndfl_load_spravki t
+      where  1 = 1
+      and    t.nom_korr = p_ref_row.nom_korr
+      and    t.tip_dox = p_row.rev_type
+      and    t.ssylka = p_row.ssylka_fl
+      and    t.god = p_ref_row.god
+      and    t.kod_na = p_ref_row.kod_na;
+      --
+      plog('  f2ndfl_load_spravki deleted ' || sql%rowcount || ' row(s)');
+      --
+    end purge_load_tbl_;
+    --
+  begin
+    --
+    for rt in l_revenue_types_cur loop
+      purge_load_tbl_(rt);
+    end loop;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end purge_load_tbl;
+  
+  /**
+   * Процедура purge_arh_tbl удаляет записи о заданной справке 2НДФЛ из таблиц F2NDFL_ARH (кроме F2NDFL_ARH_NOMSPR)
+   *
+   * @param p_ref_id - ID удаляемой справки
+   *
+   */
+  procedure purge_arh_tbl(
+    p_ref_id f2ndfl_arh_spravki.id%type
+  ) is
+  begin
+    --
+    delete from f2ndfl_arh_adr a
+    where  a.r_sprid = p_ref_id;
+    --
+    plog('  f2ndfl_arh_adr deleted      ' || sql%rowcount || ' row(s)');
+    --
+    delete from f2ndfl_arh_mes a
+    where  a.r_sprid = p_ref_id;
+    --
+    plog('  f2ndfl_arh_mes deleted      ' || sql%rowcount || ' row(s)');
+    --
+    delete from f2ndfl_arh_vych a
+    where  a.r_sprid = p_ref_id;
+    --
+    plog('  f2ndfl_arh_vych deleted     ' || sql%rowcount || ' row(s)');
+    --
+    delete from f2ndfl_arh_itogi a
+    where  a.r_sprid = p_ref_id;
+    --
+    plog('  f2ndfl_arh_itogi deleted    ' || sql%rowcount || ' row(s)');
+    --
+    delete from f2ndfl_arh_uved a
+    where  a.r_sprid = p_ref_id;
+    --
+    plog('  f2ndfl_arh_uved deleted     ' || sql%rowcount || ' row(s)');
+    --
+    delete from f2ndfl_arh_spravki a
+    where  a.id = p_ref_id;
+    --
+    plog('  f2ndfl_arh_spravki deleted  ' || sql%rowcount || ' row(s)');
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end purge_arh_tbl;
+
+  /**
+   * Процедура delete_reference удаляет данные справки из таблиц F2NDFL_, кроме F2NDFL_ARH_NOMSPR
+   *  Если данные справки включены в XML для ГНИ - удаление отменяется.
+   * Внимание: для исходных справок (корр.номер=0) данные по сотрудникам фонда не удаляются, также не удаляются данные по 9 типу дохода (зп)
+   *   Т.е. если справка относится к сотруднику фонда, не являющемуся контрагентом - она не будет удалена, 
+   *        если сотрудник является контрагентом - будут удалены данные по всем типам дохода, кроме 9 (зп)
+   *
+   * @param p_ref_id - ID удаляемой справки
+   * @param p_commit - флаг фиксации транзакции
+   *
+   */
+  procedure delete_reference(
+    p_ref_id f2ndfl_arh_spravki.id%type,
+    p_commit boolean default false
+  ) is
+    l_ref_row f2ndfl_arh_spravki%rowtype;
+  begin
+    --
+    init_exceptions;
+    --
+    if is_employee_ref(p_ref_id) then
+      fix_exception($$PLSQL_LINE, 'Удаление отклонено. Справка по сотруднику фонда, не являющемся контрагентом фонда.');
+      raise utl_error_api.G_EXCEPTION;
+    end if;
+    --
+    l_ref_row := get_reference_row(p_ref_id);
+    --
+    if l_ref_row.r_xmlid is not null then
+      fix_exception($$PLSQL_LINE, 'Удаление отклонено. Данные справки включены в файл для передачи в ГНИ.');
+      raise utl_error_api.G_EXCEPTION;
+    end if;
+    --
+    plog(
+      'Удаление справки №' || l_ref_row.nom_spr || ' (корр. ' || l_ref_row.nom_korr || ') за ' || l_ref_row.god || ' по ' || 
+      l_ref_row.familiya || ' ' || l_ref_row.imya || ' ' || l_ref_row.otchestvo
+    );
+    --
+    purge_load_tbl(l_ref_row);
+    --
+    purge_arh_tbl(l_ref_row.id);
+    --
+    if p_commit then 
+      commit;
+    else
+      plog('Транзакция не зафиксирована');
+    end if;
+    --
+    plog('Удаление завершено');
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      dbms_output.put_line(utl_error_api.get_exception_full);
+      if p_commit then rollback; end if;
+      raise;
+  end delete_reference;
   
 end f2ndfl_arh_spravki_api;
 /
