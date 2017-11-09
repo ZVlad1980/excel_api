@@ -1,4 +1,4 @@
-create or replace noneditionable package body utl_error_api is
+create or replace package body utl_error_api is
 
   type g_exception_rec_type is record (
     routine     varchar2(200),
