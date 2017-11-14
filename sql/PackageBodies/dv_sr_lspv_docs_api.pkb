@@ -4,11 +4,13 @@ create or replace package body dv_sr_lspv_docs_api is
   C_PACKAGE_NAME constant varchar2(32) := $$plsql_unit;
   
   --
-  G_START_DATE date;
-  G_END_DATE   date;
-  
+  G_START_DATE     date;
+  G_END_DATE       date;
+  G_IS_BUF         varchar2(1) := 'N';
+  G_START_DATE_BUF date;
+  G_END_DATE_BUF   date;
   /**
-   * ÐžÐ±Ð²ÐµÑ€Ñ‚ÐºÐ¸ Ð¾Ð±Ñ€Ð°Ð±Ð¾Ñ‚ÐºÐ¸ Ð¾ÑˆÐ¸Ð±Ð¾Ðº
+   * Îáâåðòêè îáðàáîòêè îøèáîê
    */
   procedure fix_exception(p_line number, p_msg varchar2 default null) is
   begin
@@ -18,10 +20,33 @@ create or replace package body dv_sr_lspv_docs_api is
   end;
   
   /**
-   * Ð¤ÑƒÐ½ÐºÑ†Ð¸Ð¸ Ð¾Ð±Ð²ÐµÑ€Ñ‚ÐºÐ¸ Ð´Ð»Ñ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ð¹
+   * Ôóíêöèè îáâåðòêè äëÿ ïðåäñòàâëåíèé
    */
   function get_start_date return date deterministic is begin return G_START_DATE; end;
   function get_end_date   return date deterministic is begin return G_END_DATE; end;
+  function get_is_buff    return varchar2 deterministic is begin return G_IS_BUF; end;
+  function get_start_date_buf  return date deterministic is begin return G_START_DATE_BUF; end;
+  function get_end_date_buf    return date deterministic is begin return G_END_DATE_BUF; end;
+  /**
+   * Ïðîöåäóðû set_is_buff è unset_is_buff - âêëþ÷àþò è âûêëþ÷àþò ó÷åò áóôåðà ðàñ÷åòîâ VYPLACH... â ïðåäñòàâëåíèÿõ
+   */
+  procedure set_is_buff is
+  begin 
+    G_IS_BUF         := 'Y';
+    if extract(month from trunc(G_END_DATE)) = 12 then
+      unset_is_buff;
+    else
+      G_START_DATE_BUF := trunc(G_END_DATE) + 1;
+      G_END_DATE_BUF   := add_months(trunc(G_START_DATE_BUF, 'MM'), 1) - 1;
+    end if;
+  end set_is_buff;
+  
+  procedure unset_is_buff is 
+  begin 
+    G_IS_BUF := 'N'; 
+    G_START_DATE_BUF := null;
+    G_END_DATE_BUF := null;
+  end unset_is_buff;
   
   procedure set_period(
     p_start_date date,
@@ -29,7 +54,12 @@ create or replace package body dv_sr_lspv_docs_api is
   ) is
   begin
     G_START_DATE := p_start_date;
-    G_END_DATE   := trunc(p_end_date) + 1 - .00001; --Ð½Ð° ÐºÐ¾Ð½ÐµÑ† ÑÑƒÑ‚Ð¾Ðº
+    G_END_DATE   := trunc(p_end_date) + 1 - .00001; --íà êîíåö ñóòîê
+    if get_is_buff = 'Y' then
+      set_is_buff; --ïåðåñ÷åò ïåðèîäà, åñëè âêëþ÷åí ó÷åò áóôåðà VYPLACH
+    else
+      unset_is_buff;
+    end if;
   end set_period;
   
   procedure set_period(
@@ -43,7 +73,7 @@ create or replace package body dv_sr_lspv_docs_api is
   end set_period; 
   
   /**
-   * ÐŸÑ€Ð¾Ñ†ÐµÐ´ÑƒÑ€Ð° ÑƒÑÑ‚Ð°Ð½Ð¾Ð²ÐºÐ¸ Ð¿ÐµÑ€Ð¸Ð¾Ð´Ð°
+   * Ïðîöåäóðà óñòàíîâêè ïåðèîäà
    */
   procedure set_period(p_year number) is
   begin
@@ -290,8 +320,8 @@ create or replace package body dv_sr_lspv_docs_api is
   end update_dv_sr_lspv_docs_t;
 
   /**
-   * ÐŸÑ€Ð¾Ñ†ÐµÐ´ÑƒÑ€Ð° synchronize ÑÐ¸Ð½Ñ…Ñ€Ð¾Ð½Ð¸Ð·Ð¸Ñ€ÑƒÐµÑ‚ Ñ‚Ð°Ð±Ð»Ð¸Ñ†Ñƒ dv_sr_lspv_docs_t Ð´Ð°Ð½Ð½Ñ‹Ð¼Ð¸ Ð¸Ð· Ñ‚Ð°Ð±Ð»Ð¸Ñ†Ñ‹ fnd.dv_sr_lspv
-   *  Ð·Ð° ÑƒÐºÐ°Ð·Ð°Ð½Ð½Ñ‹Ð¹ Ð³Ð¾Ð´ (p_year)
+   * Ïðîöåäóðà synchronize ñèíõðîíèçèðóåò òàáëèöó dv_sr_lspv_docs_t äàííûìè èç òàáëèöû fnd.dv_sr_lspv
+   *  çà óêàçàííûé ãîä (p_year)
    */
   procedure synchronize(p_year in number) is
     procedure stats_ is
@@ -322,11 +352,11 @@ create or replace package body dv_sr_lspv_docs_api is
   end synchronize;
   
   /**
-   * Ð¤ÑƒÐ½ÐºÑ†Ð¸Ñ Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»ÑÐµÑ‚ ÑÐ²Ð»ÑÐµÑ‚ÑÑ Ð»Ð¸ Ð¾Ð¿ÐµÑ€Ð°Ñ†Ð¸Ñ - Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚Ð¾Ð¼ Ð½Ð°Ð»Ð¾Ð³Ð° Ð¿Ð¾ Ð·Ð°ÑÐ²Ð»ÐµÐ½Ð¸ÑŽ
+   * Ôóíêöèÿ îïðåäåëÿåò ÿâëÿåòñÿ ëè îïåðàöèÿ - âîçâðàòîì íàëîãà ïî çàÿâëåíèþ
    *
-   *  ÐÐ° Ñ‚ÐµÐºÑƒÑ‰Ð¸Ð¹ Ð¼Ð¾Ð¼ÐµÐ½Ñ‚, Ðº Ñ‚Ð°ÐºÐ¾Ð²Ñ‹Ð¼ Ð¾Ñ‚Ð½Ð¾ÑÑÑ‚ÑÑ:
-   *    - Ð¾Ð¿ÐµÑ€Ð°Ñ†Ð¸Ð¸ ÐºÐ¾Ñ€Ñ€ÐµÐºÑ†Ð¸Ð¸ Ð½Ð°Ð»Ð¾Ð³Ð° Ð¿Ð¾ Ð²Ñ‹ÐºÑƒÐ¿Ð½Ñ‹Ð¼ ÑÑƒÐ¼Ð¼Ð°Ð¼
-   *    - Ð¾Ð¿ÐµÑ€Ð°Ñ†Ð¸Ð¸ ÐºÐ¾Ñ€Ñ€ÐµÐºÑ†Ð¸Ð¸ Ð½Ð°Ð»Ð¾Ð³Ð° Ð¿Ð¾ Ð¿ÐµÐ½ÑÐ¸Ð¸, Ð¿Ñ€Ð¸ Ð½Ð°Ð»Ð¸Ñ‡Ð¸Ð¸ Ð¾Ð¿ÐµÑ€Ð°Ñ†Ð¸Ð¸ Ð¿Ð¾ 83 ÑÑ‡ÐµÑ‚Ñƒ Ð¸ ÑÑ‚Ð¾Ð¼Ñƒ Ð¶Ðµ Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚Ñƒ Ð½Ð° Ð¾Ð±Ñ€Ð°Ñ‚Ð½ÑƒÑŽ ÑÑƒÐ¼Ð¼Ñƒ
+   *  Íà òåêóùèé ìîìåíò, ê òàêîâûì îòíîñÿòñÿ:
+   *    - îïåðàöèè êîððåêöèè íàëîãà ïî âûêóïíûì ñóììàì
+   *    - îïåðàöèè êîððåêöèè íàëîãà ïî ïåíñèè, ïðè íàëè÷èè îïåðàöèè ïî 83 ñ÷åòó è ýòîìó æå äîêóìåíòó íà îáðàòíóþ ñóììó
    */
   function is_tax_return(
     p_nom_vkl          fnd.dv_sr_lspv.nom_vkl%type,
@@ -377,6 +407,6 @@ create or replace package body dv_sr_lspv_docs_api is
   end is_tax_return;
 
 begin
-  set_period(p_year => extract(year from sysdate));
+  set_period(p_end_date => trunc(sysdate, 'MM') - 1);
 end dv_sr_lspv_docs_api;
 /

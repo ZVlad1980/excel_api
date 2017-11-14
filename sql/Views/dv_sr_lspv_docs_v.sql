@@ -74,4 +74,40 @@ with sp_no_residents_w as (
          d.process_id, 
          d.is_tax_return
   from   dv_sr_lspv_docs_w d
+  union all
+  select d.id, 
+         d.year_op,
+         d.month_op,
+         d.quarter_op,
+         d.date_op, 
+         d.ssylka_doc_op, 
+         d.type_op, 
+         d.year_doc,
+         d.month_doc,
+         d.quarter_doc,
+         d.date_doc, 
+         d.ssylka_doc, 
+         d.nom_vkl, 
+         d.nom_ips, 
+         d.ssylka_fl, 
+         d.gf_person, 
+         d.pen_scheme_code,
+         d.det_charge_type,
+         d.revenue,
+         d.revenue_curr_year,
+         d.benefit, 
+         d.tax,
+         d.tax tax_retained,
+         d.tax_retained_old,
+         d.tax_return,
+         d.tax_rate,
+         d.tax_rate_op,
+         d.tax_83, 
+         d.source_revenue, 
+         d.source_benefit, 
+         d.source_tax, 
+         d.process_id, 
+         d.is_tax_return
+  from   dv_sr_lspv_buf_v d
+  where  dv_sr_lspv_docs_api.get_is_buff = 'Y'
 /
