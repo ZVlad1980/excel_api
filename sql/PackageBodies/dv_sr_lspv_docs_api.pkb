@@ -8,7 +8,7 @@ create or replace package body dv_sr_lspv_docs_api is
   G_END_DATE   date;
   
   /**
-   * РћР±РІРµСЂС‚РєРё РѕР±СЂР°Р±РѕС‚РєРё РѕС€РёР±РѕРє
+   * Обвертки обработки ошибок
    */
   procedure fix_exception(p_line number, p_msg varchar2 default null) is
   begin
@@ -18,7 +18,7 @@ create or replace package body dv_sr_lspv_docs_api is
   end;
   
   /**
-   * Р¤СѓРЅРєС†РёРё РѕР±РІРµСЂС‚РєРё РґР»СЏ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёР№
+   * Функции обвертки для представлений
    */
   function get_start_date return date deterministic is begin return G_START_DATE; end;
   function get_end_date   return date deterministic is begin return G_END_DATE; end;
@@ -29,7 +29,7 @@ create or replace package body dv_sr_lspv_docs_api is
   ) is
   begin
     G_START_DATE := p_start_date;
-    G_END_DATE   := trunc(p_end_date) + 1 - .00001; --РЅР° РєРѕРЅРµС† СЃСѓС‚РѕРє
+    G_END_DATE   := trunc(p_end_date) + 1 - .00001; --на конец суток
   end set_period;
   
   procedure set_period(
@@ -43,7 +43,7 @@ create or replace package body dv_sr_lspv_docs_api is
   end set_period; 
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° СѓСЃС‚Р°РЅРѕРІРєРё РїРµСЂРёРѕРґР°
+   * Процедура установки периода
    */
   procedure set_period(p_year number) is
   begin
@@ -168,8 +168,7 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     set_process_state(
       p_process_id, 
-      'PROCESSED', 
-      p_deleted_rows => sql%rowcount
+      'PROCESSED'
     );
     --
     merge into dv_sr_lspv_docs_t d
@@ -290,8 +289,8 @@ create or replace package body dv_sr_lspv_docs_api is
   end update_dv_sr_lspv_docs_t;
 
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° synchronize СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚ С‚Р°Р±Р»РёС†Сѓ dv_sr_lspv_docs_t РґР°РЅРЅС‹РјРё РёР· С‚Р°Р±Р»РёС†С‹ fnd.dv_sr_lspv
-   *  Р·Р° СѓРєР°Р·Р°РЅРЅС‹Р№ РіРѕРґ (p_year)
+   * Процедура synchronize синхронизирует таблицу dv_sr_lspv_docs_t данными из таблицы fnd.dv_sr_lspv
+   *  за указанный год (p_year)
    */
   procedure synchronize(p_year in number) is
     procedure stats_ is
@@ -322,11 +321,11 @@ create or replace package body dv_sr_lspv_docs_api is
   end synchronize;
   
   /**
-   * Р¤СѓРЅРєС†РёСЏ РѕРїСЂРµРґРµР»СЏРµС‚ СЏРІР»СЏРµС‚СЃСЏ Р»Рё РѕРїРµСЂР°С†РёСЏ - РІРѕР·РІСЂР°С‚РѕРј РЅР°Р»РѕРіР° РїРѕ Р·Р°СЏРІР»РµРЅРёСЋ
+   * Функция определяет является ли операция - возвратом налога по заявлению
    *
-   *  РќР° С‚РµРєСѓС‰РёР№ РјРѕРјРµРЅС‚, Рє С‚Р°РєРѕРІС‹Рј РѕС‚РЅРѕСЃСЏС‚СЃСЏ:
-   *    - РѕРїРµСЂР°С†РёРё РєРѕСЂСЂРµРєС†РёРё РЅР°Р»РѕРіР° РїРѕ РІС‹РєСѓРїРЅС‹Рј СЃСѓРјРјР°Рј
-   *    - РѕРїРµСЂР°С†РёРё РєРѕСЂСЂРµРєС†РёРё РЅР°Р»РѕРіР° РїРѕ РїРµРЅСЃРёРё, РїСЂРё РЅР°Р»РёС‡РёРё РѕРїРµСЂР°С†РёРё РїРѕ 83 СЃС‡РµС‚Сѓ Рё СЌС‚РѕРјСѓ Р¶Рµ РґРѕРєСѓРјРµРЅС‚Сѓ РЅР° РѕР±СЂР°С‚РЅСѓСЋ СЃСѓРјРјСѓ
+   *  На текущий момент, к таковым относятся:
+   *    - операции коррекции налога по выкупным суммам
+   *    - операции коррекции налога по пенсии, при наличии операции по 83 счету и этому же документу на обратную сумму
    */
   function is_tax_return(
     p_nom_vkl          fnd.dv_sr_lspv.nom_vkl%type,
