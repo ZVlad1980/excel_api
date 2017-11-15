@@ -4,9 +4,11 @@ create or replace package body dv_sr_lspv_docs_api is
   C_PACKAGE_NAME constant varchar2(32) := $$plsql_unit;
   
   --
-  G_START_DATE date;
-  G_END_DATE   date;
-  
+  G_START_DATE     date;
+  G_END_DATE       date;
+  G_IS_BUF         varchar2(1) := 'N';
+  G_START_DATE_BUF date;
+  G_END_DATE_BUF   date;
   /**
    * Обвертки обработки ошибок
    */
@@ -22,6 +24,29 @@ create or replace package body dv_sr_lspv_docs_api is
    */
   function get_start_date return date deterministic is begin return G_START_DATE; end;
   function get_end_date   return date deterministic is begin return G_END_DATE; end;
+  function get_is_buff    return varchar2 deterministic is begin return G_IS_BUF; end;
+  function get_start_date_buf  return date deterministic is begin return G_START_DATE_BUF; end;
+  function get_end_date_buf    return date deterministic is begin return G_END_DATE_BUF; end;
+  /**
+   * Процедуры set_is_buff и unset_is_buff - включают и выключают учет буфера расчетов VYPLACH... в представлениях
+   */
+  procedure set_is_buff is
+  begin 
+    G_IS_BUF         := 'Y';
+    if extract(month from trunc(G_END_DATE)) = 12 then
+      unset_is_buff;
+    else
+      G_START_DATE_BUF := trunc(G_END_DATE) + 1;
+      G_END_DATE_BUF   := add_months(trunc(G_START_DATE_BUF, 'MM'), 1) - 1;
+    end if;
+  end set_is_buff;
+  
+  procedure unset_is_buff is 
+  begin 
+    G_IS_BUF := 'N'; 
+    G_START_DATE_BUF := null;
+    G_END_DATE_BUF := null;
+  end unset_is_buff;
   
   procedure set_period(
     p_start_date date,
@@ -30,6 +55,11 @@ create or replace package body dv_sr_lspv_docs_api is
   begin
     G_START_DATE := p_start_date;
     G_END_DATE   := trunc(p_end_date) + 1 - .00001; --на конец суток
+    if get_is_buff = 'Y' then
+      set_is_buff; --пересчет периода, если включен учет буфера VYPLACH
+    else
+      unset_is_buff;
+    end if;
   end set_period;
   
   procedure set_period(
@@ -127,8 +157,8 @@ create or replace package body dv_sr_lspv_docs_api is
     update dv_sr_lspv_prc_t p
     set    p.state         = p_state,
            p.error_msg     = p_error_msg,
-           p.deleted_rows  = p_deleted_rows,
            last_udpated_at = default,
+           p.deleted_rows  = p_deleted_rows,
            error_rows      = p_error_rows
     where  p.id = p_process_id;
     --
@@ -163,7 +193,10 @@ create or replace package body dv_sr_lspv_docs_api is
   end get_error_rows_cnt;
   /**
    */
-  procedure update_dv_sr_lspv_docs_t(p_process_id dv_sr_lspv_prc_t.id%type) is
+  procedure update_dv_sr_lspv_docs_t(
+    p_process_id dv_sr_lspv_prc_t.id%type
+  ) is
+    l_del_rows number;
   begin
     --
     set_process_state(
@@ -270,10 +303,12 @@ create or replace package body dv_sr_lspv_docs_api is
            d.process_id = p_process_id
     where  d.process_id <> p_process_id;
     --
+    l_del_rows := sql%rowcount;
+    --
     set_process_state(
       p_process_id, 
       'SUCCESS', 
-      p_deleted_rows => sql%rowcount,
+      p_deleted_rows => l_del_rows,
       p_error_rows   => get_error_rows_cnt(p_process_id)
     );
     --
@@ -310,7 +345,9 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     set_period(p_year);
     --
-    update_dv_sr_lspv_docs_t(create_process);
+    update_dv_sr_lspv_docs_t(
+      p_process_id => create_process
+    );
     --
     stats_;
     --
@@ -376,6 +413,6 @@ create or replace package body dv_sr_lspv_docs_api is
   end is_tax_return;
 
 begin
-  set_period(p_year => extract(year from sysdate));
+  set_period(p_end_date => trunc(sysdate, 'MM') - 1);
 end dv_sr_lspv_docs_api;
 /

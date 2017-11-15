@@ -134,6 +134,10 @@ prompt install dv_sr_lspv_errors_v.sql
 @@Views\dv_sr_lspv_errors_v.sql
 show error
 
+prompt install dv_sr_lspv_buf_v.sql
+@@Views\dv_sr_lspv_buf_v.sql
+show error
+
 prompt install dv_sr_lspv_docs_v.sql
 @@Views\dv_sr_lspv_docs_v.sql
 show error
