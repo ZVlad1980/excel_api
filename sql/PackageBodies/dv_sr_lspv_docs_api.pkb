@@ -235,7 +235,7 @@ create or replace package body dv_sr_lspv_docs_api is
           d.nom_ips       = u.nom_ips         and 
           d.gf_person     = u.gf_person       and 
           d.tax_rate      = u.tax_rate     
-         )
+         )--DATE_OP, SSYLKA_DOC_OP, DATE_DOC, SSYLKA_DOC, NOM_VKL, NOM_IPS, GF_PERSON, TAX_RATE
     when matched then
       update set
         d.det_charge_type = u.det_charge_type,
