@@ -25,13 +25,23 @@ create or replace package body ndfl_report_api is
     p_end_date      date
   ) return sys_refcursor is
     --
-    l_result     sys_refcursor;
+    l_result      sys_refcursor;
+    l_report_code varchar2(100);
     --
   begin
     --
+    l_report_code := p_report_code;
     dv_sr_lspv_docs_api.set_period(p_end_date);
+    if p_report_code = 'tax_diff_det_report' then
+      dv_sr_lspv_docs_api.set_is_buff;
+    else
+      dv_sr_lspv_docs_api.unset_is_buff;
+      if l_report_code = 'tax_diff_det_report2' then
+        l_report_code := 'tax_diff_det_report';
+      end if;
+    end if;
     --
-    case p_report_code
+    case l_report_code
       when 'ndfl2_tax_corr' then
         open l_result for
           select case 
@@ -180,6 +190,26 @@ create or replace package body ndfl_report_api is
           where  1=1
           and    p.fk_contragent = d.gf_person
           order by d.tax_diff;
+      when 'tax_diff_det_report' then
+        open l_result for
+          select d.gf_person, 
+                 d.nom_vkl, 
+                 d.nom_ips, 
+                 d.pen_scheme_code,
+                 d.lastname, 
+                 d.firstname, 
+                 d.secondname, 
+                 d.tax_rate, 
+                 d.revenue, 
+                 d.benefit, 
+                 d.tax, 
+                 d.revenue_total, 
+                 d.benefit_total, 
+                 d.tax_retained, 
+                 d.tax_calc, 
+                 d.tax_diff
+          from   dv_sr_lspv_tax_diff_det_v d
+          order  by d.tax_diff, d.gf_person, d.nom_vkl, d.nom_ips;
       when 'ndfl6_part1_general_data' then
         open l_result for
           select d.total_persons,
@@ -329,7 +359,7 @@ create or replace package body ndfl_report_api is
           and    emp.god = extract(year from p_end_date)
           order  by emp.familiya, emp.imya, emp.otchestvo, emp.data_rozhd;
       else
-        fix_exception('get_report('||p_report_code || '): Неизвестный код отчета');
+        fix_exception('get_report('||l_report_code || '): Неизвестный код отчета');
         raise utl_error_api.G_EXCEPTION;
     end case;
     --

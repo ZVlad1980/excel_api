@@ -157,8 +157,8 @@ create or replace package body dv_sr_lspv_docs_api is
     update dv_sr_lspv_prc_t p
     set    p.state         = p_state,
            p.error_msg     = p_error_msg,
-           p.deleted_rows  = p_deleted_rows,
            last_udpated_at = default,
+           p.deleted_rows  = p_deleted_rows,
            error_rows      = p_error_rows
     where  p.id = p_process_id;
     --
@@ -193,13 +193,15 @@ create or replace package body dv_sr_lspv_docs_api is
   end get_error_rows_cnt;
   /**
    */
-  procedure update_dv_sr_lspv_docs_t(p_process_id dv_sr_lspv_prc_t.id%type) is
+  procedure update_dv_sr_lspv_docs_t(
+    p_process_id dv_sr_lspv_prc_t.id%type
+  ) is
+    l_del_rows number;
   begin
     --
     set_process_state(
       p_process_id, 
-      'PROCESSED', 
-      p_deleted_rows => sql%rowcount
+      'PROCESSED'
     );
     --
     merge into dv_sr_lspv_docs_t d
@@ -233,7 +235,7 @@ create or replace package body dv_sr_lspv_docs_api is
           d.nom_ips       = u.nom_ips         and 
           d.gf_person     = u.gf_person       and 
           d.tax_rate      = u.tax_rate     
-         )--DATE_OP, SSYLKA_DOC_OP, DATE_DOC, SSYLKA_DOC, NOM_VKL, NOM_IPS, GF_PERSON, TAX_RATE
+         )
     when matched then
       update set
         d.det_charge_type = u.det_charge_type,
@@ -301,10 +303,12 @@ create or replace package body dv_sr_lspv_docs_api is
            d.process_id = p_process_id
     where  d.process_id <> p_process_id;
     --
+    l_del_rows := sql%rowcount;
+    --
     set_process_state(
       p_process_id, 
       'SUCCESS', 
-      p_deleted_rows => sql%rowcount,
+      p_deleted_rows => l_del_rows,
       p_error_rows   => get_error_rows_cnt(p_process_id)
     );
     --
@@ -341,7 +345,9 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     set_period(p_year);
     --
-    update_dv_sr_lspv_docs_t(create_process);
+    update_dv_sr_lspv_docs_t(
+      p_process_id => create_process
+    );
     --
     stats_;
     --
