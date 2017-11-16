@@ -10,6 +10,10 @@ prompt install dv_sr_lspv_docs_t.sql
 @@Tables\dv_sr_lspv_docs_t.sql
 show error
 
+prompt install dv_sr_lspv_tax_diff_buf.sql
+@@Tables\dv_sr_lspv_tax_diff_buf.sql
+show error
+
 prompt install f_ndfl_spisrab_seq.sql
 @@Tables\f_ndfl_spisrab_seq.sql
 show error
@@ -200,6 +204,10 @@ show error
 
 prompt install dv_sr_lspv_tax_diff_v.sql
 @@Views\dv_sr_lspv_tax_diff_v.sql
+show error
+
+prompt install dv_sr_lspv_tax_diff_det_v.sql
+@@Views\dv_sr_lspv_tax_diff_det_v.sql
 show error
 
 prompt install ndfl_report_tax_retained_v.sql

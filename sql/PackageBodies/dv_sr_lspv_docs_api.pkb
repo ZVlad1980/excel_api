@@ -411,6 +411,75 @@ create or replace package body dv_sr_lspv_docs_api is
       );
       return null;
   end is_tax_return;
+  
+  /**
+   * Процедура build_tax_diff формирует данные по расхождению удержанного и исчисленного налога
+   *   Данные пишутся в таблицу dv_sr_lspv_tax_diff_buf, таблица перед формированием очищается!
+   *
+   * @param p_end_date - дата окончания периода выборки (по умолчанию - дата окончания предыдущего месяца от текущей даты)
+   *
+   */
+  procedure build_tax_diff(
+    p_end_date date default null
+  ) is
+  begin
+    --
+    set_period(
+      p_end_date => nvl(p_end_date, trunc(sysdate, 'MM') - 1)
+    );
+    set_is_buff;
+    --
+    execute immediate 'truncate table dv_sr_lspv_tax_diff_buf';
+    --
+    insert into dv_sr_lspv_tax_diff_buf(
+      gf_person,
+      lastname,
+      firstname,
+      secondname,
+      ssylka_fl,
+      nom_vkl,
+      nom_ips,
+      pen_scheme,
+      revenue_shifr_schet,
+      tax_shifr_schet,
+      revenue,
+      benefit,
+      tax,
+      tax_retained,
+      tax_calc,
+      tax_diff
+    ) select d.gf_person,
+             d.lastname, 
+             d.firstname, 
+             d.secondname,
+             d.ssylka_fl,
+             d.nom_vkl,
+             d.nom_ips, 
+             d.pen_scheme,
+             d.revenue_shifr_schet,
+             d.tax_shifr_schet,
+             d.revenue, 
+             d.benefit, 
+             d.tax,
+             case row_number()over(partition by d.gf_person order by d.pen_scheme, d.det_charge_type, d.tax_rate_op, d.nom_vkl, d.nom_ips)
+               when 1 then d.tax_retained
+             end tax_retained,
+             case row_number()over(partition by d.gf_person order by d.pen_scheme, d.det_charge_type, d.tax_rate_op, d.nom_vkl, d.nom_ips)
+               when 1 then d.tax_calc
+             end tax_calc, 
+             case row_number()over(partition by d.gf_person order by d.pen_scheme, d.det_charge_type, d.tax_rate_op, d.nom_vkl, d.nom_ips)
+               when 1 then d.tax_diff
+             end tax_diff
+      from   dv_sr_lspv_tax_diff_det_v d;
+    --
+    commit;
+    --
+  exception
+    when others then
+      fix_exception($$plsql_line);
+      dbms_output.put_line(utl_error_api.get_exception_full);
+      raise;
+  end build_tax_diff;
 
 begin
   set_period(p_end_date => trunc(sysdate, 'MM') - 1);
