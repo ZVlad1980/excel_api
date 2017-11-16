@@ -192,24 +192,30 @@ create or replace package body ndfl_report_api is
           order by d.tax_diff;
       when 'tax_diff_det_report' then
         open l_result for
-          select d.gf_person, 
-                 d.nom_vkl, 
-                 d.nom_ips, 
-                 d.pen_scheme_code,
+          select d.gf_person,
                  d.lastname, 
                  d.firstname, 
-                 d.secondname, 
-                 d.tax_rate, 
+                 d.secondname,
+                 d.ssylka_fl,
+                 d.nom_vkl,
+                 d.nom_ips, 
+                 d.pen_scheme,
+                 d.revenue_shifr_schet,
+                 d.tax_shifr_schet,
                  d.revenue, 
                  d.benefit, 
-                 d.tax, 
-                 d.revenue_total, 
-                 d.benefit_total, 
-                 d.tax_retained, 
-                 d.tax_calc, 
-                 d.tax_diff
+                 d.tax,
+                 case row_number()over(partition by d.gf_person order by d.pen_scheme, d.det_charge_type, d.tax_rate_op, d.nom_vkl, d.nom_ips)
+                   when 1 then d.tax_retained
+                 end tax_retained,
+                 case row_number()over(partition by d.gf_person order by d.pen_scheme, d.det_charge_type, d.tax_rate_op, d.nom_vkl, d.nom_ips)
+                   when 1 then d.tax_calc
+                 end tax_calc, 
+                 case row_number()over(partition by d.gf_person order by d.pen_scheme, d.det_charge_type, d.tax_rate_op, d.nom_vkl, d.nom_ips)
+                   when 1 then d.tax_diff
+                 end tax_diff
           from   dv_sr_lspv_tax_diff_det_v d
-          order  by d.tax_diff, d.gf_person, d.nom_vkl, d.nom_ips;
+          order by d.gf_person, d.pen_scheme, d.det_charge_type, d.tax_rate_op, d.nom_vkl, d.nom_ips;
       when 'ndfl6_part1_general_data' then
         open l_result for
           select d.total_persons,

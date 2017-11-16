@@ -64,5 +64,18 @@ create or replace package dv_sr_lspv_docs_api is
     p_amount           fnd.dv_sr_lspv.summa%type
   ) return varchar2;
   
+  /**
+   * Процедура build_tax_diff формирует данные по расхождению удержанного и исчисленного налога
+   *   Данные пишутся в таблицу dv_sr_lspv_tax_diff_buf, таблица перед формированием очищается!
+   *   Для корректного вывода данных, использовать сортировку: 
+   *     order by d.gf_person, d.pen_scheme, d.det_charge_type, d.tax_rate_op, d.nom_vkl, d.nom_ips
+   *
+   * @param p_end_date - дата окончания периода выборки (по умолчанию - дата окончания предыдущего месяца от текущей даты)
+   *
+   */
+  procedure build_tax_diff(
+    p_end_date date default null
+  );
+  
 end dv_sr_lspv_docs_api;
 /
