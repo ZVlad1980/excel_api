@@ -171,10 +171,26 @@ create or replace package body ndfl_report_api is
                      'Не определен GF_PERSON участника (см. sp_fiz_lits_non_ident_v)'
                    when 4 then
                      'Не определен GF_PERSON получателя пособия (см. vyplach_posob_non_ident_v)'
+                   when 5 then
+                     'Вторая или более выплата пособия по одному контрагенту'
+                   when 6 then
+                     'Персональные данные: ' ||
+                     case
+                       when bitand(power(2, 0), r.error_sub_code) > 0 then 'ФИО'
+                     end || ', ' ||
+                     case
+                       when bitand(power(2, 1), r.error_sub_code) > 0 then 'ДР'
+                     end || ', ' ||
+                     case
+                       when bitand(power(2, 2), r.error_sub_code) > 0 then 'ИНН'
+                     end || ', ' ||
+                     case
+                       when bitand(power(2, 3), r.error_sub_code) > 0 then 'статус резидента'
+                     end
                  end err_description,
                  r.fio
           from   dv_sr_lspv_errors_v r
-          order by r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
+          order by r.error_code, r.gf_person, r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
       when 'tax_diff_report' then
         open l_result for
           select d.gf_person,
