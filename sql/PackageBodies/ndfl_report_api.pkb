@@ -42,6 +42,27 @@ create or replace package body ndfl_report_api is
     end if;
     --
     case l_report_code
+      when 'synch_error_report' then
+        open l_result for
+          select case when e.type_op = -1 then 'Коррекция' end type_op,
+                 substr(e.date_op, 1, 10) date_op,
+                 e.ssylka_doc_op,
+                 substr(e.date_doc, 1, 10) date_doc,
+                 e.ssylka_doc,
+                 e.ssylka_fl,
+                 e.nom_vkl,
+                 e.nom_ips,
+                 e.gf_person,
+                 e.det_charge_type,
+                 e.ora_err_mesg$,
+                 e.process_id
+          from   err$_dv_sr_lspv_docs_t e
+          where  e.process_id in (
+            select p.id
+            from   dv_sr_lspv_prc_t p
+            order by p.created_at desc
+            fetch first rows only
+          );
       when 'ndfl2_tax_corr' then
         open l_result for
           select case 
@@ -171,10 +192,26 @@ create or replace package body ndfl_report_api is
                      'Не определен GF_PERSON участника (см. sp_fiz_lits_non_ident_v)'
                    when 4 then
                      'Не определен GF_PERSON получателя пособия (см. vyplach_posob_non_ident_v)'
+                   when 5 then
+                     'Вторая или более выплата пособия по одному контрагенту'
+                   when 6 then
+                     'Персональные данные: ' ||
+                     case
+                       when bitand(power(2, 0), r.error_sub_code) > 0 then 'ФИО'
+                     end || ', ' ||
+                     case
+                       when bitand(power(2, 1), r.error_sub_code) > 0 then 'ДР'
+                     end || ', ' ||
+                     case
+                       when bitand(power(2, 2), r.error_sub_code) > 0 then 'ИНН'
+                     end || ', ' ||
+                     case
+                       when bitand(power(2, 3), r.error_sub_code) > 0 then 'статус резидента'
+                     end
                  end err_description,
                  r.fio
           from   dv_sr_lspv_errors_v r
-          order by r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
+          order by r.error_code, r.gf_person, r.nom_vkl, r.nom_ips, r.shifr_schet, r.SUB_SHIFR_SCHET, r.ssylka_doc;
       when 'tax_diff_report' then
         open l_result for
           select d.gf_person,

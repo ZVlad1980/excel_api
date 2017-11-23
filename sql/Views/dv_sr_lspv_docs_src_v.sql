@@ -40,9 +40,8 @@ create or replace view dv_sr_lspv_docs_src_v as
          case dc.det_charge_type
            when 'RITUAL' then
              (select vp.gf_person
-              from   fnd.vyplach_posob vp
-              where  vp.tip_vypl = 1010
-              and    vp.ssylka_doc = dc.ssylka_doc
+              from   vyplach_posob_v vp
+              where  vp.ssylka_doc = dc.ssylka_doc
               and    vp.ssylka = lspv.ssylka)
            else
              lspv.gf_person

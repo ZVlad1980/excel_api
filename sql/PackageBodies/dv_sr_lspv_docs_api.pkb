@@ -76,15 +76,22 @@ create or replace package body dv_sr_lspv_docs_api is
    * Процедура установки периода
    */
   procedure set_period(p_year number) is
+    l_end_date date;
   begin
     if not p_year between 1995 and 2030 then
       fix_exception($$plsql_line, 'Year no correct: ' || p_year);
       raise utl_error_api.G_EXCEPTION;
     end if;
     --
+    if p_year = extract(year from sysdate) then
+      l_end_date := trunc(sysdate, 'MM') - .00001; --дата завершения - предыдущий месяц
+    else
+      l_end_date := to_date(p_year || '1231', 'yyyymmdd');
+    end if;
+    --
     set_period(
       p_start_date => to_date(p_year || '0101', 'yyyymmdd'),
-      p_end_date   => to_date(p_year || '1231', 'yyyymmdd')
+      p_end_date   => l_end_date
     );
     --
   exception
