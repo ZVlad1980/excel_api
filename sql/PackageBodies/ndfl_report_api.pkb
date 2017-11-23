@@ -42,6 +42,27 @@ create or replace package body ndfl_report_api is
     end if;
     --
     case l_report_code
+      when 'synch_error_report' then
+        open l_result for
+          select case when e.type_op = -1 then 'Коррекция' end type_op,
+                 substr(e.date_op, 1, 10) date_op,
+                 e.ssylka_doc_op,
+                 substr(e.date_doc, 1, 10) date_doc,
+                 e.ssylka_doc,
+                 e.ssylka_fl,
+                 e.nom_vkl,
+                 e.nom_ips,
+                 e.gf_person,
+                 e.det_charge_type,
+                 e.ora_err_mesg$,
+                 e.process_id
+          from   err$_dv_sr_lspv_docs_t e
+          where  e.process_id in (
+            select p.id
+            from   dv_sr_lspv_prc_t p
+            order by p.created_at desc
+            fetch first rows only
+          );
       when 'ndfl2_tax_corr' then
         open l_result for
           select case 
