@@ -479,8 +479,6 @@ create or replace package body dv_sr_lspv_docs_api is
              end tax_diff
       from   dv_sr_lspv_tax_diff_det_v d;
     --
-    commit;
-    --
   exception
     when others then
       fix_exception($$plsql_line);
