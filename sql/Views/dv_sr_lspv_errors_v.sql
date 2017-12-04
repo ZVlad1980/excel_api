@@ -117,8 +117,8 @@ create or replace view dv_sr_lspv_errors_v as
          null,
          null,
          d.ssylka_fl ssylka_fl,
-         cast(d.fio || ' (' || to_char(d.birth_date, 'dd.mm.yyyy') || '), ' ||
-           d.inn || case d.resident when 1 then 'резидент' when 2 then 'не резидент' else 'не определен: ' || d.resident end
+         cast(d.fio || ' (' || to_char(d.birth_date, 'dd.mm.yyyy') || '), ИНН: ' ||
+           d.inn || ', ' || case d.resident when 1 then 'резидент' when 2 then 'не резидент' else 'не определен: ' || d.resident end
           as varchar2(200)) fio,
          6 error_code,
          d.diff_sum error_sub_code,
