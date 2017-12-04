@@ -23,4 +23,5 @@ create or replace view sp_fiz_lits_non_ident_v as
   and    p.birthdate(+) = f.data_rogd
   --
   and    f.ssylka = fd.ssylka
+  and    fd.gf_person is null
 /
