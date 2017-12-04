@@ -70,5 +70,13 @@ create or replace package gateway_pkg is
     p_contragent_id in  varchar2
   );
   
+  /**
+   * Процедура запуска формирования таблицы расхождения налогов
+   */
+  procedure build_tax_diff_det_table(
+    x_err_msg       out varchar2,
+    p_end_date      in  varchar2
+  );
+  
 end gateway_pkg;
 /

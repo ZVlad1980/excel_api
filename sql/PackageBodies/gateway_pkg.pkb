@@ -226,5 +226,29 @@ create or replace package body gateway_pkg is
       x_err_msg := utl_error_api.get_error_msg;
   end create_ndfl2;
   
+  
+  
+  /**
+   * Процедура запуска формирования таблицы расхождения налогов
+   */
+  procedure build_tax_diff_det_table(
+    x_err_msg       out varchar2,
+    p_end_date      in  varchar2
+  ) is
+  begin
+    --
+    dv_sr_lspv_docs_api.build_tax_diff(
+      p_end_date => to_date$(p_end_date)
+    );
+    --
+    commit;
+    --
+  exception
+    when others then
+      rollback;
+      fix_exception('build_tax_diff_det_table(p_end_date => ' || p_end_date || ')');
+      x_err_msg := utl_error_api.get_error_msg;
+  end build_tax_diff_det_table;
+  
 end gateway_pkg;
 /
