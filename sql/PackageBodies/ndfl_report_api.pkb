@@ -208,6 +208,8 @@ create or replace package body ndfl_report_api is
                      case
                        when bitand(power(2, 3), r.error_sub_code) > 0 then 'статус резидента'
                      end
+                   when 7 then
+                     'ќпераци€ с отрицательной суммой, не €вл€юща€с€ коррекцией!'
                  end err_description,
                  r.fio
           from   dv_sr_lspv_errors_v r

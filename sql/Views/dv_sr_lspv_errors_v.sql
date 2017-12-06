@@ -123,5 +123,26 @@ create or replace view dv_sr_lspv_errors_v as
          6 error_code,
          d.diff_sum error_sub_code,
          d.gf_person
-  from   sp_fiz_lits_diff_v d  
+  from   sp_fiz_lits_diff_v d
+ union all
+  select da.date_op,
+         da.ssylka_doc,
+         da.nom_vkl,
+         da.nom_ips,
+         da.shifr_schet,
+         da.SUB_SHIFR_SCHET,
+         da.amount,
+         null source_amount,
+         null ssylka_fl,
+         cast(null as varchar2(200)) fio,
+         7 error_code,
+         null error_sub_code,
+         null gf_person
+  from   dv_sr_lspv_acc_v da
+  where  1=1
+  and    da.service_doc = 0
+  and    da.charge_type = 'REVENUE'
+  and    da.det_charge_type in ('PENSION', 'RITUAL')
+  and    da.amount < 0
+  and    da.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date;
 /
