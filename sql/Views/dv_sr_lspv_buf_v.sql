@@ -1,9 +1,9 @@
 create or replace view dv_sr_lspv_buf_v as
   with pay_buf_w as (
-    select extract(year from pb.data_vypl)            year_op,
-           extract(month from pb.data_vypl)           month_op,
-           ceil(extract(month from pb.data_vypl)/3)   quarter_op,
-           pb.data_vypl                               date_op,
+    select extract(year from max(pb.data_vypl))            year_op,
+           extract(month from max(pb.data_vypl))           month_op,
+           ceil(extract(month from max(pb.data_vypl))/3)   quarter_op,
+           max(pb.data_vypl)                               date_op,
            -1                                         ssylka_doc,
            pb.nom_vkl,
            pb.nom_ips,
@@ -11,20 +11,31 @@ create or replace view dv_sr_lspv_buf_v as
            fl.gf_person,
            fl.pen_scheme_code,
            'PENSION'                                  det_charge_type,
-           pb.pens                                    revenue,
-           pb.lpn_sum                                 benefit,
-           pb.udergano                                tax,
+           sum(pb.pens)                                    revenue,
+           sum(pb.lpn_sum)                                 benefit,
+           sum(pb.udergano)                                tax,
+           case fl.resident
+             when 1 then 13
+             else        30
+           end                                             tax_rate/*
            case 
-             when nvl(pb.udergano, 0) = 0 then 13 
-             when pb.udergano/pb.pens < .3 then 13 
+             when nvl(sum(pb.udergano), 0) = 0 then 13 
+             when sum(pb.udergano)/sum(pb.pens) < .3 then 13 
              else 30 
-           end                                        tax_rate
+           end                                        tax_rate --*/
     from   vyplach_pen_buf    pb,
            sp_fiz_litz_lspv_v fl
     where  1=1
     and    fl.ssylka = pb.ssylka
     and    pb.nom_vkl < 991
-    and    pb.data_vypl between dv_sr_lspv_docs_api.get_start_date_buf and dv_sr_lspv_docs_api.get_end_date_buf
+    group by pb.nom_vkl,
+           pb.nom_ips,
+           fl.ssylka,
+           fl.gf_person,
+           fl.pen_scheme_code,
+           fl.resident
+    --and    pb.data_vypl between dv_sr_lspv_docs_api.get_start_date_buf and dv_sr_lspv_docs_api.get_end_date_buf
+    /*Отключил, т.к. нет пояснений как обрабатывать
     union all
     select extract(year from vs.data_zanes)            year_op,
            extract(month from vs.data_zanes)           month_op,
@@ -50,6 +61,7 @@ create or replace view dv_sr_lspv_buf_v as
     where  1=1
     and    fl.ssylka = vs.ssylka
     and    vs.data_zanes between dv_sr_lspv_docs_api.get_start_date_buf and dv_sr_lspv_docs_api.get_end_date_buf
+    */
   )
   select -rownum                    id, 
          pb.year_op,
