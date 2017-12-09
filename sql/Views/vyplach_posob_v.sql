@@ -7,7 +7,10 @@ create or replace view vyplach_posob_v as
          vp.posobie,
          vp.uderg_pn,
          vp.ssylka_poluch,
-         vp.gf_person
-  from   fnd.vyplach_posob vp
-  where  vp.tip_vypl = 1010
+         nvl(sr.fk_contragent, vp.gf_person) gf_person
+  from   fnd.vyplach_posob vp,
+         sp_ritual_pos     sr
+  where  1=1
+  and    sr.ssylka = vp.ssylka
+  and    vp.tip_vypl = 1010
 /

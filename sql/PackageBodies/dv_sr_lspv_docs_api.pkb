@@ -9,6 +9,8 @@ create or replace package body dv_sr_lspv_docs_api is
   G_IS_BUF         varchar2(1) := 'N';
   G_START_DATE_BUF date;
   G_END_DATE_BUF   date;
+  G_REPORT_DATE    date; --дата, на которую формируется отчет (от этой даты зависит подхват корректировок)
+  G_RESIDENT_DATE  date; --дата, на которую определяется статус резиденства контрагентов
   /**
    * Обвертки обработки ошибок
    */
@@ -24,9 +26,12 @@ create or replace package body dv_sr_lspv_docs_api is
    */
   function get_start_date return date deterministic is begin return G_START_DATE; end;
   function get_end_date   return date deterministic is begin return G_END_DATE; end;
+  function get_year       return int deterministic is begin return extract(year from G_END_DATE); end;
   function get_is_buff    return varchar2 deterministic is begin return G_IS_BUF; end;
   function get_start_date_buf  return date deterministic is begin return G_START_DATE_BUF; end;
   function get_end_date_buf    return date deterministic is begin return G_END_DATE_BUF; end;
+  function get_report_date     return date deterministic is begin return G_REPORT_DATE; end;
+  function get_resident_date   return date deterministic is begin return G_RESIDENT_DATE; end;
   /**
    * Процедуры set_is_buff и unset_is_buff - включают и выключают учет буфера расчетов VYPLACH... в представлениях
    */
@@ -48,13 +53,22 @@ create or replace package body dv_sr_lspv_docs_api is
     G_END_DATE_BUF := null;
   end unset_is_buff;
   
+  /**
+   * Процедура set_period устанавливает глобальные переменные для ограничений в представлениях
+   */
   procedure set_period(
-    p_start_date date,
-    p_end_date   date
+    p_start_date  date,
+    p_end_date    date,
+    p_report_date date default null
   ) is
+    --
   begin
     G_START_DATE := p_start_date;
     G_END_DATE   := trunc(p_end_date) + 1 - .00001; --на конец суток
+    --
+    G_REPORT_DATE   := greatest(nvl(p_report_date, G_END_DATE), G_END_DATE);
+    G_RESIDENT_DATE := least(G_REPORT_DATE, to_date((extract(year from G_END_DATE)) || '1231', 'yyyymmdd'));
+    --
     if get_is_buff = 'Y' then
       set_is_buff; --пересчет периода, если включен учет буфера VYPLACH
     else
@@ -63,19 +77,24 @@ create or replace package body dv_sr_lspv_docs_api is
   end set_period;
   
   procedure set_period(
-    p_end_date date
+    p_end_date date,
+    p_report_date date default null
   ) is
   begin
     set_period(
-      p_start_date => trunc(p_end_date, 'Y'),
-      p_end_date   => p_end_date
+      p_start_date  => trunc(p_end_date, 'Y'),
+      p_end_date    => p_end_date,
+      p_report_date => p_report_date
     );
   end set_period; 
   
   /**
    * Процедура установки периода
    */
-  procedure set_period(p_year number) is
+  procedure set_period(
+    p_year number,
+    p_report_date date default null
+  ) is
     l_end_date date;
   begin
     if not p_year between 1995 and 2030 then
@@ -86,12 +105,13 @@ create or replace package body dv_sr_lspv_docs_api is
     if p_year = extract(year from sysdate) then
       l_end_date := trunc(sysdate, 'MM') - .00001; --дата завершения - предыдущий месяц
     else
-      l_end_date := to_date(p_year || '1231', 'yyyymmdd');
+      l_end_date := to_date(p_year || '1231', 'yyyymmdd') + .99999;
     end if;
     --
     set_period(
-      p_start_date => to_date(p_year || '0101', 'yyyymmdd'),
-      p_end_date   => l_end_date
+      p_start_date  => to_date(p_year || '0101', 'yyyymmdd'),
+      p_end_date    => l_end_date,
+      p_report_date => p_report_date
     );
     --
   exception
@@ -109,7 +129,7 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     select max(p.created_at) last_update --to_char(max(p.created_at), 'dd.mm.yyyy hh24:mi:ss') last_update
     into   l_result
-    from   DV_SR_LSPV_PRC_T p
+    from   dv_sr_lspv_prc_t p
     where  extract(year from p.end_date) = p_year;
     --
     return l_result;
@@ -119,6 +139,27 @@ create or replace package body dv_sr_lspv_docs_api is
       fix_exception($$plsql_line, 'get_last_update_date(' || p_year || ')');
       raise;
   end get_last_update_date;
+  
+  /**
+   */
+  function get_process_row(
+    p_process_id dv_sr_lspv_prc_t.id%type
+  ) return dv_sr_lspv_prc_t%rowtype is
+    l_result dv_sr_lspv_prc_t%rowtype;
+  begin
+    --
+    select *
+    into   l_result
+    from   dv_sr_lspv_prc_t p
+    where  p.id = p_process_id;
+    --
+    return l_result;
+    --
+  exception
+    when others then
+      fix_exception($$plsql_line, 'get_process_row(' || p_process_id || ')');
+      raise;
+  end get_process_row;
   /**
    */
   function create_process return dv_sr_lspv_prc_t.id%type is
@@ -198,7 +239,160 @@ create or replace package body dv_sr_lspv_docs_api is
       fix_exception($$plsql_line, 'get_error_rows_cnt(' || p_process_id || ')');
       raise;
   end get_error_rows_cnt;
+  
   /**
+   * Процедура update_sp_tax_residents_t обновляет историю изменений статуса налогового резидента контрагентов
+   */
+  procedure update_tax_residents_t(
+    p_process_id dv_sr_lspv_prc_t.id%type
+  ) is
+    --
+    cursor l_residents_cur is
+      with sp_tax_residents_w as (
+        select tr.id,
+               tr.fk_contragent,
+               tr.start_date,
+               tr.end_date
+        from   sp_tax_residents_t tr
+        where  nvl(tr.is_disable, 'N') = 'N'
+        and    tr.resident = 'N'
+      )
+      select r.fk_contragent,
+             r.start_date,
+             r.end_date,
+             tr.id          start_id,
+             tr.start_date  trg_start_date,
+             tr2.id         end_id,
+             tr2.end_date   trg_end_date
+      from   sp_tax_residents_src_v r,
+             sp_tax_residents_w     tr,
+             sp_tax_residents_w     tr2
+      where  1=1
+      --
+      and    r.end_date between tr2.start_date(+) and tr2.end_date(+)
+      and    tr2.fk_contragent(+) = r.fk_contragent
+      --
+      and    r.start_date between tr.start_date(+) and tr.end_date(+)
+      and    tr.fk_contragent(+) = r.fk_contragent
+      --
+      and    not exists (
+               select 1
+               from   sp_tax_residents_w tr
+               where  tr.fk_contragent = r.fk_contragent
+               and    tr.start_date = r.start_date
+               and    tr.end_date = r.end_date
+             );
+    --
+    type l_residents_type is table of l_residents_cur%rowtype;
+    l_residents_tbl l_residents_type;
+    l_disable_list  sys.odcinumberlist;
+    --
+    procedure append_disable_id_(p_id int) is
+    begin
+      l_disable_list.extend;
+      l_disable_list(l_disable_list.last) := p_id;
+    end;
+    --
+    --
+    function prepare_row_(
+      p_row in out nocopy l_residents_cur%rowtype
+    ) return boolean is
+      l_result   boolean := true;
+      --
+      cursor l_incl_rows_cur(p_start_date date, p_end_date date) is
+        select tr.id
+        from   sp_tax_residents_t tr
+        where  tr.start_date > p_start_date
+        and    nvl(tr.end_date, sysdate) < nvl(p_end_date, sysdate);
+      --
+    begin
+      --
+      if p_row.start_id is not null then
+        append_disable_id_(p_row.start_id);
+      end if;
+      --
+      if p_row.end_id is not null and p_row.end_id <> nvl(p_row.start_id, -1) then
+        append_disable_id_(p_row.end_id);
+      end if;
+      --
+      for r in l_incl_rows_cur(p_row.start_date, p_row.end_date) loop
+        append_disable_id_(r.id);
+      end loop;
+      --
+      return l_result;
+      --
+    exception
+      when others then
+        fix_exception($$plsql_line, 'get_error_rows_cnt(' || p_process_id || ')');
+        raise;
+    end prepare_row_;
+    --
+  begin
+    --
+    l_residents_tbl := l_residents_type();
+    l_disable_list  := sys.odcinumberlist();
+    --
+    for r in l_residents_cur loop
+      if prepare_row_(r) then
+        l_residents_tbl.extend;
+        l_residents_tbl(l_residents_tbl.last) := r;
+      end if;
+    end loop;
+    --
+    forall i in 1..l_disable_list.count
+      update sp_tax_residents_t tr
+      set    tr.is_disable = 'Y'
+      where  tr.id = l_disable_list(i);
+    --
+    forall i in 1..l_residents_tbl.count
+      insert into sp_tax_residents_t(
+        fk_contragent,
+        start_date,
+        end_date,
+        process_id
+      ) values (
+        l_residents_tbl(i).fk_contragent,
+        l_residents_tbl(i).start_date,
+        l_residents_tbl(i).end_date,
+        p_process_id
+      );
+    --
+  exception
+    when others then
+      fix_exception($$plsql_line, 'update_tax_residents_t');
+      set_process_state(
+        p_process_id, 
+        'ERROR', 
+        p_error_msg => sqlerrm
+      );
+      raise;
+  end update_tax_residents_t;
+  
+  /**
+   * Процедура update_sp_tax_residents_t обвертка для вызова
+   *   update_tax_residents_t снаружи (устанавливает глобальные переменные по p_process_id)
+   */
+  procedure update_sp_tax_residents_t(
+    p_process_id dv_sr_lspv_prc_t.id%type
+  ) is
+    l_process_row dv_sr_lspv_prc_t%rowtype;
+  begin
+    --
+    l_process_row := get_process_row(p_process_id => p_process_id);
+    set_period(
+      p_start_date => l_process_row.start_date, 
+      p_end_date   => l_process_row.end_date
+    );
+    update_tax_residents_t(p_process_id => p_process_id);
+    --
+  exception
+    when others then
+      fix_exception($$plsql_line, 'update_sp_tax_residents_t(' || p_process_id || ')');
+      raise;
+  end update_sp_tax_residents_t;
+  
+  /**
+   *
    */
   procedure update_dv_sr_lspv_docs_t(
     p_process_id dv_sr_lspv_prc_t.id%type
@@ -226,8 +420,7 @@ create or replace package body dv_sr_lspv_docs_api is
                   dc.det_charge_type,
                   dc.revenue, 
                   dc.benefit, 
-                  dc.tax, 
-                  dc.tax_83, 
+                  dc.tax,
                   dc.source_revenue, 
                   dc.source_benefit, 
                   dc.source_tax,
@@ -242,14 +435,14 @@ create or replace package body dv_sr_lspv_docs_api is
           d.nom_ips       = u.nom_ips         and 
           d.gf_person     = u.gf_person       and 
           d.tax_rate      = u.tax_rate     
-         )--DATE_OP, SSYLKA_DOC_OP, DATE_DOC, SSYLKA_DOC, NOM_VKL, NOM_IPS, GF_PERSON, TAX_RATE
+         )
     when matched then
       update set
+        d.type_op         = u.type_op,
         d.det_charge_type = u.det_charge_type,
         d.revenue         = u.revenue, 
         d.benefit         = u.benefit, 
-        d.tax             = u.tax, 
-        d.tax_83          = u.tax_83, 
+        d.tax             = u.tax,
         d.source_revenue  = u.source_revenue,
         d.source_benefit  = u.source_benefit,
         d.source_tax      = u.source_tax,
@@ -272,8 +465,7 @@ create or replace package body dv_sr_lspv_docs_api is
         det_charge_type, 
         revenue, 
         benefit, 
-        tax, 
-        tax_83, 
+        tax,
         source_revenue,
         source_benefit,
         source_tax,
@@ -295,8 +487,7 @@ create or replace package body dv_sr_lspv_docs_api is
         u.det_charge_type,
         u.revenue, 
         u.benefit, 
-        u.tax, 
-        u.tax_83, 
+        u.tax,
         u.source_revenue, 
         u.source_benefit, 
         u.source_tax,
@@ -308,7 +499,8 @@ create or replace package body dv_sr_lspv_docs_api is
     update dv_sr_lspv_docs_t d
     set    d.is_delete = 'Y',
            d.process_id = p_process_id
-    where  d.process_id <> p_process_id;
+    where  d.process_id <> p_process_id
+    and    d.date_doc between get_start_date and get_end_date;
     --
     l_del_rows := sql%rowcount;
     --
@@ -353,6 +545,10 @@ create or replace package body dv_sr_lspv_docs_api is
     set_period(p_year);
     --
     update_dv_sr_lspv_docs_t(
+      p_process_id => create_process
+    );
+    --
+    update_tax_residents_t(
       p_process_id => create_process
     );
     --

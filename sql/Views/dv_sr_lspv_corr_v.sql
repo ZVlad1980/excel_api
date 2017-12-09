@@ -34,7 +34,7 @@ create or replace view dv_sr_lspv_corr_v as
   where  1=1
   and    connect_by_isleaf = 1
   start with d.service_doc <> 0 and
-             d.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
+             d.date_op > dv_sr_lspv_docs_api.get_start_date
   connect by 
     prior d.ssylka_doc = d.service_doc and
     prior d.nom_vkl = d.nom_vkl        and

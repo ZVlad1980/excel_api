@@ -9,30 +9,40 @@ create or replace package dv_sr_lspv_docs_api is
    */
   function get_start_date      return date deterministic;
   function get_end_date        return date deterministic;
+  function get_year            return int  deterministic;
   function get_is_buff         return varchar2 deterministic;
   function get_start_date_buf  return date deterministic;
   function get_end_date_buf    return date deterministic;
-    
-  /**
-   * Процедура установки периода
-   */
-  procedure set_period(p_year number);
+  function get_report_date     return date deterministic;
+  function get_resident_date   return date deterministic;
   
   /**
    * Процедуры set_is_buff и unset_is_buff - включают и выключают учет буфера расчетов VYPLACH... в представлениях
    */
   procedure set_is_buff;
   procedure unset_is_buff;
+    
+  /**
+   * Процедура установки периода
+   */
+  procedure set_period(
+    p_year        number,
+    p_report_date date default null
+  );
   
   /**
    */
-  procedure set_period(p_end_date date);
+  procedure set_period(
+    p_end_date date,
+    p_report_date date default null
+  );
   
   /**
    */
   procedure set_period(
     p_start_date date,
-    p_end_date   date
+    p_end_date   date,
+    p_report_date date default null
   );
   
   /**
@@ -75,6 +85,13 @@ create or replace package dv_sr_lspv_docs_api is
    */
   procedure build_tax_diff(
     p_end_date date default null
+  );
+  
+  /**
+   * Процедура update_sp_tax_residents_t обновляет историю изменений статуса налогового резидента контрагентов
+   */
+  procedure update_sp_tax_residents_t(
+    p_process_id dv_sr_lspv_prc_t.id%type
   );
   
 end dv_sr_lspv_docs_api;
