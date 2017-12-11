@@ -18,4 +18,10 @@ create or replace view dv_sr_lspv_acc_v as
   and    d.nom_vkl < a.max_nom_vkl
   and    d.sub_shifr_schet = a.sub_shifr_schet
   and    d.shifr_schet = a.shifr_schet
+  --
+  --and    d.nom_ips = 3123 and    d.nom_vkl = 6
+  --and    d.nom_ips = 2643 and    d.nom_vkl = 140
+  --and    d.nom_ips = 6183  and    d.nom_vkl = 75
+  --and    d.nom_ips = 1376  and    d.nom_vkl = 1
+  --and    d.nom_ips = 1859 and    d.nom_vkl = 37 --Мингазова
 /

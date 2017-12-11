@@ -59,7 +59,7 @@ create or replace view dv_sr_lspv_docs_v as
          d.tax,
          d.tax tax_retained,
          case when not (d.type_op = -2 or (d.type_op = -1 and coalesce(d.is_tax_return, 'N') = 'Y')) then d.tax end tax_retained_old,
-         case when (d.type_op = -2 or (d.type_op = -1 and coalesce(d.is_tax_return, 'N') = 'Y')) then d.tax end tax_return,
+         case when (d.type_op = -1 and coalesce(d.is_tax_return, 'N') = 'Y') then d.tax end tax_return,
          d.tax_rate,
          d.tax_rate_op,
          d.source_revenue, 

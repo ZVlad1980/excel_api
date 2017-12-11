@@ -34,7 +34,13 @@ create or replace view dv_sr_lspv_all_v as
              'N'
          end is_tax_return--*/
   from   dv_sr_lspv_corr_v d
-  where  d.date_doc <= dv_sr_lspv_docs_api.get_report_date
+  where  1=1
+  and    (
+           (d.date_op <= dv_sr_lspv_docs_api.get_end_date and d.date_doc <= dv_sr_lspv_docs_api.get_end_date)
+           or --если коррекция следующим годом - должны учитываться только корректируемые документы заданного года
+           (extract(year from d.date_op) > dv_sr_lspv_docs_api.get_year  and d.date_doc between  dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date)
+         )
+  
  union all --83 (кроме возврата по 231)
   select 1 rn,
          d.date_op,
@@ -53,7 +59,7 @@ create or replace view dv_sr_lspv_all_v as
          -2,
          'N'
   from   dv_sr_lspv_83_v d
-  where  coalesce(d.date_doc, trunc(d.date_op, 'Y') - 1) <= dv_sr_lspv_docs_api.get_report_date
+  where  coalesce(d.date_doc, d.date_op) <= to_date((dv_sr_lspv_docs_api.get_year + 1) || '1231', 'yyyymmdd')
  union all --прямые операции
   select case d.sub_shifr_grp
            when 0 then

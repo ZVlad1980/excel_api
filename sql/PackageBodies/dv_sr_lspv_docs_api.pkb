@@ -66,7 +66,7 @@ create or replace package body dv_sr_lspv_docs_api is
     G_START_DATE := p_start_date;
     G_END_DATE   := trunc(p_end_date) + 1 - .00001; --на конец суток
     --
-    G_REPORT_DATE   := greatest(nvl(p_report_date, G_END_DATE), G_END_DATE);
+    G_REPORT_DATE   := greatest(nvl(p_report_date, sysdate), G_END_DATE);
     G_RESIDENT_DATE := least(G_REPORT_DATE, to_date((extract(year from G_END_DATE)) || '1231', 'yyyymmdd'));
     --
     if get_is_buff = 'Y' then

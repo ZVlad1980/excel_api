@@ -45,17 +45,18 @@ create or replace view dv_sr_lspv_errors_v as
          dc.nom_ips,
          dc.shifr_schet,
          dc.SUB_SHIFR_SCHET,
-         max(dc.corr_op_amount) amount,
-         sum(dc.amount)         source_amount,
+         max(dc.corr_op_amount)    amount,
+         sum(dc.source_op_amount)  source_amount,
          null ssylka_fl,
          null fio,
          2 error_code,
          null error_sub_code,
          null gf_person
   from   corrections dc
-  where  dc.type_op = -1
+  where  dc.charge_type <> 'BENEFIT' --отключил проверку по вычетам, т.к. они не всегда кратны
+  and    dc.type_op = -1
   group by dc.date_op, dc.ssylka_doc_op, dc.nom_vkl, dc.nom_ips, dc.shifr_schet, dc.sub_shifr_schet
-  having count(1) > 1 and sum(dc.amount) <> max(dc.corr_op_amount)
+  having count(1) > 1 and abs(sum(dc.source_op_amount)) <> abs(max(dc.corr_op_amount))
  union all
   -- не идентифицированные участники
   select null date_op,
