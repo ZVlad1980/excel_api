@@ -57,7 +57,10 @@ create or replace view dv_sr_lspv_errors_v as
   group by dc.date_op, dc.ssylka_doc_op, dc.nom_vkl, dc.nom_ips, dc.shifr_schet, dc.sub_shifr_schet
   having count(1) > 1 and sum(dc.amount) <> max(dc.corr_op_amount)
  union all
-  -- не идентифицированные участники
+ /*
+ TODO: owner="V.Zhuravov" created="12.12.2017"
+ text="Перевести следующие два запроса на таблицу DV_SR_GF_PERSONS_T"
+ */ -- не идентифицированные участники
   select null date_op,
          null ssylka_doc,
          fl.nom_vkl,

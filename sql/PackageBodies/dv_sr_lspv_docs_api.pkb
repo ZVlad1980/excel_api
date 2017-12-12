@@ -3,6 +3,10 @@ create or replace package body dv_sr_lspv_docs_api is
   -- Private type declarations
   C_PACKAGE_NAME constant varchar2(32) := $$plsql_unit;
   
+  --Имена процессов 
+  С_PRC_SYNCHRONIZE       constant varchar2(40) := 'SYNCHRONIZE';
+  C_PRC_UPDATE_GF_PERSONS constant varchar2(40) := 'UPDATE_GF_PERSONS';
+  
   --
   G_START_DATE     date;
   G_END_DATE       date;
@@ -119,9 +123,13 @@ create or replace package body dv_sr_lspv_docs_api is
       fix_exception($$plsql_line, 'get_last_update_date(' || p_year || ')');
       raise;
   end get_last_update_date;
+  
   /**
+   * Процедура create_process создает новый процесс в таблице dv_sr_lspv_prc_t
    */
-  function create_process return dv_sr_lspv_prc_t.id%type is
+  function create_process(
+    p_process_name varchar2 default С_PRC_SYNCHRONIZE
+  ) return dv_sr_lspv_prc_t.id%type is
     pragma autonomous_transaction;
     --
     l_result dv_sr_lspv_prc_t.id%type;
@@ -129,10 +137,12 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     --dbms_lock!!!
     insert into dv_sr_lspv_prc_t(
+      process_name,
       start_date,
       end_date,
       state
     ) values (
+      p_process_name,
       G_START_DATE,
       G_END_DATE  ,
       'CREATED'
@@ -363,6 +373,285 @@ create or replace package body dv_sr_lspv_docs_api is
       fix_exception($$plsql_line, 'synchronize(' || p_year || ')');
       raise;
   end synchronize;
+  
+  /**
+   * Процедура build_list_gf_persons строит список неактуальных / отсутствующих GF_PERSON
+   *  в таблице DV_SR_LSPV_UID_PERS_T
+   */
+  procedure build_list_gf_persons(
+    p_process_id int
+  ) is
+    --
+    procedure insert_gf_persons_ is
+    begin
+      insert into dv_sr_gf_persons_t(
+        contragent_type,
+        nom_vkl,
+        nom_ips,
+        ssylka,
+        gf_person_old,
+        gf_person_new,
+        process_id
+      ) select gp.contragent_type,
+               gp.nom_vkl,
+               gp.nom_ips,
+               gp.ssylka,
+               case gp.gf_person when -1 then null else gp.gf_person end,
+               (select max(m.fk_person_united)keep(dense_rank last order by m.lvl) 
+                from   contragent_merge_log_v m
+                where  1=1
+                and    m.fk_person_removed_root = gp.gf_person
+               ) fk_person_united,
+               p_process_id
+        from   sp_gf_persons_v        gp
+        where  1=1
+        and    gp.gf_person not in (
+                 select p.fk_contragent
+                 from   gf_people_v p
+               );
+    exception
+      when others then
+        fix_exception($$plsql_line, 'insert_gf_persons_(' || p_process_id || ')');
+        raise;
+    end insert_gf_persons_;
+    --
+    -- Определение GF_PERSON по ИНН (которые не определены изначально)
+    --
+    procedure update_gf_person_inn_ is
+    begin
+      update dv_sr_gf_persons_t  gp
+      set    gp.gf_person_new = (
+               select c.id
+               from   sp_inn_fiz_lits     inn,
+                      gazfond.contragents c
+               where  1=1
+               and    c.inn = inn.inn
+               and    inn.ssylka = gp.ssylka
+             )
+      where  gp.gf_person_new is null
+      and    gp.contragent_type = 'PENSIONER'
+      and    gp.process_id = p_process_id;
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_gf_person_inn_(' || p_process_id || ')');
+        raise;
+    end update_gf_person_inn_;
+    --
+    -- Определение GF_PERSON по ФИО + ДР
+    --
+    procedure update_gf_person_fio_ is
+    begin
+      update dv_sr_gf_persons_t  gp
+      set    gp.gf_person_new = (
+               select p.fk_contragent
+               from   (
+                       select p.fk_contragent,
+                              count(1)over(partition by p.fk_contragent) cnt
+                       from   sp_fiz_lits         fl,
+                              gf_people_v         p
+                       where  1=1
+                       --
+                       and    p.birthdate = fl.data_rogd
+                       and    nvl(upper(p.secondname), '$NULL$') = nvl(upper(fl.otchestvo), '$NULL$')
+                       and    upper(p.firstname) = upper(fl.imya)
+                       and    upper(p.lastname) = upper(fl.familiya)
+                       --
+                       and    fl.ssylka = gp.ssylka
+                      ) p
+               where  p.cnt = 1
+             )
+      where  gp.gf_person_new is null
+      and    gp.contragent_type = 'PENSIONER'
+      and    gp.process_id = p_process_id;
+      --
+      update dv_sr_gf_persons_t  gp
+      set    gp.gf_person_new = (
+               select p.fk_contragent
+               from   (
+                       select p.fk_contragent,
+                              count(1)over(partition by p.fk_contragent) cnt
+                       from   sp_ritual_pos_v     fl,
+                              gf_people_v         p
+                       where  1=1
+                       --
+                       and    p.birthdate = fl.birth_date 
+                       and    nvl(upper(p.secondname), '$NULL$') = nvl(upper(fl.second_name ), '$NULL$')
+                       and    upper(p.firstname) = upper(fl.first_name )
+                       and    upper(p.lastname) = upper(fl.last_name )
+                       --
+                       and    fl.ssylka = gp.ssylka
+                      ) p
+               where  p.cnt = 1
+             )
+      where  gp.gf_person_new is null
+      and    gp.contragent_type = 'SUCCESSOR'
+      and    gp.process_id = p_process_id;
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_gf_person_inn_(' || p_process_id || ')');
+        raise;
+    end update_gf_person_fio_;
+    --
+  begin
+    --
+    insert_gf_persons_;
+    update_gf_person_inn_;
+    update_gf_person_fio_;
+    --
+  exception
+    when others then
+      fix_exception($$plsql_line, 'build_list_gf_persons(' || p_process_id || ')');
+      raise;
+  end build_list_gf_persons;
+  
+  /**
+   * Процедура update_gf_persons обновляет GF_PERSONS
+   *  в таблицах SP_FIZ_LITS.GF_PERSON, POLUCH_POSOB.GF_PERSON, SP_RITUAL_POS.FK_CONTRAGENT, DV_SR_LSPV_DOCS_T.GF_PEROSN
+   *  по таблице DV_SR_LSPV_UID_PERS_T
+   */
+  procedure update_gf_persons(
+    p_process_id int
+  ) is
+    --
+    -- Обновление GF_PERSON в sp_fiz_lits
+    --
+    procedure update_pensioners_ is
+    begin
+      update (select fl.ssylka,
+                     fl.gf_person,
+                     gp.gf_person_new
+              from   dv_sr_gf_persons_t gp,
+                     sp_fiz_lits        fl
+              where  1=1
+              and    fl.gf_person <> gp.gf_person_new
+              and    fl.ssylka = gp.ssylka
+              and    gp.contragent_type = 'PENSIONER'
+              and    gp.process_id = p_process_id
+             ) u
+      set u.gf_person = u.gf_person_new;
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_pensioners_(' || p_process_id || ')');
+        raise;
+    end update_pensioners_;
+    --
+    -- Обновление GF_PERSON в sp_ritual_pos
+    --
+    procedure update_successors_ is
+    begin
+      update (select fl.ssylka,
+                     fl.fk_contragent,
+                     gp.gf_person_new
+              from   dv_sr_gf_persons_t gp,
+                     sp_ritual_pos      fl
+              where  1=1
+              and    fl.fk_contragent <> gp.gf_person_new
+              and    fl.ssylka = gp.ssylka
+              and    gp.contragent_type = 'PENSIONER'
+              and    gp.process_id = p_process_id
+             ) u
+      set u.fk_contragent = u.gf_person_new;
+      --
+      /*
+      update (select fl.ssylka,
+                     fl.fk_contragent,
+                     gp.gf_person_new
+              from   dv_sr_gf_persons_t gp,
+                     vyplach_posob      fl
+              where  1=1
+              and    fl.ssylka = gp.ssylka
+              and    gp.contragent_type = 'PENSIONER'
+              and    gp.process_id = p_process_id
+             ) u
+      set u.fk_contragent = u.gf_person_new;
+      --*/
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_successors_(' || p_process_id || ')');
+        raise;
+    end update_successors_;
+    --
+    -- Обновление GF_PERSON в dv_sr_lspv_docs_t
+    --
+    procedure update_docs_t_ is
+    begin
+      merge into dv_sr_lspv_docs_t d
+      using (select dd.id,
+                    gp.gf_person_new
+             from   dv_sr_gf_persons_t gp,
+                    dv_sr_lspv_docs_t  dd
+             where  1 = 1
+             and    dd.gf_person = gp.gf_person_old
+             and    gp.gf_person_old is not null
+             and    gp.process_id = p_process_id
+            ) u
+      on    (d.id = u.id)
+      when matched then
+        update set
+        d.gf_person = u.gf_person_new;
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_docs_t_(' || p_process_id || ')');
+        raise;
+    end update_docs_t_;
+    --
+  begin
+    --
+    update_pensioners_;
+    update_successors_;
+    update_docs_t_;
+    --
+  exception
+    when others then
+      fix_exception($$plsql_line, 'update_gf_persons(' || p_process_id || ')');
+      raise;
+  end update_gf_persons;
+  
+  /**
+   * Процедура обновления GF_PERSON по DV_SR_LSPV за заданный год
+   *  Обновляет таблицы SP_FIZ_LITS.GF_PERSON, POLUCH_POSOB.GF_PERSON, SP_RITUAL_POS.FK_CONTRAGENT, DV_SR_LSPV_DOCS_T.GF_PEROSN
+   *  Протокол работы в dv_sr_gf_persons_t
+   */
+  procedure update_gf_persons(
+    p_year  in number
+  ) is
+    --
+    l_process_id int;
+    --
+  begin
+    --
+    set_period(p_year);
+    --
+    l_process_id := create_process(
+      p_process_name => C_PRC_UPDATE_GF_PERSONS
+    );
+    --
+    build_list_gf_persons(
+      p_process_id => l_process_id
+    );
+    --
+    update_gf_persons(
+      p_process_id => l_process_id
+    );
+    --
+    set_process_state(
+      l_process_id, 
+      'SUCCESS'
+    );
+    --
+  exception
+    when others then
+      fix_exception($$plsql_line, 'update_gf_persons(' || p_year || ')');
+      if l_process_id is not null then
+        set_process_state(
+          l_process_id, 
+          'ERROR', 
+          p_error_msg => sqlerrm
+        );
+      end if;
+      raise;
+  end update_gf_persons;
+  
   
   /**
    * Функция определяет является ли операция - возвратом налога по заявлению

@@ -2,6 +2,7 @@ create sequence dv_sr_lspv_prc_seq
 /
 create table dv_sr_lspv_prc_t (
   id             int default dv_sr_lspv_prc_seq.nextval,
+  process_name   varchar2(40),
   start_date     date,
   end_date       date,
   state          varchar2(10),
