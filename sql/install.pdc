@@ -50,6 +50,14 @@ prompt install gateway_pkg.pks
 @@Packages\gateway_pkg.pks
 show error
 
+prompt install gateway_user_pkg.pks
+@@Packages\gateway_user_pkg.pks
+show error
+
+prompt install f2ndfl_arh_spravki_api.pks
+@@Packages\f2ndfl_arh_spravki_api.pks
+show error
+
 prompt install sp_quarters_v.sql
 @@Views\sp_quarters_v.sql
 show error
@@ -116,6 +124,22 @@ show error
 
 prompt install sp_fiz_litz_lspv_v.sql
 @@Views\sp_fiz_litz_lspv_v.sql
+show error
+
+prompt install sp_fiz_lits_receivers_v.sql
+@@Views\sp_fiz_lits_receivers_v.sql
+show error
+
+prompt install sp_fiz_lits_diff_v.sql
+@@Views\sp_fiz_lits_diff_v.sql
+show error
+
+prompt install vyplach_posob_receivers_v.sql
+@@Views\vyplach_posob_receivers_v.sql
+show error
+
+prompt install vyplach_posob_v.sql
+@@Views\vyplach_posob_v.sql
 show error
 
 prompt install dv_sr_lspv_docs_src_v.sql
@@ -188,7 +212,7 @@ show error
 
 prompt install ndfl6_part1_rates_30_v.sql
 @@Views\ndfl6_part1_rates_30_v.sql
-show error
+show error        
 
 prompt install ndfl6_part1_rates_30_persns_v.sql
 @@Views\ndfl6_part1_rates_30_persns_v.sql
@@ -226,6 +250,10 @@ prompt install ndfl2_corr_spr_rep_v.sql
 @@Views\ndfl2_corr_spr_rep_v.sql
 show error
 
+prompt install taxdeductions_v.sql
+@@Views\taxdeductions_v.sql
+show error
+
 prompt install utl_error_api.pkb
 @@PackageBodies\utl_error_api.pkb
 show error
@@ -246,6 +274,10 @@ prompt install f_ndfl_load_spisrab_api.pkb
 @@PackageBodies\f_ndfl_load_spisrab_api.pkb
 show error
 
+prompt install f2ndfl_arh_spravki_api.pkb
+@@PackageBodies\f2ndfl_arh_spravki_api.pkb
+show error
+
 prompt install ndfl_report_api.pkb
 @@PackageBodies\ndfl_report_api.pkb
 show error
@@ -256,6 +288,10 @@ show error
 
 prompt install gateway_pkg.pkb
 @@PackageBodies\gateway_pkg.pkb
+show error
+
+prompt install gateway_user_pkg.pkb
+@@PackageBodies\gateway_user_pkg.pkb
 show error
 
 prompt Install grants.sql
