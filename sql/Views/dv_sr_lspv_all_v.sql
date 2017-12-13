@@ -40,7 +40,6 @@ create or replace view dv_sr_lspv_all_v as
            or --если коррекция следующим годом - должны учитываться только корректируемые документы заданного года
            (extract(year from d.date_op) > dv_sr_lspv_docs_api.get_year  and d.date_doc between  dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date)
          )
-  
  union all --83 (кроме возврата по 231)
   select 1 rn,
          d.date_op,
