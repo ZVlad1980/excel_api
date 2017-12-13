@@ -171,7 +171,7 @@ create or replace view dv_sr_lspv_errors_v as
            select p.id
            from   dv_sr_lspv_prc_t p
            where  p.process_name = 'UPDATE_GF_PERSONS'
-           order by p.created_by desc
+           order by p.created_at desc
            fetch first rows only
          )
 /

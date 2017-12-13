@@ -16,8 +16,9 @@ create or replace view ndfl_report_tax_retained_v as
            d.source_tax,
            d.type_op,
            d.is_tax_return,
-           max(case when d.type_op = -1 then 1 else 0 end)over(partition by d.ssylka_doc, d.nom_vkl, d.nom_ips) is_corrected
+           max(case when nvl(d.type_op, 0) = -1 then 1 else 0 end)over(partition by d.ssylka_doc, d.nom_vkl, d.nom_ips) is_corrected
     from   dv_sr_lspv_docs_v d
+    where  nvl(d.type_op, 0) <> -2
   )
   select d.det_charge_type,
          d.pen_scheme_code,

@@ -70,6 +70,10 @@ create or replace package body dv_sr_lspv_docs_api is
     G_START_DATE := p_start_date;
     G_END_DATE   := trunc(p_end_date) + 1 - .00001; --на конец суток
     --
+    /*
+    TODO: owner="V.Zhuravov" created="13.12.2017"
+    text="Реализовать возможность задания даты p_report_date. Для теста sysdate отключен"
+    */
     G_REPORT_DATE   := greatest(nvl(p_report_date, sysdate), G_END_DATE);
     G_RESIDENT_DATE := least(G_REPORT_DATE, to_date((extract(year from G_END_DATE)) || '1231', 'yyyymmdd'));
     --
@@ -370,11 +374,6 @@ create or replace package body dv_sr_lspv_docs_api is
   exception
     when others then
       fix_exception($$plsql_line, 'update_tax_residents_t');
-      set_process_state(
-        p_process_id, 
-        'ERROR', 
-        p_error_msg => sqlerrm
-      );
       raise;
   end update_tax_residents_t;
   
@@ -516,7 +515,7 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     set_process_state(
       p_process_id, 
-      'SUCCESS', 
+      'DOCS', 
       p_deleted_rows => l_del_rows,
       p_error_rows   => get_error_rows_cnt(p_process_id)
     );
@@ -524,11 +523,6 @@ create or replace package body dv_sr_lspv_docs_api is
   exception
     when others then
       fix_exception($$plsql_line, 'update_dv_sr_lspv_docs_t');
-      set_process_state(
-        p_process_id, 
-        'ERROR', 
-        p_error_msg => sqlerrm
-      );
       raise;
   end update_dv_sr_lspv_docs_t;
 
@@ -538,10 +532,12 @@ create or replace package body dv_sr_lspv_docs_api is
    */
   procedure synchronize(p_year in number) is
     --
+    l_process_id int;
+    --
     function check_update_gf_persons_ return boolean is
       l_last_start date;
     begin
-      select max(p.created_by)
+      select max(p.created_at)
       into   l_last_start
       from   dv_sr_lspv_prc_t p
       where  p.process_name = 'UPDATE_GF_PERSONS';
@@ -558,16 +554,7 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     procedure stats_ is
     begin
-      dbms_stats.gather_table_stats('FND', upper('dv_sr_lspv_docs_t'));
-      return;
-      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i1'));
-      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i2'));
-      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i3'));
-      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i4'));
-      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i5'));
-      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i6'));
-      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i7'));
-      dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_u1'));
+      dbms_stats.gather_table_stats('FND', upper('dv_sr_lspv_docs_t'), cascade => true);
     end;
     --
   begin
@@ -578,19 +565,35 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     set_period(p_year);
     --
+    l_process_id := create_process;
+    --
     update_dv_sr_lspv_docs_t(
-      p_process_id => create_process
+      p_process_id => l_process_id
     );
     --
     update_tax_residents_t(
-      p_process_id => create_process
+      p_process_id => l_process_id
     );
     --
     stats_;
     --
+    set_process_state(
+      l_process_id, 
+      'SUCCESS', 
+      p_error_rows   => get_error_rows_cnt(l_process_id)
+    );
+    --
   exception
     when others then
       fix_exception($$plsql_line, 'synchronize(' || p_year || ')');
+      --
+      if l_process_id is not null then
+        set_process_state(
+          l_process_id, 
+          'ERROR', 
+          p_error_msg => sqlerrm
+        );
+      end if;
       raise;
   end synchronize;
   
@@ -743,7 +746,7 @@ create or replace package body dv_sr_lspv_docs_api is
               from   dv_sr_gf_persons_t gp,
                      sp_fiz_lits        fl
               where  1=1
-              and    fl.gf_person <> gp.gf_person_new
+              and    nvl(fl.gf_person, -1) <> gp.gf_person_new
               and    fl.ssylka = gp.ssylka
               and    gp.contragent_type = 'PENSIONER'
               and    gp.process_id = p_process_id
@@ -765,9 +768,9 @@ create or replace package body dv_sr_lspv_docs_api is
               from   dv_sr_gf_persons_t gp,
                      sp_ritual_pos      fl
               where  1=1
-              and    fl.fk_contragent <> gp.gf_person_new
+              and    nvl(fl.fk_contragent, -1) <> gp.gf_person_new
               and    fl.ssylka = gp.ssylka
-              and    gp.contragent_type = 'PENSIONER'
+              and    gp.contragent_type = 'SUCCESSOR'
               and    gp.process_id = p_process_id
              ) u
       set u.fk_contragent = u.gf_person_new;

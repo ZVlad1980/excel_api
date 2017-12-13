@@ -15,7 +15,7 @@ create or replace view dv_sr_lspv_docs_src_v as
            sum(case dc.charge_type when 'TAX_CORR' then dc.amount end) tax_83,
            sum(case dc.charge_type when 'REVENUE'  then dc.source_op_amount end) source_revenue,
            sum(case when dc.charge_type = 'BENEFIT' 
-                   or dc.type_op = -2 then  --коррекция 83 счетом - в source_op_amount - сумма вычета
+                   or nvl(dc.type_op, 0) = -2 then  --коррекция 83 счетом - в source_op_amount - сумма вычета
                  dc.source_op_amount
                end) source_benefit,
            sum(case dc.charge_type when 'TAX' then dc.source_op_amount end) source_tax,
