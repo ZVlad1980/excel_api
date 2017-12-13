@@ -18,6 +18,14 @@ prompt install f_ndfl_spisrab_seq.sql
 @@Tables\f_ndfl_spisrab_seq.sql
 show error
 
+prompt install dv_sr_lspv_uid_pers_t.sql
+@@Tables\dv_sr_lspv_uid_pers_t.sql
+show error
+
+prompt install dv_sr_gf_persons_t.sql
+@@Tables\dv_sr_gf_persons_t.sql
+show error
+
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
 show error
@@ -66,6 +74,10 @@ prompt install sp_det_charge_types_v.sql
 @@Views\sp_det_charge_types_v.sql
 show error
 
+prompt install sp_ritual_pos_v.sql
+@@Views\sp_ritual_pos_v.sql
+show error
+
 prompt install gf_people_v.sql
 @@Views\gf_people_v.sql
 show error
@@ -108,6 +120,10 @@ show error
 
 prompt install dv_sr_lspv_acc_v.sql
 @@Views\dv_sr_lspv_acc_v.sql
+show error
+
+prompt install sp_gf_persons_v.sql
+@@Views\sp_gf_persons_v.sql
 show error
 
 prompt install dv_sr_lspv_corr_v.sql
@@ -252,6 +268,10 @@ show error
 
 prompt install taxdeductions_v.sql
 @@Views\taxdeductions_v.sql
+show error
+
+prompt install contragent_merge_log_v.sql
+@@Views\contragent_merge_log_v.sql
 show error
 
 prompt install utl_error_api.pkb

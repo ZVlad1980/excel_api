@@ -210,6 +210,8 @@ create or replace package body ndfl_report_api is
                      end
                    when 7 then
                      'Операция с отрицательной суммой, не являющаяся коррекцией!'
+                   when 8 then
+                     'Контрагент не идентифицирован программой UPDATE_GF_PERSON'
                  end err_description,
                  r.fio
           from   dv_sr_lspv_errors_v r

@@ -71,7 +71,6 @@ create or replace package body gateway_pkg is
   ) is
   begin
     --
-    --
     utl_error_api.init_exceptions;
     --
     dv_sr_lspv_docs_api.synchronize(
@@ -80,13 +79,45 @@ create or replace package body gateway_pkg is
                 )
     );
     --
+    commit;
+    --
   exception
     when others then
       --
+      rollback;
       fix_exception;
       x_err_msg :=  utl_error_api.get_error_msg;
       --
   end synhr_dv_sr_lspv_docs;
+  
+  /**
+   * Процедура update_gf_persons обновляет не актуальные CONTRAGENTS.ID
+   */
+  procedure update_gf_persons(
+    x_err_msg    out varchar2,
+    p_end_date   in  varchar2
+  ) is
+  begin
+    --
+    --
+    utl_error_api.init_exceptions;
+    --
+    dv_sr_lspv_docs_api.update_gf_persons(
+      p_year => to_number(
+                  extract(year from to_date(p_end_date, C_DATE_FMT))
+                )
+    );
+    --
+    commit;
+    --
+  exception
+    when others then
+      --
+      rollback;
+      fix_exception;
+      x_err_msg :=  utl_error_api.get_error_msg;
+      --
+  end update_gf_persons;
   
   /**
    * Процедура get_report возвращает курсор с данными отчета
