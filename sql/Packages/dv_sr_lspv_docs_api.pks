@@ -94,5 +94,14 @@ create or replace package dv_sr_lspv_docs_api is
     p_process_id dv_sr_lspv_prc_t.id%type
   );
   
+  /**
+   * Процедура обновления GF_PERSON по DV_SR_LSPV за заданный год
+   *  Обновляет таблицы SP_FIZ_LITS.GF_PERSON, POLUCH_POSOB.GF_PERSON, SP_RITUAL_POS.FK_CONTRAGENT, DV_SR_LSPV_DOCS_T.GF_PEROSN
+   *  Протокол работы в dv_sr_gf_persons_t
+   */
+  procedure update_gf_persons(
+    p_year  in number
+  );
+  
 end dv_sr_lspv_docs_api;
 /

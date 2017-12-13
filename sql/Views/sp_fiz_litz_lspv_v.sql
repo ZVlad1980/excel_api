@@ -2,18 +2,17 @@ create or replace view sp_fiz_litz_lspv_v as
   select lspv.nom_vkl,
          lspv.nom_ips,
          fz.ssylka,
-         fz.familiya     last_name,
-         fz.imya         first_name,
-         fz.otchestvo    second_name,
-         fz.data_rogd    birth_date,
+         fz.familiya             last_name,
+         fz.imya                 first_name,
+         fz.otchestvo            second_name,
+         fz.data_rogd            birth_date,
          case fz.nal_rezident 
            when 1 then 1
            else 0 
-         end             resident,
-         --fz.pen_sxem    pen_scheme_code,
-         s.kod_ps        pen_scheme_code,
-         fz.gf_person    gf_person,
-         s.kr_nazv       pen_scheme
+         end                     resident,
+         s.kod_ps                pen_scheme_code,
+         fz.gf_person            gf_person,
+         s.kr_nazv               pen_scheme
   from   fnd.sp_lspv        lspv, 
          fnd.sp_pen_dog     dog,
          fnd.sp_fiz_lits    fz,

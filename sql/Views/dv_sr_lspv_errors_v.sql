@@ -58,7 +58,10 @@ create or replace view dv_sr_lspv_errors_v as
   group by dc.date_op, dc.ssylka_doc_op, dc.nom_vkl, dc.nom_ips, dc.shifr_schet, dc.sub_shifr_schet
   having count(1) > 1 and abs(sum(dc.source_op_amount)) <> abs(max(dc.corr_op_amount))
  union all
-  -- не идентифицированные участники
+ /*
+ TODO: owner="V.Zhuravov" created="12.12.2017"
+ text="Перевести следующие два запроса на таблицу DV_SR_GF_PERSONS_T"
+ */ -- не идентифицированные участники
   select null date_op,
          null ssylka_doc,
          fl.nom_vkl,
@@ -145,5 +148,30 @@ create or replace view dv_sr_lspv_errors_v as
   and    da.charge_type = 'REVENUE'
   and    da.det_charge_type in ('PENSION', 'RITUAL')
   and    da.amount < 0
-  and    da.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date;
+  and    da.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
+ union all
+  -- Ошибки программы UPDATE_GF_PERSONS (последний запуск)
+  select null date_op,
+         null ssylka_doc,
+         gp.nom_vkl,
+         gp.nom_ips,
+         null,
+         null,
+         null,
+         null,
+         gp.ssylka ssylka_fl,
+         null fio,
+         8 error_code,
+         null error_sub_code,
+         gp.gf_person_old gf_person
+  from   dv_sr_gf_persons_t gp
+  where  1=1
+  and    gp.gf_person_new is null
+  and    gp.process_id = (
+           select p.id
+           from   dv_sr_lspv_prc_t p
+           where  p.process_name = 'UPDATE_GF_PERSONS'
+           order by p.created_by desc
+           fetch first rows only
+         )
 /
