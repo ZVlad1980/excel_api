@@ -345,6 +345,25 @@ create or replace package body dv_sr_lspv_docs_api is
    *  за указанный год (p_year)
    */
   procedure synchronize(p_year in number) is
+    --
+    function check_update_gf_persons_ return boolean is
+      l_last_start date;
+    begin
+      select max(p.created_by)
+      into   l_last_start
+      from   dv_sr_lspv_prc_t p
+      where  p.process_name = 'UPDATE_GF_PERSONS';
+      --
+      return trunc(sysdate) - trunc(l_last_start) >= 1;
+    exception
+      when no_data_found then
+        return true;
+      when others then
+        fix_exception($$plsql_line, 'check_update_gf_persons_');
+        raise;
+    end check_update_gf_persons_;
+    --
+    --
     procedure stats_ is
     begin
       dbms_stats.gather_table_stats('FND', upper('dv_sr_lspv_docs_t'));
@@ -358,7 +377,12 @@ create or replace package body dv_sr_lspv_docs_api is
       dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_i7'));
       dbms_stats.gather_index_stats('FND', upper('dv_sr_lspv_docs_u1'));
     end;
+    --
   begin
+    --ќбновление GF_PERSONS запускает в процессе проверки ошибок, здесь только дл€ страховки
+    if check_update_gf_persons_ then
+      update_gf_persons(p_year);
+    end if;
     --
     set_period(p_year);
     --

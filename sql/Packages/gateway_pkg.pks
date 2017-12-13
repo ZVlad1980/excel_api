@@ -5,9 +5,17 @@ create or replace package gateway_pkg is
   -- Purpose : API Gateway
   
   /**
-   * Процедура запускает синхронизацию таблицу dv_sr_lspv_docs_t
+   * Процедура synhr_dv_sr_lspv_docs запускает синхронизацию таблицу dv_sr_lspv_docs_t
    */
   procedure synhr_dv_sr_lspv_docs(
+    x_err_msg    out varchar2,
+    p_end_date   in  varchar2
+  );
+  
+  /**
+   * Процедура update_gf_persons обновляет не актуальные CONTRAGENTS.ID
+   */
+  procedure update_gf_persons(
     x_err_msg    out varchar2,
     p_end_date   in  varchar2
   );
