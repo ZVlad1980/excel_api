@@ -16,14 +16,21 @@ create table dv_sr_lspv_prc_t (
 /
 create sequence dv_sr_lspv_docs_seq cache 100000
 /
+--rename dv_sr_lspv_docs_t to dv_sr_lspv_docs_t#
 create table dv_sr_lspv_docs_t (
   id                 int 
     default dv_sr_lspv_docs_seq.nextval
     primary key , --int generated as identity primary key,
   date_op            date           not null, 
+  year_op            as 	          (extract(year from "DATE_OP")),
+  month_op           as             (extract(month from "DATE_OP")),
+  quarter_op         as             (ceil(extract(month from "DATE_OP")/3)),
   ssylka_doc_op      number         not null, 
   type_op            number,  
   date_doc           date           not null,
+  year_doc           as 	          (extract(year from "DATE_DOC")),
+  month_doc          as             (extract(month from "DATE_DOC")),
+  quarter_doc        as             (ceil(extract(month from "DATE_DOC")/3)),
   ssylka_doc         number(10,0)   not null, 
   nom_vkl            number(10,0)   not null, 
   nom_ips            number(10,0)   not null, 
@@ -34,8 +41,7 @@ create table dv_sr_lspv_docs_t (
   det_charge_type    varchar2(20), 
   revenue            number, 
   benefit            number, 
-  tax                number, 
-  tax_83             number, 
+  tax                number,
   source_revenue     number, 
   source_benefit     number, 
   source_tax         number,

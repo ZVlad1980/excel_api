@@ -90,7 +90,6 @@ create or replace view dv_sr_lspv_buf_v as
          0                           tax_return,
          pb.tax_rate,
          pb.tax_rate                 tax_rate_op,
-         0                           tax_83, 
          0                           source_revenue, 
          0                           source_benefit, 
          0                           source_tax, 

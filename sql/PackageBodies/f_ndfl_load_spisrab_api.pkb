@@ -290,7 +290,7 @@ create or replace package body f_ndfl_load_spisrab_api is
     set    s.nalres_status = 
              case
                when s.gf_person is not null and 
-                 exists(select 1 from sp_no_residents_v  p where p.gf_person = s.gf_person) then
+                 exists(select 1 from sp_tax_residents_v  p where p.resident = 'N' and p.fk_contragent = s.gf_person) then
                  0
                else
                  1
