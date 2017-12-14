@@ -38,45 +38,73 @@ create or replace package body gateway_pkg is
    *    - трансл€ци€ латиницы и 0
    *    - удаление любых символов кроме кириллицы
    */
-   function prepare_str$(p_str varchar2) return varchar2 is
-   begin
-     return 
-       translate(
-           trim(
-             regexp_replace(
-               p_str, '  +', ' '
-             )
-           ),
-         C_SRC_CHR,
-         C_DEST_CHR
-       );
-   end prepare_str$;
+  function prepare_str$(p_str varchar2) return varchar2 is
+  begin
+    return 
+      translate(
+          trim(
+            regexp_replace(
+              p_str, '  +', ' '
+            )
+          ),
+        C_SRC_CHR,
+        C_DEST_CHR
+      );
+  end prepare_str$;
+  
+  function to_number$(p_str varchar2) return number is
+    l_delim varchar2(1);
+  begin
+    l_delim := substr(1/2, 1, 1);
+    return to_number(prepare_str$(replace(p_str, case l_delim when '.' then ',' else '.' end, l_delim)));
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end to_number$;
    
-   function to_number$(p_str varchar2) return number is
-     l_delim varchar2(1);
-   begin
-     l_delim := substr(1/2, 1, 1);
-     return to_number(prepare_str$(replace(p_str, case l_delim when '.' then ',' else '.' end, l_delim)));
-   exception
-     when others then
-       fix_exception;
-       raise;
-   end to_number$;
-   /**
-   * ѕроцедура запускает синхронизацию таблицу dv_sr_lspv_docs_t
+  /**
+   * ‘ункци€ get_date возвращает дату начала или окончани€ заданного года и мес€ца
+   *
+   * @param p_year    - год
+   * @param p_month   - мес€ц
+   * @param p_is_end  - флаг, определ€ющий тип даты: начало или конец периода
+   *
+   */
+  function get_date(
+    p_year   number,
+    p_month  number default 12,
+    p_is_end boolean default true
+  ) return date is
+    l_month  varchar2(2);
+    l_diff   int;
+  begin
+    l_month := lpad(case when p_month <1 or p_month > 12 then 12 else p_month end, 2, '0');
+    l_diff  := case when p_is_end then 1 else 0 end;
+    return add_months(to_date(p_year || l_month || '01', 'yyyymmdd'), l_diff) - l_diff;
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end get_date;
+  
+  /**
+   * ѕроцедура synhr_dv_sr_lspv_docs запускает синхронизацию таблицу dv_sr_lspv_docs_t
+   *
+   * @param p_year        - год формировани€ данных
+   * @param p_month       - мес€ц формировани€ данных
+   *
    */
   procedure synhr_dv_sr_lspv_docs(
     x_err_msg    out varchar2,
-    p_end_date   in  varchar2
+    p_year            number
   ) is
   begin
     --
     utl_error_api.init_exceptions;
     --
     dv_sr_lspv_docs_api.synchronize(
-      p_year => to_number(
-                  extract(year from to_date(p_end_date, C_DATE_FMT))
-                )
+      p_year => p_year
     );
     --
     commit;
@@ -95,7 +123,7 @@ create or replace package body gateway_pkg is
    */
   procedure update_gf_persons(
     x_err_msg    out varchar2,
-    p_end_date   in  varchar2
+    p_year            number
   ) is
   begin
     --
@@ -103,9 +131,7 @@ create or replace package body gateway_pkg is
     utl_error_api.init_exceptions;
     --
     dv_sr_lspv_docs_api.update_gf_persons(
-      p_year => to_number(
-                  extract(year from to_date(p_end_date, C_DATE_FMT))
-                )
+      p_year => p_year
     );
     --
     commit;
@@ -125,22 +151,29 @@ create or replace package body gateway_pkg is
    * @param x_result      - курсор с данными
    * @param x_err_msg     - сообщение об ошибке
    * @param p_report_code - код отчета
-   * @param p_from_date   - дата начала выборки в формате YYYYMMDD
-   * @param p_end_date    - дата окончани€ выборки в формате YYYYMMDD
+   * @param p_year        - год формировани€ отчета
+   * @param p_month       - мес€ц формировани€ отчета
+   * @param p_report_date - дата, на которую формируетс€ отчет
    *
    */
   procedure get_report(
-    x_result    out sys_refcursor, 
-    x_err_msg   out varchar2,
-    p_report_code   varchar2,
-    p_from_date     varchar2,
-    p_end_date      varchar2
+    x_result      out sys_refcursor, 
+    x_err_msg     out varchar2,
+    p_report_code     varchar2,
+    p_year            number,
+    p_month           number,
+    p_report_date     varchar2
   ) is
   begin
     --
+    /*x_err_msg := 'get_report: ' || p_report_code || ', ' || 
+      to_char(get_date(p_year, p_month), 'dd.mm.yyyy') || ', ' || 
+      to_char(to_date$(p_report_date), 'dd.mm.yyyy');
+    return;--*/
     x_result := ndfl_report_api.get_report(
       p_report_code => p_report_code, 
-      p_end_date    => to_date(p_end_date, C_DATE_FMT)
+      p_end_date    => get_date(p_year, p_month),
+      p_report_date => to_date$(p_report_date)
     );
     --
   exception
@@ -257,19 +290,18 @@ create or replace package body gateway_pkg is
       x_err_msg := utl_error_api.get_error_msg;
   end create_ndfl2;
   
-  
-  
   /**
    * ѕроцедура запуска формировани€ таблицы расхождени€ налогов
    */
   procedure build_tax_diff_det_table(
     x_err_msg       out varchar2,
-    p_end_date      in  varchar2
+    p_year              number,
+    p_month             number
   ) is
   begin
     --
     dv_sr_lspv_docs_api.build_tax_diff(
-      p_end_date => to_date$(p_end_date)
+      p_end_date => get_date(p_year, p_month)
     );
     --
     commit;
@@ -277,7 +309,7 @@ create or replace package body gateway_pkg is
   exception
     when others then
       rollback;
-      fix_exception('build_tax_diff_det_table(p_end_date => ' || p_end_date || ')');
+      fix_exception('build_tax_diff_det_table(p_year => ' || p_year || ', p_month => ' || p_month || ')');
       x_err_msg := utl_error_api.get_error_msg;
   end build_tax_diff_det_table;
   

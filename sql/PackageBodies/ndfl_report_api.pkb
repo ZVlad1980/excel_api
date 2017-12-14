@@ -16,13 +16,14 @@ create or replace package body ndfl_report_api is
    * Функция get_report возвращает курсор с данными отчета
    * 
    * @param p_report_code - код отчета
-   * @param p_from_date   - дата начала выборки в формате YYYYMMDD
-   * @param p_end_date    - дата окончания выборки в формате YYYYMMDD
+   * @param p_end_date    - конечная дата отчета
+   * @param p_report_date - дата, на которую формируется отчет
    *
    */
   function get_report(
     p_report_code   varchar2,
-    p_end_date      date
+    p_end_date      date,
+    p_report_date   date default null
   ) return sys_refcursor is
     --
     l_result      sys_refcursor;
@@ -31,7 +32,11 @@ create or replace package body ndfl_report_api is
   begin
     --
     l_report_code := p_report_code;
-    dv_sr_lspv_docs_api.set_period(p_end_date);
+    dv_sr_lspv_docs_api.set_period(
+      p_end_date    => p_end_date,
+      p_report_date => p_report_date
+    );
+    --
     if p_report_code = 'tax_diff_det_report' then
       dv_sr_lspv_docs_api.set_is_buff;
     else

@@ -6,10 +6,13 @@ create or replace package gateway_pkg is
   
   /**
    * Процедура synhr_dv_sr_lspv_docs запускает синхронизацию таблицу dv_sr_lspv_docs_t
+   *
+   * @param p_year        - год формирования данных
+   *
    */
   procedure synhr_dv_sr_lspv_docs(
     x_err_msg    out varchar2,
-    p_end_date   in  varchar2
+    p_year            number
   );
   
   /**
@@ -17,7 +20,7 @@ create or replace package gateway_pkg is
    */
   procedure update_gf_persons(
     x_err_msg    out varchar2,
-    p_end_date   in  varchar2
+    p_year            number
   );
   
   /**
@@ -26,16 +29,18 @@ create or replace package gateway_pkg is
    * @param x_result      - курсор с данными
    * @param x_err_msg     - сообщение об ошибке
    * @param p_report_code - код отчета
-   * @param p_from_date   - дата начала выборки в формате YYYYMMDD
-   * @param p_end_date    - дата окончания выборки в формате YYYYMMDD
+   * @param p_year        - год формирования отчета
+   * @param p_month       - месяц формирования отчета
+   * @param p_report_date - дата, на которую формируется отчет
    *
    */
   procedure get_report(
-    x_result    out sys_refcursor, 
-    x_err_msg   out varchar2,
-    p_report_code   varchar2,
-    p_from_date     varchar2,
-    p_end_date      varchar2
+    x_result      out sys_refcursor, 
+    x_err_msg     out varchar2,
+    p_report_code     varchar2,
+    p_year            number,
+    p_month           number,
+    p_report_date     varchar2
   );
   
   /**
@@ -83,7 +88,8 @@ create or replace package gateway_pkg is
    */
   procedure build_tax_diff_det_table(
     x_err_msg       out varchar2,
-    p_end_date      in  varchar2
+    p_year              number,
+    p_month             number
   );
   
 end gateway_pkg;

@@ -5,16 +5,17 @@ create or replace package ndfl_report_api is
   -- Purpose : 
   
   /**
-   * Р¤СѓРЅРєС†РёСЏ get_report РІРѕР·РІСЂР°С‰Р°РµС‚ РєСѓСЂСЃРѕСЂ СЃ РґР°РЅРЅС‹РјРё РѕС‚С‡РµС‚Р°
+   * Функция get_report возвращает курсор с данными отчета
    * 
-   * @param p_report_code - РєРѕРґ РѕС‚С‡РµС‚Р°
-   * @param p_from_date   - РґР°С‚Р° РЅР°С‡Р°Р»Р° РІС‹Р±РѕСЂРєРё РІ С„РѕСЂРјР°С‚Рµ YYYYMMDD
-   * @param p_end_date    - РґР°С‚Р° РѕРєРѕРЅС‡Р°РЅРёСЏ РІС‹Р±РѕСЂРєРё РІ С„РѕСЂРјР°С‚Рµ YYYYMMDD
+   * @param p_report_code - код отчета
+   * @param p_end_date    - конечная дата отчета
+   * @param p_report_date - дата, на которую формируется отчет
    *
    */
   function get_report(
     p_report_code   varchar2,
-    p_end_date      date
+    p_end_date      date,
+    p_report_date   date default null
   ) return sys_refcursor;
   
 end ndfl_report_api;
