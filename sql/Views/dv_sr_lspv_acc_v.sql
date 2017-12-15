@@ -24,4 +24,6 @@ create or replace view dv_sr_lspv_acc_v as
   --and    d.nom_ips = 6183  and    d.nom_vkl = 75
   --and    d.nom_ips = 1376  and    d.nom_vkl = 1
   --and    d.nom_ips = 1859 and    d.nom_vkl = 37 --Мингазова
+  --and    d.nom_ips = 5098  and    d.nom_vkl = 77  --3443820 - benefit + 83   (77 5098)
+  --and    d.nom_ips = 3123  and    d.nom_vkl = 6   --3052332 - benefit + -1 0 (6 3123)
 /

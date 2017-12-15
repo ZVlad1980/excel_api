@@ -26,7 +26,39 @@ create or replace view dv_sr_lspv_corr_v as
          d.corr_op_amount,
          d.root_amount,
          d.type_op,
-         d.is_leaf
+         d.is_leaf,
+         case 
+           when d.charge_type = 'BENEFIT' then
+             case 
+               when d.type_op = -1 and
+                 exists(
+                   select 1
+                   from   dv_sr_lspv_acc_v dd
+                   where  1=1
+                   and    dd.charge_type = 'TAX_CORR'
+                           --(dd.charge_type = 'BENEFIT' and dd.amount = 0)
+                   and    dd.ssylka_doc = d.ssylka_doc_op
+                   and    dd.date_op > d.date_op
+                   and    dd.nom_vkl = d.nom_vkl
+                   and    dd.nom_ips = d.nom_ips
+                 ) then 1
+               when d.type_op is null and exists (
+                   select 1
+                   from   dv_sr_lspv_acc_v dd
+                   where  1=1
+                   and    dd.charge_type = 'BENEFIT'
+                   and    dd.amount = 0
+                   and    dd.ssylka_doc = d.service_doc
+                   and    dd.date_op > d.date_op
+                   and    dd.nom_vkl = d.nom_vkl
+                   and    dd.nom_ips = d.nom_ips
+                 )
+                 then 1
+               else 0
+             end
+           else
+             0
+         end exists_83
   from   (
           select connect_by_root(d.date_op)    date_op,
                  connect_by_root(d.ssylka_doc) ssylka_doc_op,

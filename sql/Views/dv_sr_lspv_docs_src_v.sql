@@ -10,14 +10,15 @@ create or replace view dv_sr_lspv_docs_src_v as
            max(dc.tax_rate)        tax_rate,
            max(dc.det_charge_type) det_charge_type,
            sum(case dc.charge_type when 'REVENUE'  then dc.amount end) revenue,
-           sum(case dc.charge_type when 'BENEFIT'  then dc.amount end) benefit,
+           sum(case dc.charge_type 
+                 when 'BENEFIT'  then case when (dc.type_op = -1 and dc.amount = 0) then dc.source_op_amount else dc.amount end
+                 when 'TAX_CORR' then dc.source_op_amount
+               end
+           )                                                           benefit,
            sum(case dc.charge_type when 'TAX'      then dc.amount end) tax,
            sum(case dc.charge_type when 'TAX_CORR' then dc.amount end) tax_83,
            sum(case dc.charge_type when 'REVENUE'  then dc.source_op_amount end) source_revenue,
-           sum(case when dc.charge_type = 'BENEFIT' 
-                   or nvl(dc.type_op, 0) = -2 then  --коррекция 83 счетом - в source_op_amount - сумма вычета
-                 dc.source_op_amount
-               end) source_benefit,
+           sum(case dc.charge_type when 'BENEFIT'  then dc.source_op_amount end) source_benefit,
            sum(case dc.charge_type when 'TAX' then dc.source_op_amount end) source_tax,
            max(dc.is_tax_return) is_tax_return
     from   dv_sr_lspv_all_v dc
