@@ -21,7 +21,7 @@ create or replace view ndfl6_report_detail_v as
          sum(d.benefit) benefit,
          sum(d.tax)     tax
   from   dv_sr_lspv_det_v d
-  where  d.type_op is null
+  where  d.type_op = 0
   group by d.date_op
   ) d
   full outer join (

@@ -3,7 +3,7 @@ create or replace view ndfl6_part1_rates_13_bb_v as
     select d.nom_vkl, d.nom_ips, d.ssylka_doc, d.gf_person, d.pen_scheme_code, d.year_doc, d.year_op,
            min(d.type_op) type_op,
            sum(d.revenue) revenue,
-           sum(case when d.type_op is null then d.revenue when d.type_op = -1 then -1 * d.source_revenue end) fix_revenue,
+           sum(case when d.type_op = 0 then d.revenue when d.type_op = -1 then -1 * d.source_revenue end) fix_revenue,
            sum(case d.type_op when -1 then d.revenue end) corr_revenue,
            max(d.source_revenue) source_revenue
     from   dv_sr_lspv_docs_v d

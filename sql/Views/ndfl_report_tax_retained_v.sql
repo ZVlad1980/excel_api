@@ -16,9 +16,9 @@ create or replace view ndfl_report_tax_retained_v as
            d.source_tax,
            d.type_op,
            d.is_tax_return,
-           max(case when nvl(d.type_op, 0) = -1 then 1 else 0 end)over(partition by d.ssylka_doc, d.nom_vkl, d.nom_ips) is_corrected
+           max(case when d.type_op = -1 then 1 else 0 end)over(partition by d.ssylka_doc, d.nom_vkl, d.nom_ips) is_corrected
     from   dv_sr_lspv_docs_v d
-    where  nvl(d.type_op, 0) <> -2
+    where  d.type_op <> -2
   )
   select d.det_charge_type,
          d.pen_scheme_code,
@@ -29,12 +29,12 @@ create or replace view ndfl_report_tax_retained_v as
              end
          )          tax_wo_corr_13,
          sum(case when d.tax_rate_op = 13 and 
-                    coalesce(d.type_op, 0) = -1 and coalesce(d.is_tax_return, 'N') = 'Y' then 
+                    d.type_op = -1 and coalesce(d.is_tax_return, 'N') = 'Y' then 
                coalesce(t.tax_accruing, coalesce(d.tax, 0)) + coalesce(case when d.year_op = d.year_doc then d.source_tax end, 0)
              end
          )          tax_corr_13,
          sum(case when d.tax_rate_op = 30 and d.is_corrected = 0 then d.tax end) tax_wo_corr_30,
-         sum(case when d.tax_rate_op = 30 and coalesce(d.type_op, 0) = -1 and coalesce(d.is_tax_return, 'N') = 'Y' then 
+         sum(case when d.tax_rate_op = 30 and d.type_op = -1 and coalesce(d.is_tax_return, 'N') = 'Y' then 
                coalesce(t.tax_accruing, coalesce(d.tax, 0)) + coalesce(case when d.year_op = d.year_doc then d.source_tax end, 0)
              end
          )          tax_corr_30
