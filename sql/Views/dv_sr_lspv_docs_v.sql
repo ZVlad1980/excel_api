@@ -1,12 +1,30 @@
 create or replace view dv_sr_lspv_docs_v as
-  with dv_sr_lspv_docs_w as (
+  with dv_sr_lspv_docs_ids_w as (
+    select dd.id,
+           0 type_op,
+           'N' is_tax_return,
+           null source_benefit
+    from   dv_sr_lspv_docs_t dd
+    where  dd.type_op is null
+    and    date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
+   union all
+    select dd.id,
+           dd.type_op,
+           nvl(dd.is_tax_return, 'N') is_tax_return,
+           case when dd.type_op <> -2 then dd.source_benefit end source_benefit
+    from   dv_sr_lspv_docs_t dd
+    where  dd.type_op < 0
+    and    dd.year_doc <= dv_sr_lspv_docs_api.get_year
+    and    dd.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_report_date
+  ),
+  dv_sr_lspv_docs_w as (
     select d.id, 
            d.year_op,
            d.month_op,
            d.quarter_op,
            d.date_op, 
            d.ssylka_doc_op, 
-           nvl(d.type_op, 0) type_op, 
+           dd.type_op,
            d.year_doc,
            d.month_doc,
            d.quarter_doc,
@@ -24,16 +42,17 @@ create or replace view dv_sr_lspv_docs_v as
            case nn.resident when 'N' then 30 else 13 end tax_rate,
            d.tax_rate tax_rate_op,
            d.source_revenue, 
-           d.source_benefit, 
+           dd.source_benefit, 
            d.source_tax, 
            d.process_id, 
-           d.is_tax_return
-    from   dv_sr_lspv_docs_t   d,
-           sp_tax_residents_v  nn
+           dd.is_tax_return
+    from   dv_sr_lspv_docs_ids_w dd,
+           dv_sr_lspv_docs_t     d,
+           sp_tax_residents_v    nn
     where  1=1
     and    nn.fk_contragent(+) = d.gf_person
     and    d.is_delete is null
-    and    d.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
+    and    d.id = dd.id
   )
   select d.id, 
          d.year_op,
@@ -54,17 +73,17 @@ create or replace view dv_sr_lspv_docs_v as
          d.pen_scheme_code,
          d.det_charge_type,
          d.revenue,
-         case when not(d.type_op = -1 and d.year_op <> d.year_doc) then d.revenue end revenue_curr_year,
-         case when d.type_op in (0, -1) and d.year_doc = dv_sr_lspv_docs_api.get_year then d.benefit end benefit, 
-         case when d.type_op in (0, -1) then d.tax end tax,
-         case when d.type_op in (0, -1) then d.tax end tax_retained,
-         case when not (d.type_op = -2 or (d.type_op = -1 and coalesce(d.is_tax_return, 'N') = 'Y')) then d.tax end tax_retained_old,
-         case when (d.type_op = -1 and coalesce(d.is_tax_return, 'N') = 'Y') then d.tax end tax_return,
-         case when d.type_op = -2 then d.tax end tax_83,
+         case when d.year_doc = dv_sr_lspv_docs_api.get_year then d.revenue else 0 end revenue_curr_year,
+         case when d.year_doc = dv_sr_lspv_docs_api.get_year then d.benefit else 0 end benefit,
+         case when d.type_op in (0, -1) then d.benefit else 0                      end benefit_all,
+         case when d.type_op in (0, -1) or (d.type_op = -2 and d.year_doc = dv_sr_lspv_docs_api.get_year) then d.tax     else 0 end tax,
+         case when d.type_op in (0, -1) or (d.type_op = -2 and d.year_doc = dv_sr_lspv_docs_api.get_year) then d.tax     else 0 end tax_retained,
+         case when d.is_tax_return = 'Y' and d.year_op = dv_sr_lspv_docs_api.get_year then d.tax else 0 end tax_return, --возврат налога по 231 в нал.периоде
+         case when d.type_op = -2 and d.year_doc < dv_sr_lspv_docs_api.get_year then d.tax else 0 end tax_83,
          d.tax_rate,
          d.tax_rate_op,
          d.source_revenue, 
-         case when d.type_op in (0, -1) then d.source_benefit end source_benefit,
+         d.source_benefit,
          d.source_tax, 
          d.process_id, 
          d.is_tax_return
@@ -90,10 +109,10 @@ create or replace view dv_sr_lspv_docs_v as
          d.det_charge_type,
          d.revenue,
          d.revenue_curr_year,
-         d.benefit, 
+         d.benefit,
+         null benefit_all,
          d.tax,
          d.tax tax_retained,
-         d.tax_retained_old,
          d.tax_return,
          null tax_83,
          d.tax_rate,

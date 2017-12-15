@@ -172,7 +172,7 @@ create or replace package body ndfl_report_api is
                  c.nom_ips,
                  c.shifr_schet,
                  c.sub_shifr_schet,
-                 c.ssylka,
+                 c.gf_person,
                  c.last_name,
                  c.first_name,
                  c.second_name
