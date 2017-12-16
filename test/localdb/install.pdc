@@ -1,0 +1,303 @@
+
+
+prompt install utl_error_api.pks
+@@Packages\utl_error_api.pks
+show error
+
+prompt install zaprvkl_api.pks
+@@Packages\zaprvkl_api.pks
+show error
+
+prompt install zaprvkl_headers_tapi.pks
+@@Packages\zaprvkl_headers_tapi.pks
+show error
+
+prompt install zaprvkl_lines_tmp_api.pks
+@@Packages\zaprvkl_lines_tmp_api.pks
+show error
+
+prompt install dv_sr_lspv_docs_api.pks
+@@Packages\dv_sr_lspv_docs_api.pks
+show error
+
+prompt install ndfl_report_api.pks
+@@Packages\ndfl_report_api.pks
+show error
+
+prompt install f_ndfl_load_spisrab_api.pks
+@@Packages\f_ndfl_load_spisrab_api.pks
+show error
+
+prompt install gateway_pkg.pks
+@@Packages\gateway_pkg.pks
+show error
+
+prompt install gateway_user_pkg.pks
+@@Packages\gateway_user_pkg.pks
+show error
+
+prompt install f2ndfl_arh_spravki_api.pks
+@@Packages\f2ndfl_arh_spravki_api.pks
+show error
+
+/*prompt install FXNDFL_UTIL.pks
+@@Packages\FXNDFL_UTIL.pks
+show error
+*/
+prompt install sp_quarters_v.sql
+@@Views\sp_quarters_v.sql
+show error
+
+prompt install sp_det_charge_types_v.sql
+@@Views\sp_det_charge_types_v.sql
+show error
+
+prompt install sp_ritual_pos_v.sql
+@@Views\sp_ritual_pos_v.sql
+show error
+
+prompt install gf_people_v.sql
+@@Views\gf_people_v.sql
+show error
+
+prompt install zaprvkl_lines_tmp_v.sql
+@@Views\zaprvkl_lines_tmp_v.sql
+show error
+
+prompt install zaprvkl_lines_v.sql
+@@Views\zaprvkl_lines_v.sql
+show error
+
+prompt install zaprvkl_lines_translate_v.sql
+@@Views\zaprvkl_lines_translate_v.sql
+show error
+
+prompt install zaprvkl_persons_v.sql
+@@Views\zaprvkl_persons_v.sql
+show error
+
+prompt install zaprvkl_persons_translate_v.sql
+@@Views\zaprvkl_persons_translate_v.sql
+show error
+
+prompt install zaprvkl_persons_rep_v.sql
+@@Views\zaprvkl_persons_rep_v.sql
+show error
+
+prompt install zaprvkl_part_rep_v.sql
+@@Views\zaprvkl_part_rep_v.sql
+show error
+
+prompt install zaprvkl_full_ident_v.sql
+@@Views\zaprvkl_full_ident_v.sql
+show error
+
+prompt install zaprvkl_part_ident_v.sql
+@@Views\zaprvkl_part_ident_v.sql
+show error
+
+prompt install dv_sr_lspv_acc_v.sql
+@@Views\dv_sr_lspv_acc_v.sql
+show error
+
+prompt install sp_gf_persons_v.sql
+@@Views\sp_gf_persons_v.sql
+show error
+
+prompt install dv_sr_lspv_corr_v.sql
+@@Views\dv_sr_lspv_corr_v.sql
+show error
+
+prompt install dv_sr_lspv_83_v.sql
+@@Views\dv_sr_lspv_83_v.sql
+show error
+
+prompt install dv_sr_lspv_all_v.sql
+@@Views\dv_sr_lspv_all_v.sql
+show error
+
+prompt install sp_pen_schemes_v.sql
+@@Views\sp_pen_schemes_v.sql
+show error
+
+prompt install sp_fiz_litz_lspv_v.sql
+@@Views\sp_fiz_litz_lspv_v.sql
+show error
+
+prompt install sp_fiz_lits_receivers_v.sql
+@@Views\sp_fiz_lits_receivers_v.sql
+show error
+
+prompt install sp_fiz_lits_diff_v.sql
+@@Views\sp_fiz_lits_diff_v.sql
+show error
+
+prompt install vyplach_posob_receivers_v.sql
+@@Views\vyplach_posob_receivers_v.sql
+show error
+
+prompt install vyplach_posob_v.sql
+@@Views\vyplach_posob_v.sql
+show error
+
+prompt install dv_sr_lspv_docs_src_v.sql
+@@Views\dv_sr_lspv_docs_src_v.sql
+show error
+
+prompt install vyplach_posob_non_ident_v.sql
+@@Views\vyplach_posob_non_ident_v.sql
+show error
+
+prompt install sp_fiz_lits_non_ident_v.sql
+@@Views\sp_fiz_lits_non_ident_v.sql
+show error
+
+prompt install sp_no_residents_v.sql
+@@Views\sp_no_residents_v.sql
+show error
+
+prompt install dv_sr_lspv_errors_v.sql
+@@Views\dv_sr_lspv_errors_v.sql
+show error
+
+prompt install dv_sr_lspv_buf_v.sql
+@@Views\dv_sr_lspv_buf_v.sql
+show error
+
+prompt install dv_sr_lspv_docs_v.sql
+@@Views\dv_sr_lspv_docs_v.sql
+show error
+
+prompt install dv_sr_lspv_docs_pers_v.sql
+@@Views\dv_sr_lspv_docs_pers_v.sql
+show error
+
+prompt install dv_sr_lspv_pers_v.sql
+@@Views\dv_sr_lspv_pers_v.sql
+show error
+
+prompt install dv_sr_lspv_det_v.sql
+@@Views\dv_sr_lspv_det_v.sql
+show error
+
+prompt install ndfl6_report_detail_v.sql
+@@Views\ndfl6_report_detail_v.sql
+show error
+
+prompt install ndfl6_report_detail2_v.sql
+@@Views\ndfl6_report_detail2_v.sql
+show error
+
+prompt install ndfl6_tax_returns_v.sql
+@@Views\ndfl6_tax_returns_v.sql
+show error
+
+prompt install ndfl6_report_correcting_v.sql
+@@Views\ndfl6_report_correcting_v.sql
+show error
+
+prompt install ndfl6_part1_general_v.sql
+@@Views\ndfl6_part1_general_v.sql
+show error
+
+prompt install ndfl6_part1_rates_13_wo_bb_v.sql
+@@Views\ndfl6_part1_rates_13_wo_bb_v.sql
+show error
+
+prompt install ndfl6_part1_rates_13_bb_v.sql
+@@Views\ndfl6_part1_rates_13_bb_v.sql
+show error
+
+prompt install ndfl6_part1_rates_30_v.sql
+@@Views\ndfl6_part1_rates_30_v.sql
+show error        
+
+prompt install ndfl6_part1_rates_30_persns_v.sql
+@@Views\ndfl6_part1_rates_30_persns_v.sql
+show error
+
+prompt install dv_sr_lspv_corr_ops_v.sql
+@@Views\dv_sr_lspv_corr_ops_v.sql
+show error
+
+prompt install ndfl6_part2_v.sql
+@@Views\ndfl6_part2_v.sql
+show error
+
+prompt install dv_sr_lspv_tax_diff_v.sql
+@@Views\dv_sr_lspv_tax_diff_v.sql
+show error
+
+prompt install dv_sr_lspv_tax_diff_det_v.sql
+@@Views\dv_sr_lspv_tax_diff_det_v.sql
+show error
+
+prompt install ndfl_report_tax_retained_v.sql
+@@Views\ndfl_report_tax_retained_v.sql
+show error
+
+prompt install ndfl2_corr_spr_v.sql
+@@Views\ndfl2_corr_spr_v.sql
+show error
+
+prompt install ndfl2_corr_spr_rep_v.sql
+@@Views\ndfl2_corr_spr_rep_v.sql
+show error
+
+/*prompt install taxdeductions_v.sql
+@@Views\taxdeductions_v.sql
+show error
+*/
+prompt install contragent_merge_log_v.sql
+@@Views\contragent_merge_log_v.sql
+show error
+
+prompt install utl_error_api.pkb
+@@PackageBodies\utl_error_api.pkb
+show error
+
+prompt install zaprvkl_api.pkb
+@@PackageBodies\zaprvkl_api.pkb
+show error
+
+prompt install zaprvkl_headers_tapi.pkb
+@@PackageBodies\zaprvkl_headers_tapi.pkb
+show error
+
+prompt install zaprvkl_lines_tmp_api.pkb
+@@PackageBodies\zaprvkl_lines_tmp_api.pkb
+show error
+
+prompt install f_ndfl_load_spisrab_api.pkb
+@@PackageBodies\f_ndfl_load_spisrab_api.pkb
+show error
+
+prompt install f2ndfl_arh_spravki_api.pkb
+@@PackageBodies\f2ndfl_arh_spravki_api.pkb
+show error
+
+prompt install ndfl_report_api.pkb
+@@PackageBodies\ndfl_report_api.pkb
+show error
+
+prompt install dv_sr_lspv_docs_api.pkb
+@@PackageBodies\dv_sr_lspv_docs_api.pkb
+show error
+
+prompt install gateway_pkg.pkb
+@@PackageBodies\gateway_pkg.pkb
+show error
+
+prompt install gateway_user_pkg.pkb
+@@PackageBodies\gateway_user_pkg.pkb
+show error
+/*
+prompt install FXNDFL_UTIL.pkb
+@@PackageBodies\FXNDFL_UTIL.pkb
+show error
+*/
+prompt Install grants.sql
+@@grants.sql
+show error
+
+exit
