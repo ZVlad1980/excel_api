@@ -1,5 +1,5 @@
 create or replace view dv_sr_lspv_errors_v as
-  with corrections as (
+  /*with corrections as (
     select c.date_op, 
            c.ssylka_doc_op, 
            c.date_doc, 
@@ -62,19 +62,19 @@ create or replace view dv_sr_lspv_errors_v as
  TODO: owner="V.Zhuravov" created="12.12.2017"
  text="Перевести следующие два запроса на таблицу DV_SR_GF_PERSONS_T"
  */ -- не идентифицированные участники
-  select null date_op,
-         null ssylka_doc,
+  select null                                                          date_op,
+         null                                                          ssylka_doc,
          fl.nom_vkl,
          fl.nom_ips,
-         null,
-         null,
-         null,
-         null,
-         fl.ssylka ssylka_fl,
-         fl.familiya || ' ' || fl.imya || ' ' || fl.otchestvo fio,
-         3 error_code,
-         null error_sub_code,
-         null gf_person
+         null                                                          shifr_schet, 
+         null                                                          sub_shifr_schet,
+         null                                                          amount, 
+         null                                                          source_amount,
+         fl.ssylka                                                     ssylka_fl,
+         fl.familiya || ' ' || fl.imya || ' ' || fl.otchestvo          fio,
+         3                                                             error_code,
+         null                                                          error_sub_code,
+         null                                                          gf_person
   from   sp_fiz_lits_non_ident_v fl
  union all
   -- не идентифицированные получатели пособий

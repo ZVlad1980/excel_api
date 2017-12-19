@@ -1,5 +1,5 @@
 PL/SQL Developer Test script 3.0
-11
+13
 -- Created on 16.12.2017 by V.ZHURAVOV 
 declare 
   -- Local variables here
@@ -8,8 +8,10 @@ begin
   -- Test statements here
   dv_sr_lspv_docs_api.synchronize(p_year => 2016);
   commit;
+  --*/
   dv_sr_lspv_docs_api.synchronize(p_year => 2017);
   commit;
+  --*/
 end;
 0
 0

@@ -512,10 +512,13 @@ create or replace package body dv_sr_lspv_docs_api is
       log errors into err$_dv_sr_lspv_docs_t reject limit unlimited;
     --
     update dv_sr_lspv_docs_t d
-    set    d.is_delete = 'Y',
-           d.process_id = p_process_id
+    set    d.is_delete = 'Y'
     where  d.process_id <> p_process_id
-    and    d.date_doc between get_start_date and get_end_date;
+    and    (
+            (d.date_doc between get_start_date and get_end_date)
+            or
+            (d.date_op between get_start_date and get_end_date)
+           );
     --
     l_del_rows := sql%rowcount;
     --

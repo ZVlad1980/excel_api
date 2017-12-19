@@ -1,105 +1,101 @@
 create or replace view dv_sr_lspv_corr_v as
-  select d.date_op,
-         d.ssylka_doc_op,
-         d.date_doc,
+  with d83 as (
+    select d83.date_op,
+           d83.ssylka_doc,
+           d83.service_doc,
+           d83.date_doc,
+           d83.nom_vkl,
+           d83.nom_ips,
+           d83.charge_type,
+           d83.det_charge_type,
+           d83.shifr_schet,
+           d83.sub_shifr_schet,
+           d83.amount
+    from   dv_sr_lspv_83_v d83
+    where  1=1
+    and    d83.is_link_benefit_op = 1
+    and    d83.is_link_tax_op = 0
+  )
+  select max(connect_by_root(d.date_op)) over(partition by connect_by_root(d.ssylka_doc), d.nom_vkl, d.nom_ips) date_op, 
+         connect_by_root(d.ssylka_doc)               ssylka_doc_op,
+         case 
+           when d.charge_type = 'TAX_CORR' then
+             (select d83.date_doc
+              from   d83
+              where  d83.nom_vkl = d.nom_vkl
+              and    d83.nom_ips = d.nom_ips
+              and    d83.ssylka_doc = d.ssylka_doc
+             )
+           else date_op
+         end                                         date_doc,
          d.ssylka_doc,
          d.nom_vkl,
          d.nom_ips,
-         d.charge_type, 
+         d.charge_type,
          d.det_charge_type,
          d.shifr_schet,
          d.sub_shifr_schet,
-         d.sub_shifr_grp,
          d.tax_rate,
-         d.service_doc,
-         case
-           when d.root_amount = 0 then
-             0
-           when d.source_op_amount = 0 then
-             abs(root_amount)
-           when (abs(d.corr_op_amount) - abs(d.source_op_amount_accum)) > abs(d.source_op_amount) then
-             abs(d.source_op_amount)
-           else abs(d.corr_op_amount) - abs(d.source_op_amount_accum)
-         end * sign(d.corr_op_amount) amount,
-         d.source_op_amount,
-         d.source_op_amount_accum,
-         d.corr_op_amount,
-         d.root_amount,
-         d.type_op,
-         d.is_leaf,
-         case 
-           when d.charge_type = 'BENEFIT' then
-             case 
-               when d.type_op = -1 and
-                 exists(
-                   select 1
-                   from   dv_sr_lspv_acc_v dd
-                   where  1=1
-                   and    dd.charge_type = 'TAX_CORR'
-                           --(dd.charge_type = 'BENEFIT' and dd.amount = 0)
-                   and    dd.ssylka_doc = d.ssylka_doc_op
-                   and    dd.date_op > d.date_op
-                   and    dd.nom_vkl = d.nom_vkl
-                   and    dd.nom_ips = d.nom_ips
-                 ) then 1
-               when d.type_op is null and exists (
-                   select 1
-                   from   dv_sr_lspv_acc_v dd
-                   where  1=1
-                   and    dd.charge_type = 'BENEFIT'
-                   and    dd.amount = 0
-                   and    dd.ssylka_doc = d.service_doc
-                   and    dd.date_op > d.date_op
-                   and    dd.nom_vkl = d.nom_vkl
-                   and    dd.nom_ips = d.nom_ips
-                 )
-                 then 1
-               else 0
-             end
+         d.amount                                    source_op_amount,
+         sum(d.amount) 
+           over(
+             partition by d.nom_vkl, 
+                          d.nom_ips, 
+                          connect_by_root(d.ssylka_doc), 
+                          d.shifr_schet, 
+                          d.sub_shifr_schet,
+                          connect_by_isleaf 
+             order by     d.date_op desc 
+             rows unbounded preceding 
+           ) - d.amount                              source_op_amount_accum,
+         case connect_by_root(d.amount)
+           when 0 then
+            sum(case level
+                  when 2 then
+                   d.amount
+                  else 0
+                end
+            ) over(
+              partition by 
+                connect_by_root(d.ssylka_doc),
+                connect_by_root(d.date_op),
+                d.nom_vkl,
+                d.nom_ips,
+                d.shifr_schet,
+                d.sub_shifr_schet
+           )
            else
-             0
-         end exists_83
-  from   (
-          select connect_by_root(d.date_op)    date_op,
-                 connect_by_root(d.ssylka_doc) ssylka_doc_op,
-                 date_op                       date_doc,
-                 d.ssylka_doc,
-                 d.nom_vkl,
-                 d.nom_ips,
-                 d.charge_type, 
-                 d.det_charge_type,
-                 d.shifr_schet,
-                 d.sub_shifr_schet,
-                 d.sub_shifr_grp,
-                 d.tax_rate,
-                 connect_by_root(d.service_doc) service_doc,
-                 d.amount                       source_op_amount,
-                 sum(d.amount)over(
-                   partition by connect_by_isleaf, connect_by_root(d.ssylka_doc), connect_by_root(d.date_op), d.nom_vkl, d.nom_ips, d.shifr_schet, d.sub_shifr_schet 
-                   order by d.date_op desc
-                 ) - d.amount                   source_op_amount_accum,
-                 case connect_by_root(d.amount) 
-                   when 0 then
-                     sum(case level when 2 then d.amount end) over(partition by connect_by_root(d.ssylka_doc), connect_by_root(d.date_op), d.nom_vkl, d.nom_ips, d.shifr_schet, d.sub_shifr_schet)
-                   else connect_by_root(d.amount)
-                 end                            corr_op_amount,
-                 connect_by_root(d.amount)      root_amount,
-                 case
-                   when connect_by_root(d.ssylka_doc) <> d.ssylka_doc or d.service_doc = -1 then -1
-                 end                            type_op,
-                 level                          lvl,
-                 connect_by_isleaf              is_leaf
-          from   dv_sr_lspv_acc_v d
-          where  1=1
-          start with d.service_doc <> 0 and
-                     d.date_op > dv_sr_lspv_docs_api.get_start_date
-          connect by 
-            prior d.ssylka_doc = d.service_doc   and
-            prior d.nom_vkl = d.nom_vkl          and
-            prior d.nom_ips = d.nom_ips          and
-            prior d.shifr_schet = d.shifr_schet  and
-            prior d.sub_shifr_schet = d.sub_shifr_schet
-         ) d
-  where  1=1
-  and   (d.root_amount <> 0 and (trim((abs(d.corr_op_amount) - abs(d.source_op_amount_accum))) > 0 and d.is_leaf = 1) or (d.root_amount = 0 and lvl = 2))
+            connect_by_root(d.amount)
+         end                                         corr_op_amount,
+         level                                       lvl,
+         connect_by_isleaf                           is_leaf,
+         connect_by_root(d.service_doc)              root_service_doc,
+         connect_by_root(d.amount)                   root_amount,
+         case when d.charge_type = 'TAX_CORR' then -2 when connect_by_root(d.ssylka_doc) = d.ssylka_doc then null else -1 end type_op
+         --lead(connect_by_root(d.amount))over(partition by d.nom_vkl, d.nom_ips, d.ssylka_doc, d.charge_type order by level) base_root_amount
+  from   dv_sr_lspv_acc_v d
+  start with (d.nom_vkl, d.nom_ips, d.date_op, d.shifr_schet, d.sub_shifr_schet, d.ssylka_doc) in (
+    select dd.nom_vkl, dd.nom_ips, dd.date_op, dd.shifr_schet, dd.sub_shifr_schet, dd.ssylka_doc
+    from   dv_sr_lspv_acc_v dd
+    where  dd.service_doc <> 0
+    and    dd.date_op >= dv_sr_lspv_docs_api.get_start_date
+    union
+    select dd.nom_vkl, dd.nom_ips, dd.date_op, dd.shifr_schet, dd.sub_shifr_schet, dd.ssylka_doc
+    from   dv_sr_lspv_acc_v dd
+    where  (dd.nom_vkl, dd.nom_ips, dd.ssylka_doc) in (
+             select d83.nom_vkl, d83.nom_ips, d83.ssylka_doc
+             from   d83 d83
+             where  d83.service_doc = 0
+           )
+    and    dd.charge_type = 'BENEFIT'
+    and    dd.date_op < dv_sr_lspv_docs_api.get_start_date
+    union
+    select dd.nom_vkl, dd.nom_ips, dd.date_op, dd.shifr_schet, dd.sub_shifr_schet, dd.ssylka_doc
+    from   d83 dd
+  )
+  connect by prior d.ssylka_doc = d.service_doc
+      and    prior d.nom_vkl = d.nom_vkl
+      and    prior d.nom_ips = d.nom_ips
+      and    prior d.shifr_schet = d.shifr_schet
+      and    prior d.sub_shifr_schet = d.sub_shifr_schet
 /
