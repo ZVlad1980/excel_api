@@ -8,7 +8,7 @@ create or replace view ndfl6_report_correcting_v as
          d.date_doc,
          d.ssylka_doc,
          case ds.charge_type when 'REVENUE' then d.source_revenue when 'BENEFIT' then case when d.benefit = 0 then 0 else d.source_benefit end when 'TAX' then d.source_tax end source_amount,
-         case ds.charge_type when 'REVENUE' then d.revenue when 'BENEFIT' then d.benefit_all when 'TAX' then d.tax end amount,
+         case ds.charge_type when 'REVENUE' then d.revenue when 'BENEFIT' then d.benefit when 'TAX' then d.tax end amount,
          d.gf_person,
          d.nom_vkl,
          d.nom_ips,

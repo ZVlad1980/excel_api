@@ -116,7 +116,7 @@ create or replace package body ndfl_report_api is
           select 'TAX_RETAINED_DATE' key, (select sum(d.tax_retained) from ndfl6_part2_v d)     value from dual union all
           select 'TAX_NOT_RETAINED'  key, (select sum(d.tax_diff) from dv_sr_lspv_tax_diff_v d) value from dual union all
           select 'TAX_RETURN'        key, (select d.tax_return from ndfl6_part1_general_v d)    value from dual union all
-          select 'TAX_RETURN_83'     key, (select sum(d.amount) from dv_sr_lspv_83_v d)           value from dual;
+          select 'TAX_RETURN_83'     key, (select sum(d.tax_83) from dv_sr_lspv_docs_v d)       value from dual;
       when 'detail_report' then
         open l_result for
           select r.date_op,
@@ -130,7 +130,7 @@ create or replace package body ndfl_report_api is
                  r.benefit_corr,
                  r.tax_corr
           from   ndfl6_report_detail_v r
-          where  1 = 1
+          where  r.date_op <= dv_sr_lspv_docs_api.get_end_date
           order by r.date_op,
                    r.date_corr;
       when 'detail_report_2' then
@@ -152,6 +152,7 @@ create or replace package body ndfl_report_api is
                  r.revenue30_corr,
                  r.tax30_corr
           from   ndfl6_report_detail2_v r
+          where  r.date_op <= dv_sr_lspv_docs_api.get_end_date
           order by r.date_op,
                    r.det_charge_ord_num, 
                    r.pen_scheme, 
@@ -178,6 +179,7 @@ create or replace package body ndfl_report_api is
                  c.second_name
           from   ndfl6_report_correcting_v c
           where  coalesce(c.amount, 0) <> 0
+          and    c.date_op <= dv_sr_lspv_docs_api.get_end_date
           order by c.date_op, c.last_name, c.first_name, c.second_name, c.nom_vkl, c.nom_ips, c.date_doc, c.shifr_schet, c.sub_shifr_schet;
       when 'error_report' then
         open l_result for
@@ -235,7 +237,7 @@ create or replace package body ndfl_report_api is
                  gf_people_v       p
           where  1=1
           and    p.fk_contragent = d.gf_person
-          order by d.tax_diff;
+          order by d.tax_diff, p.lastname, p.firstname, p.secondname;
       when 'tax_diff_det_report' then
         open l_result for
           select d.gf_person,

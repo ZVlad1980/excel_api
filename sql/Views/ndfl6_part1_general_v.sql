@@ -11,7 +11,7 @@ create or replace view ndfl6_part1_general_v as
          d.tax_retained,
          null tax_not_retained,
          abs(d.tax_return) tax_return
-  from   (select sum(case when d.year_op = d.year_doc then d.tax_retained end) tax_retained,
+  from   (select sum(case when d.year_doc = dv_sr_lspv_docs_api.get_year then d.tax_retained else 0 end) tax_retained,
                  sum(d.tax_return) tax_return
           from   dv_sr_lspv_docs_v d
          ) d
