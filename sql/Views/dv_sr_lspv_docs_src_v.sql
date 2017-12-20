@@ -51,7 +51,10 @@ create or replace view dv_sr_lspv_docs_src_v as
          end gf_person,
          lspv.pen_scheme_code, 
          dc.tax_rate, 
-         dc.det_charge_type,
+         case
+           when dc.det_charge_type is null then min(dc.det_charge_type) over(partition by dc.ssylka_doc_op, dc.nom_vkl, dc.nom_ips)
+           else dc.det_charge_type
+         end det_charge_type,
          dc.revenue, 
          dc.benefit, 
          nvl(dc.tax, dc.tax_83) tax, 

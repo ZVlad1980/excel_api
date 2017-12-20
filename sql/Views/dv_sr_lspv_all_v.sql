@@ -17,7 +17,11 @@ create or replace view dv_sr_lspv_all_v as
            else sign(dc.corr_op_amount) * least(abs(dc.corr_op_amount) - dc.source_op_amount_accum, dc.source_op_amount) 
          end amount, 
          dc.source_op_amount,
-         dc.type_op,
+         case 
+           when dc.type_op = -1 and dc.charge_type = 'BENEFIT' then
+             min(dc.type_op)over(partition by dc.nom_vkl, dc.nom_ips, dc.ssylka_doc_op)
+           else dc.type_op
+         end type_op,
          case
            when nvl(dc.type_op, 0) = -1 and dc.charge_type = 'TAX' 
                and (dc.det_charge_type = 'BUYBACK' 
