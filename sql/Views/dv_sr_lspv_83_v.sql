@@ -9,7 +9,7 @@ select d.nom_vkl,
        min(case d.charge_type when 'TAX_CORR' then d.charge_type end)     charge_type,
        min(case d.charge_type when 'TAX_CORR' then d.det_charge_type end) det_charge_type,
        min(case when d.charge_type = 'BENEFIT' then d.date_op end)        date_doc,
-       sum(case d.charge_type when 'TAX_CORR' then d.amount end)          amount,
+       sum(case d.charge_type when 'TAX_CORR' then -1 * d.amount end)     amount,
        max(d.tax_rate)                                                    tax_rate,
        sum(case when d.charge_type = 'TAX' then 1 else 0 end)             is_link_tax_op,
        sum(case when d.charge_type = 'BENEFIT' then 1 else 0 end)         is_link_benefit_op

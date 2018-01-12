@@ -16,23 +16,23 @@ create or replace view ndfl6_report_detail_v as
          dc.benefit                               benefit_corr,
          dc.tax                                   tax_corr
   from (
-  select d.date_op,
-         sum(d.revenue) revenue,
-         sum(d.benefit) benefit,
-         sum(d.tax)     tax
-  from   dv_sr_lspv_det_v d
-  where  d.type_op = 0
-  group by d.date_op
-  ) d
-  full outer join (
-  select d.date_op,
-         d.date_corr,
-         sum(d.revenue) revenue,
-         sum(d.benefit) benefit,
-         sum(d.tax)     tax
-  from   dv_sr_lspv_det_v d
-  where  d.type_op  = -1
-  group by d.date_op, d.date_corr
-  ) dc
-  on  d.date_op = dc.date_op
+          select d.date_op,
+                 sum(d.revenue) revenue,
+                 sum(d.benefit) benefit,
+                 sum(d.tax)     tax
+          from   dv_sr_lspv_det_v d
+          where  d.type_op = 0
+          group by d.date_op
+       ) d
+       full outer join (
+         select d.date_op,
+                d.date_corr,
+                sum(d.revenue) revenue,
+                sum(d.benefit) benefit,
+                sum(d.tax)     tax
+         from   dv_sr_lspv_det_v d
+         where  d.type_op  = -1
+         group by d.date_op, d.date_corr
+       ) dc
+       on  d.date_op = dc.date_op
 /

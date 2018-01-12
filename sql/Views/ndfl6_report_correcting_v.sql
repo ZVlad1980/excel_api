@@ -26,8 +26,8 @@ create or replace view ndfl6_report_correcting_v as
                   ds.nom_ips        ,
                   ds.nom_vkl        ,
                   ds.charge_type    ,
-                  listagg(ds.shifr_schet, ', ') within group (order by rownum/*ds.shifr_schet*/) shifr_schet,
-                  listagg(ds.sub_shifr_schet, ', ') within group (order by rownum/*ds.shifr_schet*/) sub_shifr_schet
+                  listagg(ds.shifr_schet, ', ') within group (order by rownum) shifr_schet,
+                  listagg(ds.sub_shifr_schet, ', ') within group (order by rownum) sub_shifr_schet
            from   dv_sr_lspv_acc_v   ds
            where  1 = 1
            and    ds.service_doc <> 0
