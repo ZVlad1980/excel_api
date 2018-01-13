@@ -47,7 +47,7 @@ create or replace view dv_sr_lspv_all_v as
   and    not (dc.ssylka_doc_op = dc.ssylka_doc and dc.source_op_amount = 0 and dc.corr_op_amount = 0)
   and    case 
            when dc.charge_type = 'BENEFIT' 
-             and dc.type_op = -1 and dc.root_amount <> 0 and exists (
+             /*and dc.type_op = -1 */and dc.root_amount <> 0 and exists (
                select 1
                from   dv_sr_lspv_acc_v da
                where  da.nom_vkl = dc.nom_vkl

@@ -465,7 +465,8 @@ create or replace package body dv_sr_lspv_docs_api is
         d.source_benefit  = u.source_benefit,
         d.source_tax      = u.source_tax,
         d.is_tax_return   = u.is_tax_return,
-        d.process_id      = p_process_id
+        d.process_id      = p_process_id,
+        d.is_delete       = null
     when not matched then
       insert (
         id,

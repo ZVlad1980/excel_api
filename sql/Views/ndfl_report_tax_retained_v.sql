@@ -30,7 +30,7 @@ create or replace view ndfl_report_tax_retained_v as
            d.is_tax_return,
            max(case when d.type_op < 0 and d.year_op = dv_sr_lspv_docs_api.get_year then 1 else 0 end)over(partition by d.ssylka_doc, d.nom_vkl, d.nom_ips) is_corrected
     from   dv_sr_lspv_docs_v d
-    where  d.type_op <> -2
+    where  not (d.type_op = -2 and d.year_doc < dv_sr_lspv_docs_api.get_year)
   )
   select d.det_charge_type,
          d.pen_scheme_code,

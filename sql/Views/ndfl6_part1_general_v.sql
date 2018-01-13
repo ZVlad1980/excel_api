@@ -12,7 +12,7 @@ create or replace view ndfl6_part1_general_v as
          null tax_not_retained,
          abs(d.tax_return) tax_return
   from   (select sum(d.tax_retained) tax_retained,
-                 sum(d.tax_return) tax_return
+                 sum(d.tax_return)   tax_return
           from   dv_sr_lspv_docs_v d
          ) d
 /

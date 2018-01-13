@@ -1,4 +1,10 @@
-create or replace view ndfl6_part1_rates_13_bb_v as
+begin
+  dv_sr_lspv_docs_api.set_period(
+    p_end_date    => to_date(20161231, 'yyyymmdd'),
+    p_report_date => to_date(20171231, 'yyyymmdd')
+  );
+end;
+/
   with buybacks as (
     select d.nom_vkl, d.nom_ips, d.ssylka_doc, d.gf_person, d.pen_scheme_code, d.year_doc, d.year_op,
            min(d.type_op) type_op,
@@ -39,4 +45,3 @@ create or replace view ndfl6_part1_rates_13_bb_v as
   and    dc.det_charge_type(+) = 'BUYBACK'
   and    ps.code(+) = d.pen_scheme_code
   order by d.pen_scheme_code;
-/
