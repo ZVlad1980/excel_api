@@ -274,6 +274,18 @@ prompt install contragent_merge_log_v.sql
 @@Views\contragent_merge_log_v.sql
 show error
 
+prompt install f2ndfl_load_spravki_v.sql
+@@Views\f2ndfl_load_spravki_v
+show error
+
+prompt install f2ndfl_load_totals_det_v.sql
+@@Views\f2ndfl_load_totals_det_v
+show error
+
+prompt install f2ndfl_load_totals_v.sql
+@@Views\f2ndfl_load_totals_v
+show error
+
 prompt install utl_error_api.pkb
 @@PackageBodies\utl_error_api.pkb
 show error

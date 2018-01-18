@@ -831,11 +831,45 @@ create or replace package body dv_sr_lspv_docs_api is
         raise;
     end update_docs_t_;
     --
+    -- Обновление GF_PERSON в f2ndfl_arh_nomspr
+    --
+    procedure update_arh_nomspr_t_ is
+    begin
+      merge into f2ndfl_arh_nomspr ns
+      using (select ns.kod_na,
+                    ns.god,
+                    ns.ssylka,
+                    ns.tip_dox,
+                    ns.flag_otmena,
+                    gp.gf_person_new
+             from   dv_sr_gf_persons_t gp,
+                    f2ndfl_arh_nomspr  ns
+             where  1 = 1
+             and    ns.fk_contragent = gp.gf_person_old
+             and    gp.gf_person_old is not null
+             and    gp.process_id = p_process_id
+            ) u
+      on    (ns.kod_na      = u.kod_na      and
+             ns.god         = u.god         and
+             ns.ssylka      = u.ssylka      and
+             ns.tip_dox     = u.tip_dox     and
+             ns.flag_otmena = u.flag_otmena
+            )
+      when matched then
+        update set
+        ns.fk_contragent = u.gf_person_new;
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_arh_nomspr_t_(' || p_process_id || ')');
+        raise;
+    end update_arh_nomspr_t_;
+    --
   begin
     --
     update_pensioners_;
     update_successors_;
     update_docs_t_;
+    update_arh_nomspr_t_;
     --
   exception
     when others then
