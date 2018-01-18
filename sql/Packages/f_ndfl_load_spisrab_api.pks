@@ -8,6 +8,12 @@ create or replace package f_ndfl_load_spisrab_api is
     p_load_date date
   );
   
+  /**
+   * Процедура идентификации сотрудников фонда по базе участников фонда
+   */
+  procedure identify_employees(
+    p_year       integer
+  );
 
 end f_ndfl_load_spisrab_api;
 /
