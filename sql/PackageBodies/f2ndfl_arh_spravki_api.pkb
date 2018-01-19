@@ -225,6 +225,11 @@ create or replace package body f2ndfl_arh_spravki_api is
       --
     end loop;
     --
+    l_globals.TIPDOX := null;
+    l_globals.NOMVKL := null;
+    l_globals.NOMIPS := null;
+    l_globals.CAID   := null;
+    --
     create_load_total(l_globals);
     --
     if not p_wo_arh then
@@ -711,8 +716,8 @@ create or replace package body f2ndfl_arh_spravki_api is
    *   Т.е. если справка относится к сотруднику фонда, не являющемуся контрагентом - она не будет удалена, 
    *        если сотрудник является контрагентом - будут удалены данные по всем типам дохода, кроме 9 (зп)
    *
-   * @param p_ref_id - ID удаляемой справки
-   * @param p_commit - флаг фиксации транзакции
+   * @param p_ref_id     - ID удаляемой справки
+   * @param p_commit     - флаг фиксации транзакции
    *
    */
   procedure delete_reference(
@@ -725,14 +730,14 @@ create or replace package body f2ndfl_arh_spravki_api is
     init_exceptions;
     --
     if is_employee_ref(p_ref_id) then
-      fix_exception($$PLSQL_LINE, 'Удаление отклонено. Справка по сотруднику фонда, не являющемся контрагентом фонда.');
+      fix_exception($$PLSQL_LINE, 'Удаление справки (' || p_ref_id || ') отклонено. Справка по сотруднику фонда, не являющемся контрагентом фонда.');
       raise utl_error_api.G_EXCEPTION;
     end if;
     --
     l_ref_row := get_reference_row(p_ref_id);
     --
     if l_ref_row.r_xmlid is not null then
-      fix_exception($$PLSQL_LINE, 'Удаление отклонено. Данные справки включены в файл для передачи в ГНИ.');
+      fix_exception($$PLSQL_LINE, 'Удаление (' || p_ref_id || ') отклонено. Данные справки включены в файл для передачи в ГНИ.');
       raise utl_error_api.G_EXCEPTION;
     end if;
     --
@@ -761,7 +766,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   end delete_reference;
   
   /*
-   * Синхронизация таблиц load с arh (за 16 год - рассинхронизированы!)
+   * Синхронизация таблицы load по arh (за 16 год - рассинхронизированы!)
    *  
    * @param p_code_na       - код НА
    * @param p_year          - год
@@ -811,7 +816,7 @@ create or replace package body f2ndfl_arh_spravki_api is
       and    sa2.god = sa.god
       and    sa2.kod_na = sa.kod_na
       --
-      and    ls.nom_korr <> sa.nom_korr
+      and    ls.nom_korr < sa.nom_korr
       and    ls.nom_spr = sa.nom_spr
       and    ls.god = sa.god
       and    ls.kod_na = sa.kod_na

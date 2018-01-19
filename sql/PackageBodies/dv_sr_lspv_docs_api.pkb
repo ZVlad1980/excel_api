@@ -15,6 +15,8 @@ create or replace package body dv_sr_lspv_docs_api is
   G_END_DATE_BUF   date;
   G_REPORT_DATE    date; --дата, на которую формируется отчет (от этой даты зависит подхват корректировок)
   G_RESIDENT_DATE  date; --дата, на которую определяется статус резиденства контрагентов
+  G_EMPLOYEES      varchar2(1) := 'N'; --флаг учета данных сотрудников в отчетах (актуально для 2NDFL)
+  
   /**
    * Обвертки обработки ошибок
    */
@@ -36,6 +38,8 @@ create or replace package body dv_sr_lspv_docs_api is
   function get_end_date_buf    return date deterministic is begin return G_END_DATE_BUF; end;
   function get_report_date     return date deterministic is begin return G_REPORT_DATE; end;
   function get_resident_date   return date deterministic is begin return G_RESIDENT_DATE; end;
+  function get_employees  return varchar2 deterministic is begin return G_EMPLOYEES; end;
+  procedure set_employees(p_flag boolean) is begin G_EMPLOYEES := case when p_flag then 'Y' else 'N' end; end set_employees;
   /**
    * Процедуры set_is_buff и unset_is_buff - включают и выключают учет буфера расчетов VYPLACH... в представлениях
    */
@@ -69,6 +73,7 @@ create or replace package body dv_sr_lspv_docs_api is
   begin
     G_START_DATE := p_start_date;
     G_END_DATE   := trunc(p_end_date) + 1 - .00001; --на конец суток
+    G_EMPLOYEES  := 'N'; --по умолчанию - сброс, т.к. для выверки не актуально!
     --
     /*
     TODO: owner="V.Zhuravov" created="13.12.2017"

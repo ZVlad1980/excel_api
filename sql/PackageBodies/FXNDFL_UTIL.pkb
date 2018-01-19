@@ -7008,8 +7008,6 @@ begin
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR
       and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
       and ls.STATUS_NP=1          -- резиденты
-      and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-      and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
       and ds.SHIFR_SCHET>1000     -- вычеты
       and ds.DATA_OP >= dTermBeg  -- за год
       and ds.DATA_OP <  dTermEnd
@@ -7051,11 +7049,17 @@ dTermBeg date;
 dTermEnd date;
 
 cursor cPBS( pNPStatus in number, pKodStavki in number ) is 
-    Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(nal.SGD_SUM,0) SGD_NAL, 
-           nvl(doh.SGD_SUM30,0) SGD_NI30, 
-           nvl(doh.SGD_SUM,0) - LEAST(nvl(doh.SGD_SUM,0),nvl(vyc.SGD_SUM,0)) SGD_OB13,
-           round( 0.13*(nvl(doh.SGD_SUM,0) - LEAST(nvl(doh.SGD_SUM,0),nvl(vyc.SGD_SUM,0))), 0 ) SGD_NI13
-    from f2NDFL_LOAD_SPRAVKI ls
+    select ls.ssylka,
+           nvl(doh.sgd_sum, 0) sgd_doh,
+           nvl(vyc.sgd_sum, 0) sgd_vych,
+           nvl(nal.sgd_sum, 0) sgd_nal,
+           nvl(doh.sgd_sum30, 0) sgd_ni30,
+           nvl(doh.sgd_sum, 0) -
+           least(nvl(doh.sgd_sum, 0), nvl(vyc.sgd_sum, 0)) sgd_ob13,
+           round(0.13 * (nvl(doh.sgd_sum, 0) -
+                 least(nvl(doh.sgd_sum, 0), nvl(vyc.sgd_sum, 0))),
+                 0) sgd_ni13
+    from   f2ndfl_load_spravki ls
         left join( 
             Select SSYLKA, sum(DOH_SUM) SGD_SUM, sum(round(0.3*DOH_SUM,0)) SGD_SUM30
                 from f2NDFL_LOAD_MES 
@@ -7075,8 +7079,6 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.DATA_OP >= dTermBeg 
                           and ds.DATA_OP <  dTermEnd
-                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl) 
                           and ds.SHIFR_SCHET = 85 
                           and ds.SUB_SHIFR_SCHET = (pNPStatus-1) -- для пенсий: 0-резиденты, 1-нерезиденты 
                           and ds.SERVICE_DOC = 0                 -- если <>0, то это должна получиться нулевая сумма для сторно
@@ -7087,8 +7089,6 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.DATA_OP >= dTermBeg
                           and ds.DATA_OP <  dTermEnd 
-                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                           and ds.SHIFR_SCHET=83 
                           and ds.SERVICE_DOC=0       
                         group by sp.SSYLKA_FL 
@@ -7099,8 +7099,6 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                         where 1 = 1--RFC_3779 gl_GOD=2016 -- коррекция только для 2016 года
                           and ds.DATA_OP >= dTermEnd  --RFC_3779 = to_date('01.01.2017', 'dd.mm.yyyy') 
                           and ds.SHIFR_SCHET=83 
-                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                         group by sp.SSYLKA_FL 
             ) group by SSYLKA_FL
         ) nal on ls.SSYLKA=nal.SSYLKA_FL
@@ -7216,8 +7214,6 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                   and ds.SHIFR_SCHET = 86 
                   and ds.SUB_SHIFR_SCHET = (pNPStatus - 1) -- для пособий: 0-резиденты, 1-нерезиденты 
                   and ds.SERVICE_DOC = 0                   -- это данные без исправлений STORNO_FLAG=0
-                  and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                  and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                 group by sp.SSYLKA_FL             
             ) nal on ls.SSYLKA=nal.SSYLKA_FL    
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=0 and ls.STATUS_NP=pNPStatus
@@ -7348,8 +7344,6 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                          and  sp.nom_ips = ds.nom_ips
                        where  ds.data_op >= dtermbeg
                        and    ds.data_op < dtermend
-                       and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                       and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                        and    ds.shifr_schet = 85
                        and    ds.sub_shifr_schet = (pnpstatus + 1) -- для выкупных: 2-резиденты, 3-нерезиденты 
                        and    ds.service_doc = 0 -- это справки без исправлений STORNO_FLAG=0
@@ -7473,8 +7467,6 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
                         where ds.DATA_OP >= dTermBeg 
                           and ds.DATA_OP <  dTermEnd 
                           and ds.SHIFR_SCHET=85 
-                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                           and ds.SUB_SHIFR_SCHET=(pNPStatus+1) -- для выкупных: 2-резиденты, 3-нерезиденты 
                           and ds.SERVICE_DOC=0                 -- это данные без исправлений 
                         group by sp.SSYLKA_FL
@@ -7486,8 +7478,6 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
                         where ds.SHIFR_SCHET=85 
                           and ds.SUB_SHIFR_SCHET=(pNPStatus+1) -- для выкупных: 2-резиденты, 3-нерезиденты 
                           and ds.SERVICE_DOC<>0                -- это данные с исправлениями STORNO_FLAG=1
-                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                         start with ds.SERVICE_DOC=-1
                           and ds.DATA_OP >= dTermBeg 
                         connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до

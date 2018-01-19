@@ -39,5 +39,4 @@ create or replace view f2ndfl_load_spravki_v as
   and    substr(sp.nom_spr, 1, 4) <> 'ноль' 
   and    sp.god = dv_sr_lspv_docs_api.get_year
   and    sp.kod_na = 1
-
 /

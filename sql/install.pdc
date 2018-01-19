@@ -66,6 +66,10 @@ prompt install f2ndfl_arh_spravki_api.pks
 @@Packages\f2ndfl_arh_spravki_api.pks
 show error
 
+prompt install f2ndfl_arh_totals_v.pks
+@@Packages\f2ndfl_arh_totals_v.pks
+show error
+
 prompt install sp_quarters_v.sql
 @@Views\sp_quarters_v.sql
 show error
@@ -275,15 +279,19 @@ prompt install contragent_merge_log_v.sql
 show error
 
 prompt install f2ndfl_load_spravki_v.sql
-@@Views\f2ndfl_load_spravki_v
+@@Views\f2ndfl_load_spravki_v.sql
 show error
 
 prompt install f2ndfl_load_totals_det_v.sql
-@@Views\f2ndfl_load_totals_det_v
+@@Views\f2ndfl_load_totals_det_v.sql
 show error
 
 prompt install f2ndfl_load_totals_v.sql
-@@Views\f2ndfl_load_totals_v
+@@Views\f2ndfl_load_totals_v.sql
+show error
+
+prompt install f2ndfl_arh_spravki_v.sql
+@@Views\f2ndfl_arh_spravki_v.sql
 show error
 
 prompt install utl_error_api.pkb
