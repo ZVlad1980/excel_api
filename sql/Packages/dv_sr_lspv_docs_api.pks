@@ -17,6 +17,9 @@ create or replace package dv_sr_lspv_docs_api is
   function get_resident_date   return date deterministic;
   function get_employees       return varchar2 deterministic;
   procedure set_employees(p_flag boolean);
+  function get_last_only       return varchar2 deterministic;
+  procedure set_last_only(p_flag boolean);
+  
   /**
    * Процедуры set_is_buff и unset_is_buff - включают и выключают учет буфера расчетов VYPLACH... в представлениях
    */
