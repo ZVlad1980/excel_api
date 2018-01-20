@@ -75,10 +75,6 @@ create or replace package body dv_sr_lspv_docs_api is
     G_END_DATE   := trunc(p_end_date) + 1 - .00001; --на конец суток
     G_EMPLOYEES  := 'N'; --по умолчанию - сброс, т.к. для выверки не актуально!
     --
-    /*
-    TODO: owner="V.Zhuravov" created="13.12.2017"
-    text="Реализовать возможность задания даты p_report_date. Для теста sysdate отключен"
-    */
     G_REPORT_DATE   := greatest(
                          nvl(p_report_date, 
                            case 
@@ -457,7 +453,7 @@ create or replace package body dv_sr_lspv_docs_api is
           d.nom_vkl       = u.nom_vkl         and 
           d.nom_ips       = u.nom_ips         and 
           d.gf_person     = u.gf_person       and 
-          d.tax_rate      = u.tax_rate     
+          d.tax_rate      = u.tax_rate
          )
     when matched then
       update set
@@ -522,7 +518,9 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     update dv_sr_lspv_docs_t d
     set    d.is_delete = 'Y'
-    where  d.process_id <> p_process_id
+    where  1=1
+    and    d.is_delete is null
+    and    d.process_id <> p_process_id
     and    (
             (d.date_doc between get_start_date and get_end_date)
             or
