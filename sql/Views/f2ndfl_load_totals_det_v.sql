@@ -26,7 +26,7 @@ create or replace view f2ndfl_load_totals_det_v as
          s.is_last_spr,
          s.god,
          li.kod_stavki tax_rate,
-         li.sgd_sum revenue,
+         li.sgd_sum    revenue,
          lv.benefit    benefit,
          li.sgd_sum - li.sum_obl benefit_used,
          li.sum_obl_ni tax_calc,
@@ -68,4 +68,5 @@ create or replace view f2ndfl_load_totals_det_v as
   and    e.god(+) = s.god
   and    sfl.ssylka(+) = s.ssylka_fl
   and    rp.ssylka(+) = s.ssylka_rp
+  and    s.is_last_spr = case dv_sr_lspv_docs_api.get_last_only when 'Y' then 'Y' else s.is_last_spr end
 /

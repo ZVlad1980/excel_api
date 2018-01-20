@@ -18,7 +18,7 @@ create or replace view f2ndfl_load_totals_v as
              end
          )                        is_participant,
          sum(s.revenue     )      revenue     ,
-         sum(s.benefit     )      benefit     ,
+         least(sum(coalesce(s.benefit, 0)), sum(s.revenue))      benefit     ,
          round(
            case s.tax_rate
              when 13 then

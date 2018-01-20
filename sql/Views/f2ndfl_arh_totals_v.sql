@@ -32,6 +32,7 @@ create or replace view f2ndfl_arh_totals_v as
          ) (+) ltd
   where  1=1
   and    ai.r_sprid = s.id
+  and    s.is_last_spr = case dv_sr_lspv_docs_api.get_last_only when 'Y' then 'Y' else s.is_last_spr end
   and    not(dv_sr_lspv_docs_api.get_employees = 'N' and (s.is_participant = 'N' or ai.kod_stavki = 35))
   group by s.gf_person,
            s.kod_na,

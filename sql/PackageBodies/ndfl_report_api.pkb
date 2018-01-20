@@ -68,6 +68,177 @@ create or replace package body ndfl_report_api is
             order by p.created_at desc
             fetch first rows only
           );
+      when 'cmp_f2load_arh' then
+        dv_sr_lspv_docs_api.set_employees(p_flag => true);
+        dv_sr_lspv_docs_api.set_last_only(p_flag => true);
+        open l_result for
+          select nvl(lt.nom_spr, ta.nom_spr)               nom_spr,
+                 lt.nom_korr                               nom_korr_load,
+                 ta.nom_korr                               nom_korr_arh,
+                 nvl(lt.gf_person, ta.gf_person)           gf_person,
+                 p.fullname,
+                 nvl(lt.revenue  , ta.revenue )            revenue ,
+                 nvl(lt.benefit  , ta.benefit )            benefit ,
+                 nvl(lt.tax_calc , ta.tax_calc)            tax_calc,
+                 lt.tax_retained                           tax_retained_load,
+                 ta.tax_retained                           tax_retained_arh,
+                 coalesce(lt.tax_retained, 0) - 
+                   coalesce(ta.tax_retained, 0)            tax_retained_diff,
+                 nvl(lt.is_employee, ta.is_employee)       is_employee,
+                 nvl(lt.is_participant, ta.is_participant) is_participant
+          from   f2ndfl_arh_totals_v ta
+            full outer join f2ndfl_load_totals_v lt
+             on  lt.nom_spr = ta.nom_spr
+             and lt.tax_rate = ta.tax_rate
+            left join gf_people_v p
+             on  p.fk_contragent = nvl(ta.gf_person, lt.gf_person)
+          where  1=1
+          and    abs(coalesce(lt.tax_retained, 0) - coalesce(ta.tax_retained, 0)) > .01;
+      when 'cmp_f2load_docs' then
+        dv_sr_lspv_docs_api.set_employees(p_flag => false);
+        dv_sr_lspv_docs_api.set_last_only(p_flag => true);
+        open l_result for
+          select lt.nom_spr                                nom_spr,
+                 lt.nom_korr                               nom_korr_lt,
+                 null                                      nom_korr_ta,
+                 nvl(lt.gf_person, dp.gf_person)           gf_person,
+                 p.fullname,
+                 nvl(lt.revenue  , dp.revenue )            revenue ,
+                 nvl(lt.benefit  , dp.benefit )            benefit ,
+                 nvl(lt.tax_calc , dp.tax_calc)            tax_calc,
+                 lt.tax_retained                           tax_retained_load,
+                 dp.tax_retained_83                        tax_retained_arh,
+                 coalesce(lt.tax_retained, 0) - 
+                   coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
+                 lt.is_employee                            is_employee,
+                 lt.is_participant                         is_participant
+          from   f2ndfl_load_totals_v lt
+            full outer join dv_sr_lspv_pers_v dp
+             on  lt.gf_person = dp.gf_person
+            left join gf_people_v p
+             on  p.fk_contragent = nvl(lt.gf_person, dp.gf_person)
+          where  1=1
+          and    abs(coalesce(lt.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01;
+      when 'cmp_f2arh_docs' then
+        dv_sr_lspv_docs_api.set_employees(p_flag => false);
+        dv_sr_lspv_docs_api.set_last_only(p_flag => true);
+        open l_result for
+          select ta.nom_spr                                nom_spr,
+                 ta.nom_korr                               nom_korr_lt,
+                 null                                      nom_korr_ta,
+                 nvl(ta.gf_person, dp.gf_person)           gf_person,
+                 p.fullname,
+                 nvl(ta.revenue  , dp.revenue )            revenue ,
+                 nvl(ta.benefit  , dp.benefit )            benefit ,
+                 nvl(ta.tax_calc , dp.tax_calc)            tax_calc,
+                 ta.tax_retained                           tax_retained_load,
+                 dp.tax_retained_83                        tax_retained_arh,
+                 coalesce(ta.tax_retained, 0) - 
+                   coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
+                 ta.is_employee                            is_employee,
+                 ta.is_participant                         is_participant
+          from   f2ndfl_arh_totals_v ta
+            full outer join dv_sr_lspv_pers_v dp
+             on  ta.gf_person = dp.gf_person
+            left join gf_people_v p
+             on  p.fk_contragent = nvl(ta.gf_person, dp.gf_person)
+          where  1=1
+          and    abs(coalesce(ta.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01;
+      when 'cmp_f2ndfl_f6_total' then
+        dv_sr_lspv_docs_api.set_employees(p_flag => false);
+        dv_sr_lspv_docs_api.set_last_only(p_flag => true);
+        open l_result for
+          select "2NDFL" ndfl2, 
+                 "6NDFL" ndfl6, 
+                 "2NDFL" - "6NDFL" ndfl_diff
+          from   (
+                  select 'DUMMY' src,
+                         0 fact01,
+                         0 fact02,
+                         0 fact03
+                  from   dual
+                  union all
+                  select 'NDFL6' src,
+                         gp.total_persons,
+                         gp.tax_retained,
+                         gp.tax_return
+                  from   ndfl6_part1_general_v gp
+                  union all
+                  select 'NDFL2' src,
+                         count(distinct lt.nom_spr) ,
+                         sum(lt.tax_retained)       ,
+                         null                       
+                  from   f2ndfl_load_totals_v lt
+                  group by lt.god
+                 ) t
+          unpivot(
+            fact_val
+            for fact in (fact01, fact02, fact03)
+          ) up
+          pivot(
+          sum(fact_val)
+            for src in('NDFL2' as "2NDFL", 'NDFL6' as "6NDFL")
+          )
+          order by fact; --*/
+      when 'cmp_f2ndfl_f6_rates' then
+        dv_sr_lspv_docs_api.set_employees(p_flag => false);
+        dv_sr_lspv_docs_api.set_last_only(p_flag => true);
+        open l_result for
+          select "NDFL2" ndfl2, 
+                 "NDFL6" ndfl6, 
+                 round("NDFL2" - "NDFL6", 2) ndfl_diff
+          from   (
+                  select 'DUMMY' src,
+                         case level
+                           when 1 then 13
+                           when 2 then 30
+                           when 3 then 35
+                         end tax_rate,
+                         0 fact01,
+                         0 fact02,
+                         0 fact03,
+                         0 fact04
+                  from   dual
+                  connect by level < 3
+                  union all
+                  select 'NDFL6' src,
+                         d.tax_rate,
+                         sum(d.revenue) revenue,
+                         sum(d.benefit) benefit,
+                         sum(d.tax_calc) tax_calc,
+                         sum(d.tax_retained) tax_retained
+                  from   dv_sr_lspv_pers_v d
+                  group  by d.tax_rate
+                  union all
+                  select 'NDFL2' src,
+                         lt.tax_rate,
+                         sum(lt.revenue),
+                         sum(lt.benefit),
+                         sum(lt.tax_calc),
+                         sum(lt.tax_retained)       
+                  from   f2ndfl_load_totals_v lt
+                  group by lt.tax_rate
+                 ) t
+          unpivot(
+            fact_val
+            for fact in (fact01, fact02, fact03, fact04)
+          ) up
+          pivot(
+          sum(fact_val)
+            for src in('NDFL2' as "NDFL2", 'NDFL6' as "NDFL6")
+          )
+          order by tax_rate, fact; --*/
+      when 'cmp_f2ndfl_f6_return' then
+        dv_sr_lspv_docs_api.set_employees(p_flag => false);
+        dv_sr_lspv_docs_api.set_last_only(p_flag => true);
+        open l_result for
+          select sum(case t.current_year when 'N' then t.tax_returned end) val01, --prev
+                 sum(case t.current_year when 'Y' then t.tax_returned end) val02  --curr
+          from   ndfl6_tax_returns_v t
+          union all
+          select sum(dd.tax_83) tax_83,
+                 0
+          from   dv_sr_lspv_docs_v dd;
       when 'ndfl2_tax_corr' then
         open l_result for
           select case 
