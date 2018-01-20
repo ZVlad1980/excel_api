@@ -275,10 +275,6 @@ prompt install f2ndfl_load_spravki_v.sql
 @@Views\f2ndfl_load_spravki_v.sql
 show error
 
-prompt install f2ndfl_arh_totals_v.sql
-@@Views\f2ndfl_arh_totals_v.sql
-show error
-
 prompt install f2ndfl_load_totals_det_v.sql
 @@Views\f2ndfl_load_totals_det_v.sql
 show error
@@ -289,6 +285,10 @@ show error
 
 prompt install f2ndfl_arh_spravki_v.sql
 @@Views\f2ndfl_arh_spravki_v.sql
+show error
+
+prompt install f2ndfl_arh_totals_v.sql
+@@Views\f2ndfl_arh_totals_v.sql
 show error
 
 prompt install utl_error_api.pkb
