@@ -55,5 +55,4 @@ create or replace view sp_fiz_lits_diff_v as
   where  1=1
   and    r.gf_person = dr.gf_person
   and    (dr.diff_fio + dr.diff_birth_date + dr.diff_inn + dr.diff_resident) > 0
-  order by r.gf_person, r.ssylka
 /
