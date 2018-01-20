@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE BODY FXNDFL_UTIL AS
 
--- Р“Р›РћР‘РђР›Р¬РќР«Р• РџР•Р Р•РњР•РќРќР«Р•
+-- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
 gl_FLAGDEF number := 0;
 gl_KODNA   number := Null;
 gl_GOD     number := Null;
@@ -18,7 +18,7 @@ gl_CAID    number       := Null;
 gl_COMMIT  boolean      := true;
 
 --
--- 03.11.2017 RFC_3779 - РґРѕР±Р°РІРёР» РїР°СЂР°РјРµС‚СЂС‹ РґР»СЏ С„РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РєРѕСЂСЂ.СЃРїСЂР°РІРѕРє
+-- 03.11.2017 RFC_3779 - добавил параметры для формирования корр.справок
 --
 procedure InitGlobals( 
   pKODNA   in number, 
@@ -57,20 +57,20 @@ procedure CheckGlobals as
 begin
     
     if gl_FLAGDEF <> 1234509876 then
-       Raise_Application_Error( -20001,'РџР°РєРµС‚ FXNFL_UTIL: РЅРµ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅС‹ РіР»РѕР±Р°Р»СЊРЅС‹Рµ РїР°СЂР°РјРµС‚СЂС‹ РґР»СЏ Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С… 2-РќР”Р¤Р›.' );
+       Raise_Application_Error( -20001,'Пакет FXNFL_UTIL: не инициализированы глобальные параметры для загрузки данных 2-НДФЛ.' );
     end if;
 
 end;
 
--- Р·Р°РїРѕР»РЅРёС‚СЊ СЃРїРёСЃРѕРє РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ Р·Р° РїРµСЂРёРѕРґ РїРѕ РґРІРёР¶РµРЅРёСЋ СЃСЂРµРґСЃС‚РІ РЅР° Р›РЎРџР’
--- РґР°РЅРЅС‹Рµ Р·Р°РЅРѕСЃСЏС‚СЃСЏ РІ С‚Р°Р±Р»РёС†Сѓ F_NDFL_LOAD_NALPLAT
+-- заполнить список налогоплательщиков за период по движению средств на ЛСПВ
+-- данные заносятся в таблицу F_NDFL_LOAD_NALPLAT
 /*
             declare 
             RC varchar2(4000);
             begin
                 dbms_output.enable(10000); 
                 FXNDFL_UTIL.Spisok_NalPlat_poLSPV( RC, 149565 );
-                dbms_output.put_line( nvl(RC,'РћРљ') );
+                dbms_output.put_line( nvl(RC,'ОК') );
             end;
 */
 
@@ -85,7 +85,7 @@ procedure Zapoln_Buf_NalogIschisl( pSPRID in number ) as
   nKFLRab number;
   nKFLObs number;
 begin
-        -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+        -- выборка периода справки
         Select KOD_NA,GOD, PERIOD into  nKodNA,nGod, nPeriod  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
          
         dTermBeg  :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
@@ -98,14 +98,14 @@ begin
                else return;                
         end case;
         
-        -- РїРѕС‚РѕРј СЃРґРµР»Р°С‚СЊ РєР°Рє РЅР°РґРѕ
+        -- потом сделать как надо
         dTermKor := dTermEnd;
            
-    -- Р·Р°РїРѕР»РЅРµРЅРёСЏ РІСЂРµРјРµРЅРЅРѕР№ С‚Р°Р±Р»РёС†С‹ РґР»СЏ РїРѕРґСЃС‡РµС‚Р° РёСЃС‡РёСЃР»РµРЅРЅРѕРіРѕ РЅР°Р»РѕРіР°
-    -- С‚Р°Р±Р»РёС†Р° РѕС‡РёС‰Р°РµС‚СЃСЏ РїРѕ РєРѕРјРёС‚Сѓ
+    -- заполнения временной таблицы для подсчета исчисленного налога
+    -- таблица очищается по комиту
     
-    -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ Р·Р°РїРёСЃРё, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
-        -- РїРµРЅСЃРёРё       
+    -- изначально правильные записи, без исправлений
+        -- пенсии       
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH )
         Select np.GF_PERSON, 10 TIP, sum(ds.SUMMA) DOX_SUM 
             from DV_SR_LSPV ds
@@ -125,7 +125,7 @@ begin
               and n30.NOM_VKL is Null
             group by np.GF_PERSON;
             
-        -- РїРѕСЃРѕР±РёСЏ     
+        -- пособия     
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH )            
         Select np.GF_PERSON, 20 TIP, sum(ds.SUMMA) DOX_SUM                  
             from DV_SR_LSPV ds
@@ -141,7 +141,7 @@ begin
               and n30.NOM_VKL is Null  
             group by np.GF_PERSON;    
             
-        -- РІС‹РєСѓРїРЅС‹Рµ        
+        -- выкупные        
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH ) 
         Select np.GF_PERSON, 30 TIP, sum(ds.SUMMA) DOX_SUM
             from DV_SR_LSPV ds
@@ -157,22 +157,22 @@ begin
                   and n30.NOM_VKL is Null
             group by np.GF_PERSON;      
                 
-    -- РёСЃРїСЂР°РІР»РµРЅРёСЏ
-        -- РїРµРЅСЃРёСЏ
+    -- исправления
+        -- пенсия
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH ) 
         Select np.GF_PERSON, 11 TIP, sum(dox.SUMMA) DOX_SUM
         from
            (Select * from (    
-                Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРµРЅСЃРёРё РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                Select ds.*        -- все исправления пенсии должны выполняться в текущем году
+                from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                     where  ds.SERVICE_DOC<>0
-                    start with   ds.SHIFR_SCHET= 60          -- РїРµРЅСЃРёСЏ
-                             and ds.NOM_VKL<991              -- Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                             and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                             and ds.DATA_OP >= dTermBeg      -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                             and ds.DATA_OP <  dTermKor      -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                    connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                             and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                    start with   ds.SHIFR_SCHET= 60          -- пенсия
+                             and ds.NOM_VKL<991              -- и пенсия не своя
+                             and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                             and ds.DATA_OP >= dTermBeg      -- исправление сделано после начала периода
+                             and ds.DATA_OP <  dTermKor      -- до конца квартала, в котором выполняется корректировка
+                    connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                             and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                              and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                              and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                              and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -193,20 +193,20 @@ begin
         group by np.GF_PERSON  
         having sum(dox.SUMMA)<>0;                  
                         
-        -- РїРѕСЃРѕР±РёСЏ  
+        -- пособия  
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH )                   
         Select np.GF_PERSON, 21 TIP, sum(dox.SUMMA) DOX_SUM
             from
                (Select * from (    
-                    Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРѕСЃРѕР±РёР№ РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                    from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                    Select ds.*        -- все исправления пособий должны выполняться в текущем году
+                    from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                         where  ds.SERVICE_DOC<>0
-                        start with   ds.SHIFR_SCHET= 62          -- РїРѕСЃРѕР±РёРµ
-                                 and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                 and ds.DATA_OP >= dTermBeg      -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                 and ds.DATA_OP <  dTermKor      -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                        start with   ds.SHIFR_SCHET= 62          -- пособие
+                                 and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                 and ds.DATA_OP >= dTermBeg      -- исправление сделано после начала периода
+                                 and ds.DATA_OP <  dTermKor      -- до конца квартала, в котором выполняется корректировка
+                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                  and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                  and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -221,7 +221,7 @@ begin
             group by np.GF_PERSON  
             having sum(dox.SUMMA)<>0;
                 
-        -- РІС‹РєСѓРїРЅС‹Рµ 
+        -- выкупные 
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH )           
         Select np.GF_PERSON, 31 TIP,sum(dox.SUMMA) DOX_SUM
             from
@@ -229,11 +229,11 @@ begin
                     Select ds.*, min(DATA_OP) over(partition by ds.NOM_VKL, ds.NOM_IPS) MINDATOP
                     from DV_SR_LSPV ds
                         where  ds.SERVICE_DOC<>0
-                        start with   ds.SHIFR_SCHET= 55        -- РїРµРЅСЃРёСЏ
-                                 and ds.SERVICE_DOC=-1         -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                 and ds.DATA_OP >= dTermBeg   -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                        start with   ds.SHIFR_SCHET= 55        -- пенсия
+                                 and ds.SERVICE_DOC=-1         -- коррекция (начинаем поиск с -1)
+                                 and ds.DATA_OP >= dTermBeg   -- исправление сделано после начала периода
+                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                  and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                  and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -247,8 +247,8 @@ begin
             group by np.GF_PERSON  
             having sum(dox.SUMMA)<>0;
                      
-    -- РєРѕРјРёС‚ РЅРµР»СЊР·СЏ - СЃРѕС‚СЂРµС‚СЃСЏ Р±СѓС„РµСЂ
-    -- СЌС‚Рѕ РґРѕР»Р¶РЅР° СЃРґРµР»Р°С‚СЊ РІС‹Р·С‹РІР°СЋС‰Р°СЏ РїСЂРѕС†РµРґСѓСЂР° 
+    -- комит нельзя - сотрется буфер
+    -- это должна сделать вызывающая процедура 
     
 end Zapoln_Buf_NalogIschisl;         
 
@@ -266,7 +266,7 @@ procedure Spisok_NalPlat_poLSPV( pErrInfo out varchar2, pSPRID in number ) as
 begin
          pErrInfo := Null;  
          
-         -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+         -- выборка периода справки
          Select KOD_NA,GOD, PERIOD into  nKodNA,nGod, nPeriod  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
          
          dTermBeg  :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
@@ -277,50 +277,50 @@ begin
                when 31 then dTermEnd := add_months(dTermBeg,6);        
                when 33 then dTermEnd := add_months(dTermBeg,9);        
                when 34 then dTermEnd := add_months(dTermBeg,12);      
-               else pErrInfo :='РћС€РёР±РєР°: Р·РЅР°С‡РµРЅРёРµ '||to_char(nPeriod)||' РїР°СЂР°РјРµС‚СЂР° pPeriod РЅРµ СЂР°РІРЅРѕ 21, 31, 33 РёР»Рё 34 (РєРѕРґС‹ РєРІР°СЂС‚Р°Р»РѕРІ).'; return;                
+               else pErrInfo :='Ошибка: значение '||to_char(nPeriod)||' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).'; return;                
          end case;
     
-         -- РІСЃРµ Р·Р°РїСЂРѕСЃС‹ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ РЅР° РґРѕР±Р°РІР»РµРЅРёРµ
-         -- С‚РѕР»СЊРєРѕ С‚РµС… СѓС‡Р°СЃС‚РЅРёРєРѕРІ, РєРѕС‚РѕСЂС‹Рµ РµС‰С‘ РЅРµ Р±С‹Р»Рё РІРЅРµСЃРµРЅС‹ РІ СЃРїРёСЃРѕРє
+         -- все запросы должны быть на добавление
+         -- только тех участников, которые ещё не были внесены в список
          
-         -- С‚РёРї СЃСЃС‹Р»РєРё 
-         --   0 - РїРµРЅСЃРёСЏ РёР»Рё РІС‹РєСѓРїРЅР°СЏ (СЃСЃС‹Р»РєР° СЃР°РјРѕРіРѕ РїРѕР»СѓС‡Р°С‚РµР»СЏ)
-         --   1 - РїРѕР·РѕР±РёРµ (СЃСЃС‹Р»РєР° СѓРјРµСЂС€РµРіРѕ, Р° РЅРµ РїРѕР»СѓС‡Р°С‚РµР»СЏ)
+         -- тип ссылки 
+         --   0 - пенсия или выкупная (ссылка самого получателя)
+         --   1 - позобие (ссылка умершего, а не получателя)
          
-         -- 1.  РЎРїРёСЃРєРё С‚РµС…, Сѓ РєРѕРіРѕ РЅРµ Р±С‹Р»Рѕ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕС…РѕРґР°  
+         -- 1.  Списки тех, у кого не было исправлений дохода  
         
-         -- 1.1. РїРѕР»СѓС‡РёРІС€РёС… РІС‹РєСѓРїРЅСѓСЋ СЃСѓРјРјСѓ
+         -- 1.1. получивших выкупную сумму
          Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
          Select distinct nKodNA, nGod, ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, 0, lspv.SSYLKA_FL, sfl.GF_PERSON, sfl.NAL_REZIDENT, nPeriod
                 from DV_SR_LSPV ds
                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                         left join (Select NOM_VKL, NOM_IPS from F_NDFL_LOAD_NALPLAT 
-                                       where KOD_NA=nKodNA and GOD=nGod and SSYLKA_TIP=0  -- СѓС‡Р°СЃС‚РЅРёРєРё
+                                       where KOD_NA=nKodNA and GOD=nGod and SSYLKA_TIP=0  -- участники
                                     ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                        
                 where ds.DATA_OP>=dTermBeg
                    and ds.DATA_OP < dTermEnd
-                   and ds.SHIFR_SCHET=55  -- СЃРЅР°С‡Р°Р»Р° РІС‹РєСѓРїРЅС‹Рµ
+                   and ds.SHIFR_SCHET=55  -- сначала выкупные
                    and ds.SERVICE_DOC=0
-                   and np.NOM_VKL is Null;    -- РЅРѕРІС‹Рµ, РєРѕС‚РѕСЂС‹С… РµС‰С‘ РЅРµ Р±С‹Р»Рѕ
+                   and np.NOM_VKL is Null;    -- новые, которых ещё не было
                  
-         -- 1.2. РїРѕР»СѓС‡Р°РІС€РёС… РїРµРЅСЃРёРё
+         -- 1.2. получавших пенсии
          Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
          Select distinct nKodNA, nGod, ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, 0, lspv.SSYLKA_FL, sfl.GF_PERSON, sfl.NAL_REZIDENT, nPeriod
                 from DV_SR_LSPV ds
                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                         left join (Select NOM_VKL, NOM_IPS from F_NDFL_LOAD_NALPLAT 
-                                       where KOD_NA=nKodNA and GOD=nGod and SSYLKA_TIP=0  -- СѓС‡Р°СЃС‚РЅРёРєРё
+                                       where KOD_NA=nKodNA and GOD=nGod and SSYLKA_TIP=0  -- участники
                                     ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                        
                 where ds.DATA_OP>=dTermBeg
                    and ds.DATA_OP < dTermEnd
-                   and ds.SHIFR_SCHET=60  -- РїРѕС‚РѕРј РїРµРЅСЃРёРё РѕС‚РґРµР»СЊРЅРѕ
-                   and ds.NOM_VKL < 991     -- РєСЂРѕРјРµ РїРµРЅСЃРёР№ РёР· Р»РёС‡РЅС‹С… СЃСЂРµРґСЃС‚РІ
+                   and ds.SHIFR_SCHET=60  -- потом пенсии отдельно
+                   and ds.NOM_VKL < 991     -- кроме пенсий из личных средств
                    and ds.SERVICE_DOC=0
                    and np.NOM_VKL is Null;                   
                  
-         -- 1.3. РїРѕР»СѓС‡Р°С‚РµР»РµР№ РїРѕСЃРѕР±РёР№ РґРѕР±Р°РІР»СЏРµРј С‚СЂРµС‚СЊРµР№ РѕС‡РµСЂРµРґСЊСЋ   
+         -- 1.3. получателей пособий добавляем третьей очередью   
          Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
          Select distinct nKodNA, nGod, ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, vrp.NOM_VIPL, vrp.SSYLKA_POLUCH, vrp.GF_PERSON, vrp.NAL_REZIDENT, nPeriod
                 from DV_SR_LSPV ds
@@ -336,14 +336,14 @@ begin
                                     ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS and vrp.NOM_VIPL=np.SSYLKA_TIP                       
                 where ds.DATA_OP>=dTermBeg
                    and ds.DATA_OP < dTermEnd
-                   and ds.SHIFR_SCHET=62  -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ СЃСѓРјРјС‹
+                   and ds.SHIFR_SCHET=62  -- ритуалки и наследуемые суммы
                    and ds.SERVICE_DOC=0
                    and np.NOM_VKL is Null;    
                    
                    
-         -- 2. Р‘С‹Р»Рё РёСЃРїСЂР°РІР»РµРЅРёРµ РґРѕС…РѕРґР°, РїРѕР»СѓС‡РµРЅРЅРѕРіРѕ РІ РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+         -- 2. Были исправление дохода, полученного в отчетном периоде
          
-         -- 2.1. РџРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ СЃСѓРјРјС‹ (РїСЂРѕРІРµСЂРёР» 12.04.2017 РђРЅРєРёРЅ)         
+         -- 2.1. Пенсии и выкупные суммы (проверил 12.04.2017 Анкин)         
          Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
          Select nKodNA, nGod, NOM_VKL, NOM_IPS, SSYLKA_FL, 0, SSYLKA_FL, GF_PERSON, NAL_REZIDENT, nPeriod
          from (Select distinct NOM_VKL, NOM_IPS, SSYLKA_FL, GF_PERSON, NAL_REZIDENT -- ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, sfl.GF_PERSON, sfl.NAL_REZIDENT 
@@ -356,55 +356,55 @@ begin
                                                       and GOD=nGod
                                                       and SSYLKA_TIP=0
                                                 ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS
-                        where sfl.PEN_SXEM<>7                  -- РЅРµ РћРџРЎ  
-                          and np.NOM_VKL is Null               -- РґРѕР±Р°РІР»РµРЅРёРµ С‚РµС…, РєРѕРіРѕ РµС‰С‘ РЅРµС‚             
-                         start with ( ds.SHIFR_SCHET= 55       -- РІС‹РєСѓРїРЅС‹Рµ, РёСЃРїСЂР°РІР»РµРЅРёРµ РІС‹РєСѓРїРЅС‹С… РјРѕР¶РµС‚ Р±С‹С‚СЊ РїРѕСЃР»Рµ Р·Р°РІРµСЂС€РµРЅРёСЏ РіРѕРґР° 
-                                      or ( ds.SHIFR_SCHET=60   -- РїРµРЅСЃРёСЏ
-                                           and ds.NOM_VKL<991  -- РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ
-                                           and ds.DATA_OP < dTermYear -- РёСЃРїСЂР°РІР»РµРЅРёРµ РїРµРЅСЃРёР№ С‚РѕР»СЊРєРѕ РґРѕ РєРѕРЅС†Р° С‚РµРєСѓС‰РµРіРѕ РіРѕРґР°
+                        where sfl.PEN_SXEM<>7                  -- не ОПС  
+                          and np.NOM_VKL is Null               -- добавление тех, кого ещё нет             
+                         start with ( ds.SHIFR_SCHET= 55       -- выкупные, исправление выкупных может быть после завершения года 
+                                      or ( ds.SHIFR_SCHET=60   -- пенсия
+                                           and ds.NOM_VKL<991  -- не из своих средств
+                                           and ds.DATA_OP < dTermYear -- исправление пенсий только до конца текущего года
                                           ) 
                                     ) 
-                                and ds.SERVICE_DOC=-1          -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РЅРµ СЂР°РЅРµРµ РЅР°С‡Р°Р»Р° С‚РµРєСѓС‰РµРіРѕ РіРѕРґР°                                                                
-                         connect by PRIOR ds.NOM_VKL=ds.NOM_VKL        -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                    and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
+                                and ds.DATA_OP>=dTermBeg       -- исправление сделано не ранее начала текущего года                                                                
+                         connect by PRIOR ds.NOM_VKL=ds.NOM_VKL        -- поиск по цепочке исправлений до
+                                    and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                     and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                     and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                     and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
-                    ) where ISLEAF=1           -- РёСЃРїСЂР°РІР»СЏРµРјР°СЏ Р·Р°РїРёСЃСЊ (РёСЃРїСЂР°РІР»СЏСЋС‰РёРµ Р·Р°РїРёСЃРё РёРіРЅРѕСЂРёСЂСѓРµРј)
-                       and  DATA_OP >=dTermBeg -- РёСЃРїСЂР°РІР»СЏРµРјР°СЏ РІС‹РїР»Р°С‚Р° РґРѕР»Р¶РЅР° Р±С‹С‚СЊ 
-                       and  DATA_OP < dTermEnd -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                    ) where ISLEAF=1           -- исправляемая запись (исправляющие записи игнорируем)
+                       and  DATA_OP >=dTermBeg -- исправляемая выплата должна быть 
+                       and  DATA_OP < dTermEnd -- в текущем отчетном периоде
               );                                           
                    
-         -- 2.2. Р РёС‚СѓР°Р»СЊРЅС‹Рµ РїРѕСЃРѕР±РёСЏ Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ СЃСѓРјРјС‹
+         -- 2.2. Ритуальные пособия и наследуемые суммы
          Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
          Select nKodNA, nGod, NOM_VKL, NOM_IPS, SSYLKA_FL, 0, SSYLKA_FL, GF_PERSON, NAL_REZIDENT, nPeriod
          from (Select lspv.NOM_VKL, lspv.NOM_IPS, lspv.SSYLKA_FL, vrp.GF_PERSON, vrp.NAL_REZIDENT
                     from(
                             Select  ds.NOM_VKL, ds.NOM_IPS, 
-                                       min( ds.SSYLKA_DOC ) SSDOC,       -- РїРµСЂРІС‹Р№ РґРѕРєСѓРјРµРЅС‚ РІ С†РµРїРѕС‡РєРµ, РёСЃРїСЂР°РІР»СЏРµРјС‹Р№ 
-                                       min(ds.DATA_OP) DATA_OSH_DOH,  -- РґР°С‚Р° РґРѕС…РѕРґР° РїРѕ РїРµСЂРІРѕРјСѓ РґРѕРєСѓРјРµРЅС‚Сѓ
+                                       min( ds.SSYLKA_DOC ) SSDOC,       -- первый документ в цепочке, исправляемый 
+                                       min(ds.DATA_OP) DATA_OSH_DOH,  -- дата дохода по первому документу
                                        sum(SUMMA) DOH_POLUCH
                              from  DV_SR_LSPV ds       
                                      left join (Select NOM_VKL, NOM_IPS from F_NDFL_LOAD_NALPLAT 
                                                    where KOD_NA=nKodNA 
                                                       and GOD=nGod
-                                                      and SSYLKA_TIP=1           -- СЃСЃС‹Р»РєР° СѓРјРµСЂС€РµРіРѕ, Р° РЅРµ РїРѕР»СѓС‡РёРІС€РµРіРѕ РґРѕС…РѕРґ
+                                                      and SSYLKA_TIP=1           -- ссылка умершего, а не получившего доход
                                                  ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                                         
                              where np.NOM_VKL is Null 
-                             start with ds.SHIFR_SCHET=62   -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                    and ds.SERVICE_DOC= -1  -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј СЃ -1)
-                                    and ds.DATA_OP>=dTermBeg    -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                                    
-                                    and ds.DATA_OP < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                             start with ds.SHIFR_SCHET=62   -- ритуалки и наследуемые пенсии
+                                    and ds.SERVICE_DOC= -1  -- коррекция (начинаем с -1)
+                                    and ds.DATA_OP>=dTermBeg    -- исправление сделано
+                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                                    
+                                    and ds.DATA_OP < dTermEnd    -- в текущем отчетном периоде
                              connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
                                         and PRIOR ds.NOM_IPS=ds.NOM_IPS
                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC                             
                              group by ds.NOM_VKL, ds.NOM_IPS
-                             having min(ds.DATA_OP)>=dTermBeg   -- РѕС€РёР±РѕС‡РЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                 and min(ds.DATA_OP) < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ  
+                             having min(ds.DATA_OP)>=dTermBeg   -- ошибочное начисление сделано
+                                 and min(ds.DATA_OP) < dTermEnd    -- в текущем отчетном периоде  
                            ) dvs
                      inner join SP_LSPV lspv on lspv.NOM_VKL=dvs.NOM_VKL and lspv.NOM_IPS=dvs.NOM_IPS 
                      inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
@@ -416,32 +416,32 @@ begin
                      group by  lspv.NOM_VKL, lspv.NOM_IPS, lspv.SSYLKA_FL, vrp.GF_PERSON, vrp.NAL_REZIDENT
               ); 
                                     
-        -- СѓСЃС‚Р°РЅРѕРІРёС‚СЊ С„Р»Р°Р¶РѕРє РЅСѓР»РµРІРѕРіРѕ РґРѕС…РѕРґР°
+        -- установить флажок нулевого дохода
         Spisok_NalPlat_DohodNol( pSPRID );
                 
                                
-         -- РРґРµРЅС‚РёС„РёРєР°С†РёСЏ СѓС‡Р°СЃС‚РЅРёРєРѕРІ
-         -- СЃРЅР°С‡Р°Р»Р° РґР»СЏ С‚РµС…, РєС‚Рѕ РјРµРЅСЏР» РїРµРЅСЃРёРѕРЅРЅСѓСЋ СЃС…РµРјСѓ
+         -- Идентификация участников
+         -- сначала для тех, кто менял пенсионную схему
          Update f_NDFL_LOAD_NALPLAT np
            set np.GF_PERSON= (Select tc.FK_CONTRAGENT from GAZFOND.TRANSFORM_CONTRAGENTS tc where tc.SSYLKA_TS=np.SSYLKA_REAL)
            where np.GF_PERSON is Null and np.SSYLKA_TIP=0;
-         -- РїРѕС‚РѕРј РґР»СЏ РІСЃРµС…  
+         -- потом для всех  
          Update f_NDFL_LOAD_NALPLAT np
            set np.GF_PERSON= (Select tc.FK_CONTRAGENT from GAZFOND.TRANSFORM_CONTRAGENTS tc where tc.SSYLKA_FL=np.SSYLKA_REAL)
            where np.GF_PERSON is Null and np.SSYLKA_TIP=0;  
            
-         -- РРґРµРЅС‚РёС„РёРєР°С†РёСЏ РїРѕР»СѓС‡Р°С‚РµР»РµР№ РїРѕСЃРѕР±РёСЏ, РєРѕС‚РѕСЂС‹Рµ СЏРІР»СЏСЋС‚СЃСЏ РЈС‡Р°СЃС‚РЅРёРєР°РјРё  
-         -- СЃРЅР°С‡Р°Р»Р° РґР»СЏ С‚РµС…, РєС‚Рѕ РјРµРЅСЏР» РїРµРЅСЃРёРѕРЅРЅСѓСЋ СЃС…РµРјСѓ
+         -- Идентификация получателей пособия, которые являются Участниками  
+         -- сначала для тех, кто менял пенсионную схему
          Update f_NDFL_LOAD_NALPLAT np
            set np.GF_PERSON= (Select tc.FK_CONTRAGENT from GAZFOND.TRANSFORM_CONTRAGENTS tc where tc.SSYLKA_TS=np.SSYLKA_REAL)
            where np.GF_PERSON is Null and np.SSYLKA_TIP=1 and np.SSYLKA_REAL>0;
-         -- РїРѕС‚РѕРј РґР»СЏ РІСЃРµС…  
+         -- потом для всех  
          Update f_NDFL_LOAD_NALPLAT np
            set np.GF_PERSON= (Select tc.FK_CONTRAGENT from GAZFOND.TRANSFORM_CONTRAGENTS tc where tc.SSYLKA_FL=np.SSYLKA_REAL)
            where np.GF_PERSON is Null and np.SSYLKA_TIP=1 and np.SSYLKA_REAL>0;   
         
 
-         -- РїРµСЂРµРЅРѕСЃ РєРѕРґР° РїРµСЂСЃРѕРЅС‹ РїСЂР°РІРѕРїСЂРµРµРјРЅРёРєР° РёР· СЃРїРёСЃРєР° СЂРёС‚СѓР°Р»РѕРє РІ СЃРїРёСЃРѕРІ РІС‹РїР»Р°С‡РµРЅРЅС‹С… РїРѕСЃРѕР±РёР№
+         -- перенос кода персоны правопреемника из списка ритуалок в списов выплаченных пособий
          Update VYPLACH_POSOB vp  
            set vp.GF_PERSON= (Select sr.FK_CONTRAGENT from SP_RITUAL_POS sr
                               where sr.SSYLKA=vp.SSYLKA)
@@ -451,7 +451,7 @@ begin
               and vp.DATA_VYPL>=dTermBeg 
               and vp.DATA_VYPL < dTermEnd; 
                           
-         -- РРґРµРЅС‚РёС„РёРєР°С†РёСЏ РїРѕР»СѓС‡Р°С‚РµР»РµР№ РїРѕСЃРѕР±РёСЏ, РєРѕС‚РѕСЂС‹Рµ РќР• СЏРІР»СЏСЋС‚СЃСЏ РЈС‡Р°СЃС‚РЅРёРєР°РјРё Р¤РѕРЅРґР°
+         -- Идентификация получателей пособия, которые НЕ являются Участниками Фонда
          Update f_NDFL_LOAD_NALPLAT np
            set np.GF_PERSON= (Select distinct sr.FK_CONTRAGENT 
                                  from SP_RITUAL_POS sr
@@ -464,7 +464,7 @@ begin
            where np.GF_PERSON is Null and np.SSYLKA_TIP=1 and np.SSYLKA_REAL=0;         
 
 
-         -- Р·Р°РїРѕР»РЅСЏРµРј РїРµСЂСЃРѕРЅС‹ РІ РЎР¤Р›              
+         -- заполняем персоны в СФЛ              
          Update SP_FIZ_LITS sfl
             set sfl.GF_PERSON = (Select distinct np.GF_PERSON
                                      from f_NDFL_LOAD_NALPLAT np
@@ -479,7 +479,7 @@ begin
                            and SSYLKA_REAL>0
                            and GF_PERSON is not Null);      
                               
-         -- СЃР±СЂРѕСЃ РїРѕРґСЃС‡РёС‚Р°РЅРЅРѕРіРѕ С‡РёСЃР»Р° РќР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ                
+         -- сброс подсчитанного числа Налогоплательщиков                
          Update F6NDFL_LOAD_SPRAVKI
            set KOL_FL_DOHOD= 0
            where R_SPRID = pSPRID;                              
@@ -493,15 +493,15 @@ exception
            
 end Spisok_NalPlat_poLSPV;      
 
--- СЌС‚Р° РїСЂРѕС†РµРґСѓСЂР° РґРѕР»Р¶РЅР° РЅР°Р№С‚Рё РІ СЃРїРёСЃРєРµ РќРџ,
--- Сѓ РєРѕС‚РѕСЂС‹С… РґРѕС…РѕРґ СЃС‚Р°Р» РЅСѓР»РµРІС‹Рј РІ СЂРµР·СѓР»СЊС‚Р°С‚Рµ РёСЃРїСЂР°РІР»РµРЅРёР№
--- (РЅР°РїСЂРјРµСЂ: С‡РµР»РѕРІРµРє РјРѕР¶РµС‚ СѓРјРµСЂРµС‚СЊ, Рё РµРјСѓ СЃС‚РѕСЂРЅРёСЂРѕРІР°Р»Рё РґРѕС…РѕРґ)
--- С‚Р°РєРёС… РќРџ РЅРµ РЅСѓР¶РЅРѕ РІРєР»СЋС‡Р°С‚СЊ РІ СЃРїСЂР°РІРєСѓ
--- РѕРЅРё РќР• РґРѕР»Р¶РЅС‹ РІРѕР№С‚Рё РІ С‡РёСЃР»Рѕ Р»РёС†, РїРѕР»СѓС‡РёРІС€РёС… РґРѕС…РѕРґ
+-- эта процедура должна найти в списке НП,
+-- у которых доход стал нулевым в результате исправлений
+-- (напрмер: человек может умереть, и ему сторнировали доход)
+-- таких НП не нужно включать в справку
+-- они НЕ должны войти в число лиц, получивших доход
 --
--- Р·Р°РґР°С‡Р° СЌС‚РѕР№ РїСЂРѕС†РµРґСѓСЂС‹ РїСЂРѕСЃС‚Р°РІРёС‚СЊ С„Р»Р°Р¶РѕРє РѕР±РЅСѓР»РµРЅРЅРѕРіРѕ РґРѕС…РѕРґР°
+-- задача этой процедуры проставить флажок обнуленного дохода
 --
--- РєРѕРјРёС‚ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РІРЅРµС€РЅРёР№!
+-- комит должен быть внешний!
 procedure Spisok_NalPlat_DohodNol( pSPRID in number ) as
   dTermBeg  date;
   dTermEnd  date;
@@ -513,7 +513,7 @@ procedure Spisok_NalPlat_DohodNol( pSPRID in number ) as
   nRIT      number;
 begin
      
-      -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+      -- выборка периода справки
       Select KOD_NA,GOD, PERIOD, NOM_KORR into  nKodNA,nGod, nPeriod, nNomKor  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
      
       dTermBeg  := to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
@@ -524,20 +524,20 @@ begin
            when 31 then dTermEnd := add_months(dTermBeg,6);        
            when 33 then dTermEnd := add_months(dTermBeg,9);        
            when 34 then dTermEnd := add_months(dTermBeg,12);      
-           else Raise_Application_Error( -20001,'РћС€РёР±РєР°: Р·РЅР°С‡РµРЅРёРµ '||to_char(nPeriod)||' РїР°СЂР°РјРµС‚СЂР° pPeriod РЅРµ СЂР°РІРЅРѕ 21, 31, 33 РёР»Рё 34 (РєРѕРґС‹ РєРІР°СЂС‚Р°Р»РѕРІ).');                
+           else Raise_Application_Error( -20001,'Ошибка: значение '||to_char(nPeriod)||' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).');                
       end case; 
       
-         -- РѕР±СЂР°Р±РѕС‚РєР° С„Р»Р°Р¶РєР° РЅСѓР»РµРІРѕРіРѕ РіРѕРґРѕРІРѕРіРѕ РґРѕС…РѕРґР°
-         -- С„Р»Р°Р¶РѕРє РјРµРЅСЏРµС‚СЃСЏ РІСЃРµРј Р·Р° РіРѕРґ
+         -- обработка флажка нулевого годового дохода
+         -- флажок меняется всем за год
          
-         -- СЃР±СЂРѕСЃ
+         -- сброс
          Update F_NDFL_LOAD_NALPLAT np
              set  np.SGD_ISPRVNOL=0
              where np.KOD_NA=nKodNA and np.GOD=nGod
                 and np.SGD_ISPRVNOL<>0;
                       
-         -- РІС‹С‡РёСЃР»РµРЅРёРµ Р·Р°РЅРѕРІРѕ
-         -- РґР»СЏ РїРµРЅСЃРёР№ (СЃСЃС‹Р»РєРё СѓС‡Р°СЃС‚РЅРёРєРѕРІ)
+         -- вычисление заново
+         -- для пенсий (ссылки участников)
          Update F_NDFL_LOAD_NALPLAT np
              set  np.SGD_ISPRVNOL=1
              where np.KOD_NA=nKodNA and np.GOD=nGod         
@@ -546,22 +546,22 @@ begin
                             from DV_SR_LSPV ds
                                  inner join (Select distinct NOM_VKL, NOM_IPS
                                                 from DV_SR_LSPV
-                                                where NOM_VKL<991          -- РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ    
-                                                  and SHIFR_SCHET=60       -- РїРµРЅСЃРёСЏ    
-                                                  and DATA_OP >= dTermBeg  -- Р·Р° РІРµСЃСЊ  
-                                                  and DATA_OP <  dTermYear -- РіРѕРґ
+                                                where NOM_VKL<991          -- не из своих средств    
+                                                  and SHIFR_SCHET=60       -- пенсия    
+                                                  and DATA_OP >= dTermBeg  -- за весь  
+                                                  and DATA_OP <  dTermYear -- год
                                                   and SUMMA<=0
-                                            ) ns  -- РёСЃРєР°С‚СЊ РЅРѕР»СЊ Р±С‹СЃС‚СЂРµРµ РЅРµ Сѓ РІСЃРµС…, Р° С‚РѕР»СЊРєРѕ СЃСЂРµРґРё С‚РµС…, Сѓ РєРѕРіРѕ РµСЃС‚СЊ РѕС‚СЂРёС†Р°С‚РµР»СЊРЅС‹Рµ СЃСѓРјРјС‹ 
+                                            ) ns  -- искать ноль быстрее не у всех, а только среди тех, у кого есть отрицательные суммы 
                                             on  ns.NOM_VKL=ds.NOM_VKL and ns.NOM_IPS=ds.NOM_IPS 
-                            where ds.NOM_VKL<991             -- РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ    
-                              and ds.SHIFR_SCHET=60          -- РїРµРЅСЃРёСЏ    
-                              and ds.DATA_OP >= dTermBeg     -- Р·Р° РІРµСЃСЊ  
-                              and ds.DATA_OP <  dTermYear    -- РіРѕРґ
+                            where ds.NOM_VKL<991             -- не из своих средств    
+                              and ds.SHIFR_SCHET=60          -- пенсия    
+                              and ds.DATA_OP >= dTermBeg     -- за весь  
+                              and ds.DATA_OP <  dTermYear    -- год
                             group by  ds.NOM_VKL, ds.NOM_IPS   
-                            having abs(sum(ds.SUMMA))<0.01   -- СЃСѓРјР°СЂРЅС‹Р№ РґРѕС…РѕРґ - РЅРѕР»СЊ           
+                            having abs(sum(ds.SUMMA))<0.01   -- сумарный доход - ноль           
                         );            
          
-         -- РґР»СЏ РІС‹РєСѓРїРЅС‹С… (СЃСЃС‹Р»РєРё СѓС‡Р°СЃС‚РЅРёРєРѕРІ)
+         -- для выкупных (ссылки участников)
          Update F_NDFL_LOAD_NALPLAT np
              set  np.SGD_ISPRVNOL=1
              where np.KOD_NA=nKodNA and np.GOD=nGod         
@@ -572,24 +572,24 @@ begin
                                     in (Select NOM_VKL, NOM_IPS, SHIFR_SCHET
                                         from(Select ds.*, CONNECT_BY_ISLEAF ISLEAF
                                                 from  DV_SR_LSPV ds            
-                                                 where   ds.NOM_VKL<>1001           -- РЅРµ РћРџРЎ                  
-                                                 start with ds.SHIFR_SCHET= 55      -- РІС‹РєСѓРїРЅС‹Рµ
-                                                        and ds.SERVICE_DOC=-1       -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                        and ds.DATA_OP >= dTermBeg  -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РЅРµ СЂР°РЅРµРµ РЅР°С‡Р°Р»Р° РіРѕРґР°                             
-                                                 connect by PRIOR ds.NOM_VKL=ds.NOM_VKL        -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                            and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РёСЃРїСЂР°РІР»РµРЅРЅРѕР№ Р·Р°РїРёСЃРё
+                                                 where   ds.NOM_VKL<>1001           -- не ОПС                  
+                                                 start with ds.SHIFR_SCHET= 55      -- выкупные
+                                                        and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
+                                                        and ds.DATA_OP >= dTermBeg  -- исправление сделано не ранее начала года                             
+                                                 connect by PRIOR ds.NOM_VKL=ds.NOM_VKL        -- поиск по цепочке исправлений до
+                                                            and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- исправленной записи
                                                             and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                             and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                             and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                             ) where ISLEAF=1
-                                                and DATA_OP >= dTermBeg  -- РґР°С‚Р° РёСЃРїСЂР°РІР»СЏРµРјРѕР№ Р·Р°РїРёСЃРё 
-                                                and DATA_OP <  dTermYear -- РІ РїСЂРµРґРµР»Р°С… РіРѕРґР°
+                                                and DATA_OP >= dTermBeg  -- дата исправляемой записи 
+                                                and DATA_OP <  dTermYear -- в пределах года
                                         )  
                                 group by ds.NOM_VKL, ds.NOM_IPS  
                                 having abs(sum(ds.SUMMA))<0.01  
                            );          
                           
-         -- РґР»СЏ СЂРёС‚СѓР°Р»РѕРє Рё РЅР°СЃР»РµРґСЃС‚РІР° (СЃСЃС‹Р»РєРё СѓРјРµСЂС€РёС… СѓС‡Р°СЃС‚РЅРёРєРѕРІ, Р° РЅРµ РїРѕР»СѓС‡Р°С‚РµР»РµР№ РґРѕС…РѕРґР°)
+         -- для ритуалок и наследства (ссылки умерших участников, а не получателей дохода)
          Select count(*) into nRIT
              from DV_SR_LSPV 
                 where SHIFR_SCHET=62 and (SERVICE_DOC<>0 or SUMMA<0) 
@@ -597,7 +597,7 @@ begin
          
     if nRIT>0 then
  
-         Raise_Application_Error( -20001,'РџСЂРѕС†РµРґСѓСЂР° Spisok_NalPlat_DohodNol. РћР±РЅР°СЂСѓР¶РµРЅРѕ РёСЃРїСЂР°РІР»РµРЅРёРµ РЅР°СЃР»РµРґСѓРµРјС‹С… СЃСѓРјРј РёР»Рё СЂРёС‚СѓР°Р»СЊРЅС‹С… РІС‹РїР»Р°С‚. РќСѓР¶РЅРѕ РІРµСЂРёС„РёС†РёСЂРѕРІР°С‚СЊ Р·Р°РїСЂРѕСЃ.');
+         Raise_Application_Error( -20001,'Процедура Spisok_NalPlat_DohodNol. Обнаружено исправление наследуемых сумм или ритуальных выплат. Нужно верифицировать запрос.');
 
          Update F_NDFL_LOAD_NALPLAT np
              set  np.SGD_ISPRVNOL=1
@@ -612,20 +612,20 @@ begin
                                             where not exists( Select * from DV_SR_LSPV dsz
                                                                          where dsz.DATA_OP>=dTermBeg  and dsz.DATA_OP <  dTermEnd 
                                                                             and dsz.NOM_VKL=ds.NOM_VKL and dsz.NOM_IPS=ds.NOM_IPS 
-                                                                            and dsz.SHIFR_SCHET=62 and dsz.SERVICE_DOC=0)  -- РЅРµС‚ РЅРµРёСЃРїСЂР°РІР»РµРЅРЅС‹С… РІС‹РїР»Р°С‚ Р·Р° РґСЂСѓРіРёРµ РјРµСЃСЏС†С‹ 
-                                            start with ds.SHIFR_SCHET=62  -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                                    and ds.SERVICE_DOC=-1  -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg    -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                                    
-                                                    and ds.DATA_OP < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                                                                            and dsz.SHIFR_SCHET=62 and dsz.SERVICE_DOC=0)  -- нет неисправленных выплат за другие месяцы 
+                                            start with ds.SHIFR_SCHET=62  -- ритуалки и наследуемые пенсии
+                                                    and ds.SERVICE_DOC=-1  -- коррекция (начинаем с -1)
+                                                    and ds.DATA_OP>=dTermBeg    -- исправление сделано
+                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                                    
+                                                    and ds.DATA_OP < dTermEnd    -- в текущем отчетном периоде
                                              connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
                                                         and PRIOR ds.NOM_IPS=ds.NOM_IPS
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC              
                                              group by ds.NOM_VKL, ds.NOM_IPS
-                                             having min(ds.DATA_OP)>=dTermBeg   -- РѕС€РёР±РѕС‡РЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                 and min(ds.DATA_OP) < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                                             having min(ds.DATA_OP)>=dTermBeg   -- ошибочное начисление сделано
+                                                 and min(ds.DATA_OP) < dTermEnd    -- в текущем отчетном периоде
                                              ) dvs
                                  inner join SP_LSPV lspv on lspv.NOM_VKL=dvs.NOM_VKL and lspv.NOM_IPS=dvs.NOM_IPS 
                                  left join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON   
@@ -633,13 +633,13 @@ begin
                                                         where TIP_VYPL=1010    
                                                            and DATA_VYPL>=dTermBeg
                                                            and DATA_VYPL < dTermEnd
-                                                           -- РµСЃР»Рё РЅР°СЃР»РµРґРЅРёРєРѕРІ 2 Рё Р±РѕР»РµРµ, С‚Рѕ РЅРµ Р°РІС‚РѕРјР°С‚РёР·РёСЂРѕРІР°РЅРѕ РёР·-Р·Р° РјРѕРґРµР»Рё РґР°РЅРЅС‹С… РЈР“Рњ
+                                                           -- если наследников 2 и более, то не автоматизировано из-за модели данных УГМ
                                                            and SSYLKA not in (Select distinct SSYLKA from VYPLACH_POSOB where NOM_VIPL>1)
                                              ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=dvs.SSDOC         
                                  group by dvs.NOM_VKL, dvs.NOM_IPS
                                  having sum( dvs.DOH_POLUCH)=0
                           );     
-    end if;  -- РєРѕРЅРµС† СЂРёС‚СѓР°Р»РєРё СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
+    end if;  -- конец ритуалки с исправлениями
                                
 exception
    when OTHERS then       
@@ -648,14 +648,14 @@ exception
               
 end Spisok_NalPlat_DohodNol;                  
 
--- РѕРїСЂРµРґРµР»РёС‚СЊ С‡РёСЃР»Рѕ РќР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ, РїРѕР»СѓС‡РёРІС€РёС… РЅРµРЅСѓР»РµРІРѕР№ РґРѕС…РѕРґ СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
---        РїРµСЂРµРґ РІС‹Р·РѕРІРѕРј РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ РїРѕРґРіРѕС‚РѕРІР»РµРЅС‹ СЃРїРёСЃРєРё РќР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ:
---        СѓС‡Р°СЃС‚РЅРёРєРѕРІ Рё СЂР°Р±РѕС‚РЅРёРєРѕРІ
---  СЂРµР·СѓР»СЊС‚Р°С‚ Р·Р°РїРёСЃС‹РІР°РµС‚СЃСЏ РІ  F6NDFL_LOAD_SPRAVKI
---                KOL_FL_DOHOD - С‡РёСЃР»Рѕ РќРџ РїРѕР»Рµ СЃРїСЂР°РІРєРё 060 Р Р°Р·РґРµР» 1 РѕР±С‰Р°СЏ С‡Р°СЃС‚СЊ
---                KFL_UCH - С‡РёСЃР»Рѕ РќРџ-РЈС‡Р°СЃС‚РЅРёРєРѕРІ СЃ РґРѕС…РѕРґРѕРј Р±РѕР»СЊС€Рµ РЅРѕР»СЏ
---                KFL_RAB - С‡РёСЃР»Рѕ РќРџ-Р Р°Р±РѕС‚РЅРёРєРѕРІ СЃ РґРѕС…РѕРґРѕРј Р±РѕР»СЊС€Рµ РЅРѕР»СЏ
---                KFL_SOVP - С‡РёСЃР»Рѕ РќРџ РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ РІ РґРІСѓС… СЃРїРёСЃРєР°С…      
+-- определить число Налогоплательщиков, получивших ненулевой доход с начала года
+--        перед вызовом должны быть подготовлены списки Налогоплательщиков:
+--        участников и работников
+--  результат записывается в  F6NDFL_LOAD_SPRAVKI
+--                KOL_FL_DOHOD - число НП поле справки 060 Раздел 1 общая часть
+--                KFL_UCH - число НП-Участников с доходом больше ноля
+--                KFL_RAB - число НП-Работников с доходом больше ноля
+--                KFL_SOVP - число НП одновременно в двух списках      
 procedure Raschet_Chisla_NalPlat( pErrInfo out varchar2, pSPRID in number ) as 
   dTermBeg date;
   dTermEnd date;
@@ -669,7 +669,7 @@ procedure Raschet_Chisla_NalPlat( pErrInfo out varchar2, pSPRID in number ) as
 begin
           pErrInfo := Null;  
          
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
           Select KOD_NA,GOD, PERIOD, NOM_KORR into  nKodNA,nGod, nPeriod, nNomKor  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
          
           dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
@@ -679,7 +679,7 @@ begin
                when 31 then dTermEnd := add_months(dTermBeg,6);        
                when 33 then dTermEnd := add_months(dTermBeg,9);        
                when 34 then dTermEnd := add_months(dTermBeg,12);      
-               else pErrInfo :='РћС€РёР±РєР°: Р·РЅР°С‡РµРЅРёРµ '||to_char(nPeriod)||' РїР°СЂР°РјРµС‚СЂР° pPeriod РЅРµ СЂР°РІРЅРѕ 21, 31, 33 РёР»Рё 34 (РєРѕРґС‹ РєРІР°СЂС‚Р°Р»РѕРІ).'; return;                
+               else pErrInfo :='Ошибка: значение '||to_char(nPeriod)||' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).'; return;                
           end case;          
                          
           begin  
@@ -720,7 +720,7 @@ exception
            
 end Raschet_Chisla_NalPlat;
 
--- РѕРїСЂРµРґРµР»РёС‚СЊ С‡РёСЃР»Рѕ РќР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ, РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ СЏРІР»СЏСЋС‰РёС…СЃСЏ СЂР°Р±РѕС‚РЅРёРєР°РјРё
+-- определить число Налогоплательщиков, одновременно являющихся работниками
 procedure Raschet_Chisla_SovpRabNp( pErrInfo out varchar2, pSPRID in number ) as
   dTermBeg date;
   dTermEnd date;
@@ -734,7 +734,7 @@ procedure Raschet_Chisla_SovpRabNp( pErrInfo out varchar2, pSPRID in number ) as
 begin
           pErrInfo := Null;  
          
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
           Select KOD_NA,GOD, PERIOD, NOM_KORR into  nKodNA,nGod, nPeriod, nNomKor  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
          
           dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
@@ -744,7 +744,7 @@ begin
                when 31 then dTermEnd := add_months(dTermBeg,6);        
                when 33 then dTermEnd := add_months(dTermBeg,9);        
                when 34 then dTermEnd := add_months(dTermBeg,12);      
-               else pErrInfo :='РћС€РёР±РєР°: Р·РЅР°С‡РµРЅРёРµ '||to_char(nPeriod)||' РїР°СЂР°РјРµС‚СЂР° pPeriod РЅРµ СЂР°РІРЅРѕ 21, 31, 33 РёР»Рё 34 (РєРѕРґС‹ РєРІР°СЂС‚Р°Р»РѕРІ).'; return;                
+               else pErrInfo :='Ошибка: значение '||to_char(nPeriod)||' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).'; return;                
           end case; 
           
             Select count(distinct sr.GF_PERSON) into nKFLObs
@@ -767,13 +767,13 @@ exception
            
 end Raschet_Chisla_SovpRabNp;
 
--- РїСЂРѕРІРµСЂРёС‚СЊ СЃРѕР·РґР°РЅРЅС‹Р№ СЃРїРёСЃРѕРє РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ, РїРѕР»СѓС‡РёС‚СЊ РїРµСЂРµС‡РµРЅСЊ РѕС€РёР±РѕРє 
+-- проверить созданный список налогоплательщиков, получить перечень ошибок 
 procedure Oshibki_vSpisNalPlat( pReportCursor out sys_refcursor, pErrInfo out varchar2, pKodNA in number, pGod in number, pPeriod in number ) as
 begin
    pErrInfo:=Null;
    
    Open pReportCursor for
-   -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
+   -- пенсии и выкупные
    Select * from (
            Select 1000 KODOSH, 
                      np.NOM_VKL, np.NOM_IPS, np.SSYLKA_REAL SSYLKA, np.SSYLKA_TIP, np.GF_PERSON, sfl.FAMILIYA||' '||sfl.IMYA||' '||sfl.OTCHESTVO FIO, sfl.DATA_ROGD, np.NALRES_STATUS, ifl.INN, '' TEXTOSH
@@ -782,10 +782,10 @@ begin
                          left join SP_INN_FIZ_LITS ifl on ifl.SSYLKA=np.SSYLKA_REAL
                  where np.KOD_NA=pKodNA
                     and np.GOD=pGod
-                    and np.GF_PERSON is Null -- РЅРµ РёРґРµРЅС‚РёС„РёС†РёСЂРѕРІР°РЅРЅС‹Р№ РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРє
+                    and np.GF_PERSON is Null -- не идентифицированный налогоплательщик
                     and np.SSYLKA_TIP=0
             UNION    
-            -- СЂРёС‚СѓР°Р»РєРё Рё РїРѕСЃРѕР±РёСЏ
+            -- ритуалки и пособия
             Select 1001 KODOSH, 
                       np.NOM_VKL, np.NOM_IPS, np.SSYLKA_REAL SSYLKA, np.SSYLKA_TIP, np.GF_PERSON, vp.FIO, cast(Null as date) DATA_ROGD, np.NALRES_STATUS, ifl.INN, '' TEXTOSH
                  from F_NDFL_LOAD_NALPLAT np
@@ -793,12 +793,12 @@ begin
                          left join SP_INN_FIZ_LITS ifl on ifl.SSYLKA=np.SSYLKA_REAL
                  where np.KOD_NA=pKodNA
                     and np.GOD=pGod
-                    and np.GF_PERSON is Null -- РЅРµ РёРґРµРЅС‚РёС„РёС†РёСЂРѕРІР°РЅРЅС‹Р№ РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРє
+                    and np.GF_PERSON is Null -- не идентифицированный налогоплательщик
                     and np.SSYLKA_TIP<>0    
                     and vp.TIP_VYPL=1010
             UNION
             Select * from(
-            -- РґР»СЏ РѕРґРёРЅР°РєРѕРІРѕРіРѕ ID РљРѕРЅС‚СЂР°РіРµРЅС‚Р°
+            -- для одинакового ID Контрагента
             With q as (Select  n1.*, 
                     s1.SSYLKA SS1, s1.FAMILIYA||' '||s1.IMYA||' '||s1.OTCHESTVO FIO1, s1.DATA_ROGD DR1, i1.INN INN1, s1.NAL_REZIDENT SNR1, s1.NOM_VKL NV1,
                     s2.SSYLKA SS2, s2.FAMILIYA||' '||s2.IMYA||' '||s2.OTCHESTVO FIO2, s2.DATA_ROGD DR2, i2.INN INN2, s2.NAL_REZIDENT SNR2, s2.NOM_VKL NV2            
@@ -806,64 +806,64 @@ begin
                             (Select GF_PERSON from F_NDFL_LOAD_NALPLAT where KOD_NA=pKodNA and GOD=pGod and SSYLKA_TIP=0 group by GF_PERSON having count(*)>1) q        
                     where n1.GF_PERSON=q.GF_PERSON
                        and n2.GF_PERSON=q.GF_PERSON
-                       and n1.SSYLKA_TIP=0 -- СЃСЂР°РІРЅРёРІР°РµРј РЈС‡Р°СЃС‚РЅРёРєРѕРІ,
-                       and n2.SSYLKA_TIP=0 -- Р° РЅРµ РёС… РЅР°СЃР»РµРґРЅРёРєРѕРІ  
+                       and n1.SSYLKA_TIP=0 -- сравниваем Участников,
+                       and n2.SSYLKA_TIP=0 -- а не их наследников  
                        and s1.SSYLKA=n1.SSYLKA_SIPS
                        and s2.SSYLKA=n2.SSYLKA_SIPS
                        and s1.SSYLKA<s2.SSYLKA
                        and i1.SSYLKA(+)=s1.SSYLKA
                        and i2.SSYLKA(+)=s2.SSYLKA )
-                -- СЂР°Р·РЅС‹Рµ Р¤РРћ       
+                -- разные ФИО       
                 Select 2000 KODOSH, NOM_VKL, NOM_IPS, SSYLKA_SIPS SSYLKA, SSYLKA_TIP, GF_PERSON, FIO1 FIO, DR1 DATA_ROGD, SNR1 NALRES_STATUS, INN1 INN,
-                          FIO2||'   РЎР¤Р› '||to_char(NV2)||'/'||to_char(SS2) TEXTOSH
+                          FIO2||'   СФЛ '||to_char(NV2)||'/'||to_char(SS2) TEXTOSH
                           from q
                           where q.FIO1<>q.FIO2
                 UNION          
-                -- СЂР°Р·РЅС‹Рµ Р”Р 
+                -- разные ДР
                 Select 2001 KODOSH, NOM_VKL, NOM_IPS, SSYLKA_SIPS SSYLKA, SSYLKA_TIP, GF_PERSON, FIO1 FIO, DR1 DATA_ROGD, SNR1 NALRES_STATUS, INN1 INN,
-                          FIO2||'   РЎР¤Р› '||to_char(NV2)||'/'||to_char(SS2)||'  Р”Р  '||to_char(DR2,'dd.mm.yyyy') TEXTOSH
+                          FIO2||'   СФЛ '||to_char(NV2)||'/'||to_char(SS2)||'  ДР '||to_char(DR2,'dd.mm.yyyy') TEXTOSH
                           from q
                           where q.DR1<>q.DR2      
                 UNION       
-                -- СЂР°Р·РЅС‹Рµ РРќРќ                 
+                -- разные ИНН                 
                 Select 2002 KODOSH, NOM_VKL, NOM_IPS, SSYLKA_SIPS SSYLKA, SSYLKA_TIP, GF_PERSON, FIO1 FIO, DR1 DATA_ROGD, SNR1 NALRES_STATUS, INN1 INN,
-                          FIO2||'   РЎР¤Р› '||to_char(NV2)||'/'||to_char(SS2)||'  РРќРќ '||to_char(nvl(q.INN2,'--')) TEXTOSH
+                          FIO2||'   СФЛ '||to_char(NV2)||'/'||to_char(SS2)||'  ИНН '||to_char(nvl(q.INN2,'--')) TEXTOSH
                           from q
                           where nvl(q.INN1,'--')<>nvl(q.INN2,'--')  
                 UNION        
-                -- -- СЂР°Р·РЅС‹Рµ РЎС‚Р°С‚СѓСЃ РќР°Р»РѕРіРѕРІРѕРіРѕ Р РµР·РёРґРµРЅС‚Р°  
+                -- -- разные Статус Налогового Резидента  
                 Select 2003 KODOSH, NOM_VKL, NOM_IPS, SSYLKA_SIPS SSYLKA, SSYLKA_TIP, GF_PERSON, FIO1 FIO, DR1 DATA_ROGD, SNR1 NALRES_STATUS, INN1 INN,
-                          FIO2||'   РЎР¤Р› '||to_char(NV2)||'/'||to_char(SS2)||'  РЎРќР  '||to_char(q.SNR2) TEXTOSH
+                          FIO2||'   СФЛ '||to_char(NV2)||'/'||to_char(SS2)||'  СНР '||to_char(q.SNR2) TEXTOSH
                           from q
                           where q.SNR1<>q.SNR2
             )                      
      ) order by  KODOSH, FIO      
-     ; -- РєРѕРЅРµС† Р·Р°РїСЂРѕСЃР° РЅР° РІС‹Р±РѕСЂРєСѓ
+     ; -- конец запроса на выборку
    
 exception
    when OTHERS then   pErrInfo := SQLERRM;     
 end Oshibki_vSpisNalPlat;
 
 
-    -- РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃС‡РµС‚С‡РёРєР° СЃРїСЂР°РІРѕРє 
+    -- инициализация счетчика справок 
     function Init_SchetchikSpravok( pKodNA in number, pGod in number, pTipDox in number, pNomKorr in number ) return number as
-    /* РџР°СЂР°РјРµС‚СЂС‹:
-        pKodNA - РєРѕРґ РЅР°Р»РѕРіРѕРІРѕРіРѕ Р°РіРµРЅС‚Р°
-        pGod - РіРѕРґ
-        pTipDox - С‚РёРї РґРѕС…РѕРґР° РїРѕ РєР»Р°СЃСЃРёС„РёРєР°С†РёРё РЅР°Р»РѕРіРѕРІРѕРіРѕ Р°РіРµРЅС‚Р°
-        pNomKorr - РЅРѕРјРµСЂ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєРё РґР»СЏ СЂР°РЅРµРµ Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… СЃРїСЂР°РІРѕРє
+    /* Параметры:
+        pKodNA - код налогового агента
+        pGod - год
+        pTipDox - тип дохода по классификации налогового агента
+        pNomKorr - номер корректировки для ранее загруженных справок
       
-       Р РµР·СѓР»СЊС‚Р°С‚:
-       РєРѕРґ РѕС€РёР±РєРё. 0 - РѕС€РёР±РѕРє РЅРµС‚.
+       Результат:
+       код ошибки. 0 - ошибок нет.
        
-       Р’С‹РїРѕР»РЅСЏРµС‚СЃСЏ РїРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С… РїРѕ РѕРґРЅРѕРјСѓ РЅР°Р»РѕРіРѕРІРѕРјСѓ Р°РіРµРЅС‚Сѓ РІ СЃС‚СЂСѓРєС‚СѓСЂСѓ _LOAD_.
-       Р—Р°РїСѓСЃРєР°РµС‚СЃСЏ СЃС‚РѕР»СЊРєРѕ СЂР°Р·, СЃРєРѕР»СЊРєРѕ  pGod, pTipDox, pNomKorr РґРѕР»Р¶РЅРѕ РІРѕР№С‚Рё РІ РЅРѕРІС‹Рµ СЃРїСЂР°РІРєРё.
-       РџРѕСЃР»Рµ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё СЃС‡РµС‚С‡РёРєРѕРІ РјРѕР¶РЅРѕ Р·Р°РїСѓСЃРєР°С‚СЊ РїСЂРѕС†РµРґСѓСЂС‹ 
-       РёРґРµРЅС‚РёС„РёРєР°С†РёРё РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ, СЂР°СЃСЃС‚Р°РЅРѕРІРєРё РЅРѕРјРµСЂРѕРІ СЃРїСЂР°РІРѕРє Рё РѕР±СЉРµРґРёРЅРµРЅРёСЏ РґР°РЅРЅС‹С… РІ СЃРїСЂР°РІРєРё.    
+       Выполняется после загрузки данных по одному налоговому агенту в структуру _LOAD_.
+       Запускается столько раз, сколько  pGod, pTipDox, pNomKorr должно войти в новые справки.
+       После инициализации счетчиков можно запускать процедуры 
+       идентификации налогоплательщиков, расстановки номеров справок и объединения данных в справки.    
     */    
      begin
      
-        if pNomKorr=99 then return 2; end if; -- РґР»СЏ РѕС‚РјРµРЅС‹ РЅСѓР¶РЅРѕ РІС‹Р·С‹РІР°С‚СЊ РЅРµ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЋ, Р° Р·Р°РєСЂС‹С‚РёРµ СЃС‡РµС‚С‡РёРєР°
+        if pNomKorr=99 then return 2; end if; -- для отмены нужно вызывать не инициализацию, а закрытие счетчика
      
         insert into f2ndfl_arh_nomspr(
           kod_na,
@@ -883,7 +883,7 @@ end Oshibki_vSpisNalPlat;
             and  ss.ssylka = ld.ssylka
             and  ss.tip_dox = ld.tip_dox
             and  ss.flag_otmena = ld.kor_otmena
-          where  ss.kod_na is null -- С‚РѕР»СЊРєРѕ С‚Рµ, С‡С‚Рѕ РµС‰Рµ РЅРµ РґРѕР±Р°РІР»РµРЅС‹
+          where  ss.kod_na is null -- только те, что еще не добавлены
           and    ld.kod_na = pkodna
           and    ld.god = pgod
           and    ld.tip_dox = ptipdox
@@ -900,14 +900,14 @@ end Oshibki_vSpisNalPlat;
            
      end Init_SchetchikSpravok;
      
--- РѕС‡РёСЃС‚РёС‚СЊ SSYLKA Рё FK_CONTRAGENT РІ СЃС‡РµС‚С‡РёРєРµ СЃРїСЂР°РІРѕРє РґР»СЏ KOD_NA=1
+-- очистить SSYLKA и FK_CONTRAGENT в счетчике справок для KOD_NA=1
    function SbrosIdent_GAZFOND( pGod in number ) return number as     
    begin
     
         Update F2NDFL_ARH_NOMSPR ns
         set ns.SSYLKA_FL=Null,
              ns.FK_CONTRAGENT=Null
-        where KOD_NA=1   -- С‚РѕР»СЊРєРѕ РґР»СЏ Р“РђР—Р¤РћРќР”                 
+        where KOD_NA=1   -- только для ГАЗФОНД                 
            and GOD=pGod
            and FLAG_OTMENA=0;
            
@@ -923,8 +923,8 @@ end Oshibki_vSpisNalPlat;
            
      end SbrosIdent_GAZFOND;   
      
--- Р·Р°РїРѕР»РЅРёС‚СЊ С‚Р°Р±Р»РёС†Сѓ-РЅСѓРјРµСЂР°С‚РѕСЂ СЃРїСЂР°РІРѕРє РїРѕ С‚Р°Р±Р»РёС†Рµ LOAD_SPRAVKI РґР»СЏ Р·Р°РґР°РЅРЅРѕРіРѕ РіРѕРґР°
--- РїСЂРµРґРІР°СЂРёС‚РµР»СЊРЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ InitGlobals
+-- заполнить таблицу-нумератор справок по таблице LOAD_SPRAVKI для заданного года
+-- предварительно использовать InitGlobals
 procedure Load_Numerator as
 dTermBeg  date;
 dTermEnd  date;
@@ -934,10 +934,10 @@ begin
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
 
-    -- СЃС‚РµСЂРµС‚СЊ РЅСѓРјРµСЂР°С†РёСЋ РґР»СЏ Р·Р°РґР°РЅРЅС‹С… РЅР°Р»РѕРіРѕРІРѕРіРѕ Р°РіРµРЅС‚Р° Рё РіРѕРґР°
+    -- стереть нумерацию для заданных налогового агента и года
     Delete from F2NDFL_ARH_NOMSPR where KOD_NA=gl_KODNA and GOD=gl_GOD;
 
-    -- СѓС‡Р°СЃС‚РЅРёРєРё С„РѕРЅРґР° (РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ)
+    -- участники фонда (пенсии и выкупные)
     Insert into F2NDFL_ARH_NOMSPR( KOD_NA, GOD, SSYLKA, TIP_DOX, FLAG_OTMENA, FK_CONTRAGENT, SSYLKA_FL, UI_PERSON )
     Select  
        ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, 0 FLAG_OTMENA, sfl.GF_PERSON FK_CONTRAGENT, sfl.SSYLKA SSYLKA_FL, sfl.GF_PERSON UI_PERSON
@@ -945,7 +945,7 @@ begin
          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=ls.SSYLKA
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX in (1,3) and ls.NOM_KORR=gl_NOMKOR;  
 
-    -- РїРѕР»СѓС‡Р°С‚РµР»Рё РїРѕСЃРѕР±РёР№
+    -- получатели пособий
     Insert into F2NDFL_ARH_NOMSPR( KOD_NA, GOD, SSYLKA, TIP_DOX, FLAG_OTMENA, FK_CONTRAGENT, SSYLKA_FL, UI_PERSON )
     Select  
        ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, 0 FLAG_OTMENA, vp.GF_PERSON FK_CONTRAGENT, vp.SSYLKA_POLUCH SSYLKA_FL, vp.GF_PERSON UI_PERSON
@@ -960,7 +960,7 @@ begin
                     ) vp on vp.SSYLKA=ls.SSYLKA
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=2 and ls.NOM_KORR=gl_NOMKOR; 
 
-    -- СЂР°Р±РѕС‚РЅРёРєРё С„РѕРЅРґР°
+    -- работники фонда
     Insert into F2NDFL_ARH_NOMSPR( KOD_NA, GOD, SSYLKA, TIP_DOX, FLAG_OTMENA, FK_CONTRAGENT, SSYLKA_FL, UI_PERSON )
     Select  
        ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, 0 FLAG_OTMENA, Null FK_CONTRAGENT, Null SSYLKA_FL, ls.SSYLKA UI_PERSON
@@ -971,7 +971,7 @@ begin
 
 end Load_Numerator;        
      
--- РїСЂРѕСЃС‚Р°РІРёС‚СЊ SSYLKA Рё FK_CONTRAGENT РІ СЃС‡РµС‚С‡РёРє РґР»СЏ KOD_NA=1
+-- проставить SSYLKA и FK_CONTRAGENT в счетчик для KOD_NA=1
    function UstIdent_GAZFOND( pGod in number ) return number as
    dTermBeg date;
    dTermEnd date;
@@ -981,24 +981,24 @@ end Load_Numerator;
         dTermEnd := to_date( '01.01.'||trim(to_char(pGOD+1,'0000')),'dd.mm.yyyy');
 
 /*
-    Р—Р°СЃСЃС‚Р°РІРёС‚СЊ СЃСЃС‹Р»РєРё СѓС‡Р°СЃС‚РЅРёРєРѕРІ
-    РІСЂРѕРґРµ С‚РµРїРµСЂСЊ РїСЂРё РІСЃС‚Р°РІРєРµ РІ РЅСѓРјРµСЂР°С‚РѕСЂ Р·Р°РЅРѕСЃРёС‚СЃСЏ   
+    Засставить ссылки участников
+    вроде теперь при вставке в нумератор заносится   
 
         Update F2NDFL_ARH_NOMSPR 
               set SSYLKA_FL = SSYLKA
               where SSYLKA_FL is Null 
                  and GOD=pGod
                  and FLAG_OTMENA=0
-                 and KOD_NA=1   -- С‚РѕР»СЊРєРѕ РґР»СЏ Р“РђР—Р¤РћРќР”
-                 and TIP_DOX in (1,3);   -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
+                 and KOD_NA=1   -- только для ГАЗФОНД
+                 and TIP_DOX in (1,3);   -- пенсии и выкупные
         if gl_COMMIT then Commit; end if;
         
 */
      
-/* Р­С‚Рѕ РґР»СЏ СЃР»СѓС‡Р°РµРІ
-   РєРѕРіРґР° РїРѕР»СѓС‡Р°С‚РµР»РµР№ РїРѕСЃРѕР±РёСЏ Р±РѕР»СЊС€Рµ РѕРґРЅРѕРіРѕ
+/* Это для случаев
+   когда получателей пособия больше одного
    
-   СЌС‚РѕС‚ Р·Р°РїСЂРѕСЃ РµС‰Рµ РЅСѓР¶РЅРѕ РїРµСЂРµРїСЂРѕРІРµСЂРёС‚СЊ 
+   этот запрос еще нужно перепроверить 
       
         Update F2NDFL_ARH_NOMSPR ns
         set ns.SSYLKA_FL 
@@ -1006,11 +1006,11 @@ end Load_Numerator;
                      where vp.SSYLKA=mod(ns.SSYLKA,100000000) 
                          and vp.NOM_VIPL= trunc(ns.SSYLKA/100000000)+1
                           and vp.SSYLKA_POLUCH>0) 
-        where KOD_NA=1 and TIP_DOX=2   -- РЅР°СЃР»РµРґРЅРёРєРё
+        where KOD_NA=1 and TIP_DOX=2   -- наследники
             and GOD=pGod
             and FLAG_OTMENA=0
             and SSYLKA_FL is Null 
-            and SSYLKA>100000000             -- РµСЃР»Рё Р±РѕР»СЊС€Рµ РѕРґРЅРѕРіРѕ
+            and SSYLKA>100000000             -- если больше одного
             and (Select distinct SSYLKA_POLUCH from  VYPLACH_POSOB vp 
                        where vp.SSYLKA=mod(ns.SSYLKA,100000000) 
                            and vp.NOM_VIPL= trunc(ns.SSYLKA/100000000)+1
@@ -1019,19 +1019,19 @@ end Load_Numerator;
 */        
 
 /*
-    Р’СЂРѕРґРµ С‚РѕР¶Рµ СѓР¶Рµ РЅРµ РЅСѓР¶РЅРѕ
-    РўРµРїРµСЂСЊ РїСЂРё РІСЃС‚Р°РІРєРµ Р·Р°РїРёСЃРµР№ РІ РЅСѓРјРµСЂР°С‚РѕСЂ Р·Р°РїРѕР»РЅСЏРµС‚СЃСЏ
+    Вроде тоже уже не нужно
+    Теперь при вставке записей в нумератор заполняется
 
         Update F2NDFL_ARH_NOMSPR ns
         set ns.SSYLKA_FL 
              = (Select distinct SSYLKA_POLUCH from  VYPLACH_POSOB vp 
                      where vp.SSYLKA=ns.SSYLKA and vp.NOM_VIPL=1
                          and vp.SSYLKA_POLUCH>0)
-        where KOD_NA=1 and TIP_DOX=2   -- РЅР°СЃР»РµРґРЅРёРєРё
+        where KOD_NA=1 and TIP_DOX=2   -- наследники
             and GOD=pGod
             and FLAG_OTMENA=0
             and SSYLKA_FL is Null
-            and SSYLKA<100000000             -- РїРµСЂРІС‹Р№ РЅР°СЃР»РµРґРЅРёРє
+            and SSYLKA<100000000             -- первый наследник
             and  (Select distinct SSYLKA_POLUCH from  VYPLACH_POSOB vp 
                           where vp.SSYLKA=ns.SSYLKA and vp.NOM_VIPL=1
                              and SSYLKA_POLUCH>0
@@ -1040,7 +1040,7 @@ end Load_Numerator;
 */        
 
 /*
-   Рё РєРѕРЅС‚СЂР°РіРµРЅС‚ РїСЂРё РІСЃС‚Р°РІРєРµ Р·Р°РїРѕР»РЅСЏРµС‚СЃСЏ
+   и контрагент при вставке заполняется
    
         Update F2NDFL_ARH_NOMSPR ns
         set ns.FK_CONTRAGENT
@@ -1055,7 +1055,7 @@ end Load_Numerator;
 */     
 
 
--- РІС‹С…РѕРґРёС‚, С„СѓРЅРєС†РёСЏ СЃРѕРІСЃРµРј РЅРµ РЅСѓР¶РЅР°!
+-- выходит, функция совсем не нужна!
    
         return 0;
         
@@ -1067,7 +1067,7 @@ end Load_Numerator;
            
      end UstIdent_GAZFOND;     
      
--- РїСЂРѕСЃС‚Р°РІРёС‚СЊ РРќРќ, РµСЃР»Рё РѕРЅ РЅРµ Р·Р°РїРѕР»РЅРµРЅ, РЅРѕ РµСЃС‚СЊ РґСЂСѓРіР°СЏ СЃРїСЂР°РІРєР° СЃ РРќРќ РґР»СЏ С‚РѕРіРѕ Р¶Рµ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°
+-- проставить ИНН, если он не заполнен, но есть другая справка с ИНН для того же контрагента
     function ZapolnINN_izDrSpravki( pGod in number )  return number as
     CAID number;
     LINN varchar2(20);
@@ -1122,7 +1122,7 @@ end Load_Numerator;
            
      end ZapolnINN_izDrSpravki;     
      
--- РїСЂРѕСЃС‚Р°РІРёС‚СЊ Р“Р РђР–Р”РђРќРЎРўР’Рћ РїРѕ РїР°СЃРїРѕСЂС‚Сѓ Р Р¤     
+-- проставить ГРАЖДАНСТВО по паспорту РФ     
    function ZapolnGRAZHD_poUdLichn( pGod in number ) return number as
    begin
    
@@ -1158,7 +1158,7 @@ begin
    open pReportCursor for  
    
         Select * from (   
-                Select  'Р¤РРћ_Р¤'  ERFLD,
+                Select  'ФИО_Ф'  ERFLD,
                         count(*) over(partition by ns.FK_CONTRAGENT, ls.FAMILIYA) CFLD,
                         ns.CCID,
                         ns.FK_CONTRAGENT,  
@@ -1176,7 +1176,7 @@ begin
         Union   
                  
         Select * from (   
-                Select  'Р¤РРћ_Р'  ERFLD,
+                Select  'ФИО_И'  ERFLD,
                         count(*) over(partition by ns.FK_CONTRAGENT, ls.IMYA) CFLD,
                         ns.CCID,
                         ns.FK_CONTRAGENT,  
@@ -1194,7 +1194,7 @@ begin
         Union             
                   
         Select * from (   
-                Select  'Р¤РРћ_Рћ'  ERFLD,
+                Select  'ФИО_О'  ERFLD,
                         count(*) over(partition by ns.FK_CONTRAGENT, ls.OTCHESTVO) CFLD,
                         ns.CCID,
                         ns.FK_CONTRAGENT,  
@@ -1212,7 +1212,7 @@ begin
         Union
 
         Select * from (   
-                Select  'Р”Р '  ERFLD,
+                Select  'ДР'  ERFLD,
                         count(*) over(partition by ns.FK_CONTRAGENT, ls.DATA_ROZHD) CFLD,
                         ns.CCID,
                         ns.FK_CONTRAGENT,  
@@ -1230,7 +1230,7 @@ begin
         Union
 
         Select * from (   
-                Select  'РЈР”Р›РР§'  ERFLD,
+                Select  'УДЛИЧ'  ERFLD,
                         count(*) over(partition by ns.FK_CONTRAGENT, ls.SER_NOM_DOC) CFLD,
                         ns.CCID,
                         ns.FK_CONTRAGENT,  
@@ -1248,7 +1248,7 @@ begin
         Union
 
         Select * from (   
-                Select  'Р“Р РђР–Р”'  ERFLD,
+                Select  'ГРАЖД'  ERFLD,
                         count(*) over(partition by ns.FK_CONTRAGENT, ls.GRAZHD) CFLD,
                         ns.CCID,
                         ns.FK_CONTRAGENT,  
@@ -1266,7 +1266,7 @@ begin
         Union
 
         Select * from (   
-                Select  'РРќРќ'  ERFLD,
+                Select  'ИНН'  ERFLD,
                         count(*) over(partition by ns.FK_CONTRAGENT, ls.INN_FL) CFLD,
                         ns.CCID,
                         ns.FK_CONTRAGENT,  
@@ -1284,7 +1284,7 @@ begin
         Union
 
         Select * from (   
-                Select  'РЎРўРђРўРЈРЎ'  ERFLD,
+                Select  'СТАТУС'  ERFLD,
                         count(*) over(partition by ns.FK_CONTRAGENT, ls.STATUS_NP) CFLD,
                         ns.CCID,
                         ns.FK_CONTRAGENT,  
@@ -1310,7 +1310,7 @@ begin
      
 procedure Vastavka_SOOTV_iz_XMLIN as
 begin
--- Р±С‹Р» СЂР°Р±РѕС‡РёР№ Р·Р°РїСЂРѕСЃ
+-- был рабочий запрос
 /*
 Insert into GNI_ADR_SOOTV (
    SSYLKA, 
@@ -1373,7 +1373,7 @@ from f2NDFL_XMLIN_ADR ad;
   Null;
 end;    
 
--- РїРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє РљРѕС‚СЂР°РіРµРЅС‚РѕРІ, РґР»СЏ РєРѕС‚РѕСЂС‹С… СѓРєР°Р·Р°РЅС‹ РЅРµРґРѕРїСѓСЃС‚РёРјРѕ РѕРґРёРЅР°РєРѕРІС‹Рµ РґР°РЅРЅС‹Рµ, РЅР°РїСЂРёРјРµСЂ: РРќРќ, РїР°СЃРїРѕСЂС‚
+-- получить список Котрагентов, для которых указаны недопустимо одинаковые данные, например: ИНН, паспорт
    procedure SovpDan_Kontragentov( pReportCursor out sys_refcursor, pErrInfo out varchar2, pGod in number ) as
    begin 
    
@@ -1382,13 +1382,13 @@ end;
            Select 
             ns.SUM_CODE,
             case ns.SUM_CODE
-            when 1 then 'РРќРќ'
-            when 2 then 'РЈР”Р›'
-            when 3 then 'РРќРќ+РЈР”Р›'
-            when 4 then 'Р¤РРћР”'
-            when 5 then 'Р¤РРћР”+РРќРќ'
-            when 6 then 'Р¤РРћР”+РЈР”Р›'
-            when 7 then 'РІСЃС‘'
+            when 1 then 'ИНН'
+            when 2 then 'УДЛ'
+            when 3 then 'ИНН+УДЛ'
+            when 4 then 'ФИОД'
+            when 5 then 'ФИОД+ИНН'
+            when 6 then 'ФИОД+УДЛ'
+            when 7 then 'всё'
             else Null
             end  ER_TIP,
             ns.CAID FK_CONTRAGENT, 
@@ -1480,7 +1480,7 @@ end;
            
      end SovpDan_Kontragentov;     
      
--- РїРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє СЃРїСЂР°РІРѕРє СЃ РѕС€РёР±РѕС‡РЅС‹РјРё РґР°РЅРЅС‹РјРё 
+-- получить список справок с ошибочными данными 
    procedure OshibDan_vSpravke( pReportCursor out sys_refcursor, pErrInfo out varchar2, pGod in number ) as
    begin
    
@@ -1492,7 +1492,7 @@ end;
             ls.SSYLKA, ls.TIP_DOX, ls.INN_FL, ls.GRAZHD, ls.FAMILIYA, ls.IMYA, ls.OTCHESTVO, ls.DATA_ROZHD, ls.KOD_UD_LICHN, ls.SER_NOM_DOC, ls.STATUS_NP
             from (
                            Select 1 ECODE, 
-                                     'РћС€РёР±РєР°: Р“Р РђР–Р”РђРќРЎРўР’Рћ РЅРµ Р·Р°РґР°РЅРѕ' EINFO,
+                                     'Ошибка: ГРАЖДАНСТВО не задано' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and GRAZHD is Null
@@ -1500,7 +1500,7 @@ end;
                        Union
                        
                            Select 2 ECODE, 
-                                     'РћС€РёР±РєР°: Р“Р РђР–Р”РђРќРЎРўР’Рћ Р Р¤ РЅРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РЈР›' EINFO,
+                                     'Ошибка: ГРАЖДАНСТВО РФ не соответствует УЛ' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and GRAZHD=643
@@ -1509,7 +1509,7 @@ end;
                        Union                                     
                        
                            Select 3 ECODE, 
-                                     'РћС€РёР±РєР°: Р“Р РђР–Р”РђРќРЎРўР’Рћ РЅРµР Р¤ РЅРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РЈР› Р Р¤' EINFO,
+                                     'Ошибка: ГРАЖДАНСТВО неРФ не соответствует УЛ РФ' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and (GRAZHD<>643)
@@ -1518,7 +1518,7 @@ end;
                        Union                                     
                        
                            Select 4 ECODE, 
-                                     'РћС€РёР±РєР°: РўРёРї РЈР› Р·Р°РїСЂРµС‰РµРЅРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ' EINFO,
+                                     'Ошибка: Тип УЛ запрещенное значение' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and KOD_UD_LICHN not in (3,7,8,10,11,12,13,14,15,19,21,23,24,91) 
@@ -1526,7 +1526,7 @@ end;
                        Union                                     
                        
                            Select 6 ECODE, 
-                                     'РћС€РёР±РєР°: РќРµРїСЂР°РІРёР»СЊРЅС‹Р№ С€Р°Р±Р»РѕРЅ РџР°СЃРїРѕСЂС‚Р° Р Р¤' EINFO,
+                                     'Ошибка: Неправильный шаблон Паспорта РФ' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and KOD_UD_LICHN =21 and not regexp_like(SER_NOM_DOC,'^\d{2}\s\d{2}\s\d{6}$')            
@@ -1534,7 +1534,7 @@ end;
                        Union                                     
                        
                            Select 7 ECODE, 
-                                     'РћС€РёР±РєР°: РќРµРїСЂР°РІРёР»СЊРЅС‹Р№ С€Р°Р±Р»РѕРЅ Р’РёРґР° РЅР° Р¶РёС‚РµР»СЊСЃС‚РІРѕ РІ Р Р¤' EINFO,
+                                     'Ошибка: Неправильный шаблон Вида на жительство в РФ' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and KOD_UD_LICHN =12 and not regexp_like(SER_NOM_DOC,'^\d{2}\s\d{7}$')            
@@ -1542,7 +1542,7 @@ end;
                        Union                                     
                        
                            Select 91 ECODE, 
-                                     'РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ: РќР°Р»РѕРіРѕРІС‹Р№ СЂРµР·РёРґРµРЅС‚ Рё Р“Р РђР–Р”РђРќРЎРўР’Рћ РёР»Рё РЈР› РЅРµ Р Р¤' EINFO,
+                                     'Предупреждение: Налоговый резидент и ГРАЖДАНСТВО или УЛ не РФ' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and STATUS_NP=1 
@@ -1551,7 +1551,7 @@ end;
                        Union                                     
                        
                            Select 92 ECODE, 
-                                     'РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ: РќР°Р»РѕРіРѕРІС‹Р№ СЂРµР·РёРґРµРЅС‚ Рё РІРёРґ РЅР° Р¶РёС‚РµР»СЊСЃС‚РІРѕ Р Р¤' EINFO,
+                                     'Предупреждение: Налоговый резидент и вид на жительство РФ' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and STATUS_NP=1 
@@ -1560,7 +1560,7 @@ end;
                        Union 
                                                           
                            Select 93 ECODE, 
-                                     'РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ: Р—РЅР°С‡РµРЅРёСЏ Р“Р РђР–Р”РђРќРЎРўР’Рћ Рё РЁРђР‘Р›РћРќ РЈР”РћРЎРўРћР’Р•Р Р•РќРРЇ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‚ РєРѕРґСѓ РџРђРЎРџРћР РўРђ Р Р¤' EINFO,
+                                     'Предупреждение: Значения ГРАЖДАНСТВО и ШАБЛОН УДОСТОВЕРЕНИЯ соответствуют коду ПАСПОРТА РФ' EINFO,
                                      x.* 
                                  from f2NDFL_LOAD_SPRAVKI x
                                   where KOD_NA=1 and GOD=pGOD and TIP_DOX>0 and KOD_UD_LICHN<>21 
@@ -1581,7 +1581,7 @@ end;
       
      
 /*
--- РїСЂРѕСЃС‚Р°РІР»СЏРµС‚ Р“СЂР°Р¶РґР°РЅСЃС‚РІРѕ РёР· GAZFOND.IDCARDS.CITIZENSHIP РІ СЃРїСЂР°РІРєСѓ
+-- проставляет Гражданство из GAZFOND.IDCARDS.CITIZENSHIP в справку
 begin
 for rec in (
                 Select ic.CITIZENSHIP, ls.* 
@@ -1608,9 +1608,9 @@ end;
      
 /*
 
--- РїСЂРѕСЃС‚Р°РІР»СЏРµС‚ UI_PERSON
--- СЃРІРѕРґРёС‚ РґР°РЅРЅС‹Рµ СЂР°Р·РЅС‹С… РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРІ РІ РѕРґРЅСѓ СЃРїСЂР°РІРєСѓ
--- РґР»СЏ СЃРѕРІРїР°РґРµРЅРёР№ Р’РЎРЃ Рё Р¤РРћР”+РЈР›
+-- проставляет UI_PERSON
+-- сводит данные разных контрагентов в одну справку
+-- для совпадений ВСЁ и ФИОД+УЛ
 
 declare 
 UIP number;
@@ -1707,7 +1707,7 @@ end;
 */     
 
 /*
--- Р·Р°РїРѕР»РЅРµРЅРёРµ Р°РґСЂРµСЃРѕРІ РІ Р°СЂС…РёРІРµ СЃРїСЂР°РІРѕРє
+-- заполнение адресов в архиве справок
 
 INSERT INTO FND.F2NDFL_ARH_ADR ( R_SPRID, KOD_STR, ADR_INO, PINDEX, KOD_REG, RAYON, GOROD, PUNKT, ULITSA, DOM, KOR, KV)  
 Select 
@@ -1755,7 +1755,7 @@ Select
 
 */
 
--- РїСЂРµРЅСѓРјРµСЂРѕРІР°С‚СЊ СЃРїСЂР°РІРєРё РґР»СЏ РќР°Р»РѕРіРѕРІРѕРіРѕ РђРіРµРЅС‚Р° РІ Р·Р°РґР°РЅРЅРѕРј РіРѕРґСѓ
+-- пренумеровать справки для Налогового Агента в заданном году
 -- begin  RC:= FXNDFL_UTIL.Numerovat_Spravki( 1, 2016 ); end;
 procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
   
@@ -1768,16 +1768,16 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
     execute immediate 'ALTER SESSION SET NLS_SORT = RUSSIAN';
   
         
-        -- РЅР°Р№РґРµРј РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ РІС‹РґР°РЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРїСЂР°РІРєРё РґР»СЏ Р·Р° РіРѕРґ РґР»СЏ РќРђ
+        -- найдем максимальный выданный номер справки для за год для НА
         Select max(ns.NOM_SPR) into cNomSprav from f2NDFL_ARH_NOMSPR ns where ns.KOD_NA=pKodNA and ns.GOD=pGod;
         nNomSprav:=to_number( nvl(cNomSprav,'0'));
-        -- РµСЃР»Рё РЅРѕРјРµСЂР° РµС‰С‘ РЅРµ РІС‹РґР°РІР°Р»РёСЃСЊ, С‚Рѕ СѓСЃС‚Р°РЅРѕРІРёРј РёС… СЃС‚Р°СЂС‚РѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ
+        -- если номера ещё не выдавались, то установим их стартовое значение
         Case  pKodNA
           when 1 then  
                 if nNomSprav<100 then nNomSprav:=100; end if;      
           --when 2 then  
           --      if nNomSprav<50 then nNomSprav:=50; end if;
-          else raise_application_error( -20001,'РљРѕРґ РЅР°Р»РѕРіРѕРІРѕРіРѕ Р°РіРµРЅС‚Р° РЅРµ СЂР°РІРµРЅ 1');
+          else raise_application_error( -20001,'Код налогового агента не равен 1');
         end case;                    
   
                 for rec in(
@@ -1789,16 +1789,16 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                                     from f2NDFL_LOAD_SPRAVKI ls
                                             inner join f2NDFL_ARH_NOMSPR ns
                                               on ns.KOD_NA=ls.KOD_NA and ns.GOD=ls.GOD and ns.SSYLKA=ls.SSYLKA and ns.TIP_DOX=ls.TIP_DOX  
-                                    where ls.KOD_NA=pKodNA and ls.GOD=pGod and ls.TIP_DOX>0 and ls.NOM_KORR = 0  -- РІС‹Р±РёСЂР°РµРј РІРїРµСЂРІС‹Рµ РїРѕРґР°РЅРЅС‹Рµ СЃРїСЂР°РІРєРё Р·Р° РіРѕРґ РїРѕ Р·Р°РґР°РЅРЅРѕРјСѓ РќРђ
-                                      and ns.FLAG_OTMENA=0 and ns.NOM_SPR is Null  -- РЅРѕРјРµСЂР° РµС‰Рµ РЅРµ Р±С‹Р»Рё РїСЂРѕСЃС‚Р°РІР»РµРЅС‹ Рё СЃС‡РµС‚С‡РёРєРё СЃРїСЂР°РІРєРѕРІ РЅРµ РѕС‚РјРµРЅРµРЅС‹ (Р°РєС‚СѓР°Р»СЊРЅС‹Рµ)     
+                                    where ls.KOD_NA=pKodNA and ls.GOD=pGod and ls.TIP_DOX>0 and ls.NOM_KORR = 0  -- выбираем впервые поданные справки за год по заданному НА
+                                      and ns.FLAG_OTMENA=0 and ns.NOM_SPR is Null  -- номера еще не были проставлены и счетчики справков не отменены (актуальные)     
                                     ) q
                               order by upper(q.FAMILIYA), upper(q.IMYA), upper(q.OTCHESTVO), 
-                                       q.DATA_ROZHD, q.UI_PERSON, q.RPTCNT  -- РІР°Р¶РЅР° СЃРѕСЂС‚РёСЂРѕРІРєР° РґР»СЏ РѕР±СЂР°Р±РѕС‚РєРё РІ С†РёРєР»Рµ        
+                                       q.DATA_ROZHD, q.UI_PERSON, q.RPTCNT  -- важна сортировка для обработки в цикле        
                           )
                 loop
                    
-                    -- РЅРµСЃРєРѕР»СЊРєРѕ Р·Р°РіСЂСѓР·РѕС‡РЅС‹С… Р·Р°РїРёСЃРµР№ РјРѕРіСѓС‚ СЃРѕРѕС‚РІРµС‚СЃС‚РІРѕРІР°С‚СЊ РѕРґРЅРѕРјСѓ РЅРѕРјРµСЂСѓ СЃРїСЂР°РІРєРё
-                    -- РіРµРЅРµСЂРёСЂСѓРµРј РЅРѕРјРµСЂ СЃРїСЂР°РІРєРё С‚РѕР»СЊРєРѕ РґР»СЏ РїРµСЂРІРѕР№ Р·Р°РїРёСЃРё РёР· РѕРґРЅРѕР№ РіСЂСѓРїРїС‹
+                    -- несколько загрузочных записей могут соответствовать одному номеру справки
+                    -- генерируем номер справки только для первой записи из одной группы
                     if rec.RPTCNT=1 then  
                        nNomSprav:=nNomSprav+1;
                        cNomSprav:=trim(to_char( nNomSprav,'000000'));
@@ -1813,15 +1813,15 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                    Update f2NDFL_ARH_NOMSPR ns
                        set ns.NOM_SPR = cNomSprav
                        where ns.KOD_NA=rec.KOD_NA and ns.GOD=rec.GOD and ns.SSYLKA=rec.SSYLKA and ns.TIP_DOX=rec.TIP_DOX 
-                          and ns.NOM_SPR is Null and ns.FLAG_OTMENA=0; -- РёС‰РµРј С‚РѕР»СЊРєРѕ СЃСЂРµРґРё Р°РєС‚СѓР°Р»СЊРЅС‹С… СЃС‡РµС‚С‡РёРєРѕРІ
+                          and ns.NOM_SPR is Null and ns.FLAG_OTMENA=0; -- ищем только среди актуальных счетчиков
                        
                    Update f2NDFL_LOAD_SPRAVKI ls
                        set ls.NOM_SPR = cNomSprav,
                             ls.R_SPRID = nArhSprId
                        where ls.KOD_NA=rec.KOD_NA and ls.GOD=rec.GOD and ls.SSYLKA=rec.SSYLKA and ls.TIP_DOX=rec.TIP_DOX 
-                           and ls.NOM_KORR=0;   -- РЅСѓРјРµСЂСѓРµРј С‚РѕР»СЊРєРѕ РІРїРµСЂРІС‹Рµ РїРѕРґР°РЅРЅС‹Рµ СЃРїСЂР°РІРєРё
+                           and ls.NOM_KORR=0;   -- нумеруем только впервые поданные справки
                        
-                end loop; -- 52 СЃРµРє
+                end loop; -- 52 сек
         
         if gl_COMMIT then Commit; end if;
         
@@ -1902,8 +1902,8 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
   end Numerovat_KorSpravki;
   
 
--- РєРѕРїРёСЂРѕРІР°С‚СЊ СЃРїСЂР°РІРєРё СЃ РЅРѕРјРµСЂР°РјРё РІ Р°СЂС…РёРІ
--- РќР• РќРЈР–РќРћ  РґР°РЅРЅС‹Рµ Р·Р°РіР»РѕРІРєРѕРІ СЃРїСЂР°РІРѕРє РєРѕРїРёСЂСѓСЋС‚СЃСЏ РїСЂРё РЅСѓРјРµСЂР°С†РёРё
+-- копировать справки с номерами в архив
+-- НЕ НУЖНО  данные загловков справок копируются при нумерации
 /*
   function KopirSpr_vArhiv( pKodNA in number, pGod in number ) return number as
   begin
@@ -1933,12 +1933,12 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
   end  KopirSpr_vArhiv;    
 */
   
--- РєРѕРїРёСЂРѕРІР°С‚СЊ РёС‚РѕРіРё РїРѕ СЃРїСЂР°РІРєР°Рј РІ Р°СЂС…РёРІ
+-- копировать итоги по справкам в архив
   procedure KopirSprItog_vArhiv( pKodNA in number, pGod in number ) as
   begin
       
         Insert into f2NDFL_ARH_ITOGI ( R_SPRID, KOD_STAVKI, SGD_SUM, SUM_OBL, SUM_OBL_NI, SUM_FIZ_AVANS, SUM_OBL_NU, SUM_NAL_PER, DOLG_NA, VZYSK_IFNS )
-        -- 13% (РіСЂСѓРїРїРёСЂСѓРµРј СЃ РїРѕРґСЃС‡РµС‚РѕРј РёСЃС‡РёСЃР»РµРЅРЅРѕРіРѕ РЅР°Р»РѕРіР°)
+        -- 13% (группируем с подсчетом исчисленного налога)
             Select rs.R_SPRID, 13 KOD_STAVKI, rs.DOX SGD_SUM, rs.BASA SUM_OBL, rs.NALI SUM_OBL_NI, 0 SUM_FIZ_AVANS, 
                    rs.NALU SUM_OBL_NU, rs.NALU SUM_NAL_PER, round(GREATEST( NALU - NALI,0 ),0) DOLG_NA, round(GREATEST( NALI - NALU,0 ),0) VZYSK_IFNS
             from(
@@ -1953,7 +1953,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                                      inner join f2NDFL_LOAD_SPRAVKI ls
                                         on ls.KOD_NA=it.KOD_NA and ls.GOD=it.GOD and ls.SSYLKA=it.SSYLKA and ls.TIP_DOX=it.TIP_DOX and ls.NOM_KORR=it.NOM_KORR
                                      inner join f2NDFL_ARH_NOMSPR ns 
-                                        on ns.KOD_NA=it.KOD_NA and ns.GOD=it.GOD and ns.SSYLKA=it.SSYLKA and ns.TIP_DOX=it.TIP_DOX and ns.FLAG_OTMENA=0 --and it.NOM_KORR=0 --RFC_3779 - РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РїРѕР»РЅРѕС†РµРЅРЅС‹С… РєРѕСЂСЂРµРєС‚РёСЂРѕРІРѕРє
+                                        on ns.KOD_NA=it.KOD_NA and ns.GOD=it.GOD and ns.SSYLKA=it.SSYLKA and ns.TIP_DOX=it.TIP_DOX and ns.FLAG_OTMENA=0 --and it.NOM_KORR=0 --RFC_3779 - для создания полноценных корректировок
                                      left join (
                                         Select KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, KOD_STAVKI, sum(SGD_VYCH_PRED) SGD_VYCH
                                         from(
@@ -1977,7 +1977,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                     )     
                 ) rs      
         union all
-        -- 30% (РіСЂСѓРїРїРёСЂСѓРµРј РїРѕ СЃРїСЂР°РІРєРµ С‚Рѕ, С‡С‚Рѕ РЅР°СЃС‡РёС‚Р°Р»Рё РїСЂРё Р·Р°РіСЂСѓР·РєРµ РёС‚РѕРіРѕРІ РїРѕ СЃС‚Р°РІРєРµ 30)
+        -- 30% (группируем по справке то, что насчитали при загрузке итогов по ставке 30)
             Select rs.R_SPRID, 30 KOD_STAVKI, rs.DOX SGD_SUM, rs.DOX SUM_OBL, rs.NALI SUM_OBL_NI, 0 SUM_FIZ_AVANS, 
                    rs.NALU SUM_OBL_NU, rs.NALU SUM_NAL_PER, round(GREATEST( NALU - NALI,0 ),0) DOLG_NA, round(GREATEST( NALI - NALU,0 ),0) VZYSK_IFNS
             from(
@@ -1992,7 +1992,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                      group by ls.R_SPRID                       
                 ) rs 
         union all
-        -- 35% (РїСЂРѕСЃС‚Рѕ РєРѕРїРёСЂСѓРµРј С‚Рѕ, С‡С‚Рѕ РїСЂРёСЃР»Р°Р»Р° Р±СѓС…РіР°Р»С‚РµСЂРёСЏ)
+        -- 35% (просто копируем то, что прислала бухгалтерия)
             Select ar.ID R_SPRID, it.KOD_STAVKI, it.SGD_SUM, it.SUM_OBL, it.SUM_OBL_NI, it.SUM_FIZ_AVANS, it.SUM_OBL_NU, it.SUM_NAL_PER, it.DOLG_NA, it.VZYSK_IFNS
             from f2NDFL_LOAD_ITOGI it
                  inner join f2NDFL_ARH_NOMSPR ns 
@@ -2013,7 +2013,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
               
   end  KopirSprItog_vArhiv;    
   
--- РєРѕРїРёСЂРѕРІР°С‚СЊ РІ Р°СЂС…РёРІ СЂР°СЃС€РёС„СЂРѕРІРєРё РґРѕС…РѕРґР° РїРѕ РјРµСЃСЏС†Р°Рј РІ СЃРїСЂР°РІРєР°С… 
+-- копировать в архив расшифровки дохода по месяцам в справках 
 procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
   begin
       
@@ -2034,7 +2034,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
               
   end KopirSprMes_vArhiv;
   
--- РєРѕРїРёСЂРѕРІР°С‚СЊ РІ Р°СЂС…РёРІ РІС‹С‡РµС‚С‹ РёР· СЃРїСЂР°РІРѕРє 
+-- копировать в архив вычеты из справок 
   procedure KopirSprVych_vArhiv( pKodNA in number, pGod in number ) as
   begin
       
@@ -2057,7 +2057,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
               
   end  KopirSprVych_vArhiv;
   
--- РєРѕРїРёСЂРѕРІР°С‚СЊ РІ Р°СЂС…РёРІ СѓРІРµРґРѕРјР»РµРЅРёСЏ Рѕ РІС‹С‡РµС‚Р°С… РёР· СЃРїСЂР°РІРѕРє 
+-- копировать в архив уведомления о вычетах из справок 
   function KopirSprUved_vArhiv( pKodNA in number, pGod in number ) return number as
   begin
       
@@ -2086,11 +2086,11 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
               
   end KopirSprUved_vArhiv;
   
--- РєРѕРїРёСЂРѕРІР°С‚СЊ РІ Р°СЂС…РёРІ Р°РґСЂРµСЃР° РќРџ РёР· СЃРїСЂР°РІРѕРє 
+-- копировать в архив адреса НП из справок 
   procedure KopirSprAdres_vArhiv( pKodNA in number, pGod in number )  as  
   begin
        
-       -- РѕРґРёРЅ Р°РґСЂРµСЃ, РѕРґРёРЅ РёСЃС‚РѕС‡РЅРёРє РЅР° РѕРґРЅСѓ СЃРїСЂР°РІРєСѓ
+       -- один адрес, один источник на одну справку
        Insert into f2NDFL_ARH_ADR( R_SPRID, KOD_STR, ADR_INO,  PINDEX, KOD_REG, RAYON, GOROD, PUNKT, ULITSA,  DOM, KOR, KV )
            Select R_SPRID, F2_KODSTR, ADR_FULL, F2_INDEX, F2_KODREG, F2_RAYON, F2_GOROD, F2_PUNKT, F2_ULITSA, F2_DOM, F2_KOR,  F2_KV
            from ( Select 
@@ -2100,9 +2100,9 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
                     from f2NDFL_LOAD_ADR mo
                             inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
                     where mo.KOD_NA=pKodNA and mo.GOD=pGod
-                  ) where CN=1;   -- РІСЃС‘ РІ РѕРґРЅРѕРј СЌРєР·РµРјРїР»СЏСЂРµ
+                  ) where CN=1;   -- всё в одном экземпляре
                   
-       -- РѕРґРёРЅР°РєРѕРІС‹Рµ Р°РґСЂРµСЃР° РёР· РІСЃРµС… РёСЃС‚РѕС‡РЅРёРєРѕРІ РЅР° РѕРґРЅСѓ СЃРїСЂР°РІРєСѓ           
+       -- одинаковые адреса из всех источников на одну справку           
        Insert into f2NDFL_ARH_ADR( R_SPRID, KOD_STR, ADR_INO,  PINDEX, KOD_REG, RAYON, GOROD, PUNKT, ULITSA,  DOM, KOR, KV )
             Select R_SPRID, F2_KODSTR, ADR_FULL, F2_INDEX, F2_KODREG, F2_RAYON, F2_GOROD, F2_PUNKT, F2_ULITSA, F2_DOM, F2_KOR,  F2_KV from(
                        Select  min(rownum) over( partition by R_SPRID)  FR,  rownum RN,
@@ -2114,10 +2114,10 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
                                 from f2NDFL_LOAD_ADR mo
                                         inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
                                 where mo.KOD_NA=pKodNA and mo.GOD=pGod
-                              ) where (CN>1 and CN=CA)  -- РѕРґРёРЅР°РєРѕРІС‹Рµ Р°РґСЂРµСЃР° 
-            ) where FR=RN;   -- РІСЃРµ Р°РґСЂРµСЃР° РѕРґРёРЅР°РєРѕРІС‹Рµ, РєРѕРїРёСЂРѕРІР°С‚СЊ РїРµСЂРІС‹Р№  
+                              ) where (CN>1 and CN=CA)  -- одинаковые адреса 
+            ) where FR=RN;   -- все адреса одинаковые, копировать первый  
 
-       --  РѕСЃС‚Р°Р»РёСЃСЊ СЂР°Р·РЅС‹Рµ Р°РґСЂРµСЃР° РёР· СЂР°Р·РЅС‹С… РѕРёСЃС‚РѕС‡РЅРёРєРѕРІ РґР»СЏ РѕРґРЅРѕР№ СЃРїСЂР°РІРєРё
+       --  остались разные адреса из разных оисточников для одной справки
 
        if gl_COMMIT then Commit; end if;
 
@@ -2139,7 +2139,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
         -- RC:=FXNDFL_UTIL.KopirSprMes_vArhiv( 1, 2015 );  --   0'26"
         -- RC:=FXNDFL_UTIL.KopirSprVych_vArhiv( 1, 2015 ); --   0'01"
         -- RC:=FXNDFL_UTIL.KopirSprUved_vArhiv( 1, 2015 ); --   0'01"
-        -- RC:=FXNDFL_UTIL.KopirSprAdres_vArhiv( 1, 2015 );  -- РґСѓР±Р»Рё СЃС‚СЂРѕРє?
+        -- RC:=FXNDFL_UTIL.KopirSprAdres_vArhiv( 1, 2015 );  -- дубли строк?
         
         -- RC:=FXNDFL_UTIL.Zareg_XML( 1, 2015, 2 );
         
@@ -2147,7 +2147,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
     end;
   */
   
- -- СЃРѕР·РґР°С‚СЊ Р·Р°РїРёСЃСЊ РІ Р РµРµСЃС‚СЂРµ XML-С„Р°Р№Р»РѕРІ
+ -- создать запись в Реестре XML-файлов
  function Zareg_XML( pKodNA in number, pGod in number, pForma in number, pCommit in number default 1 ) return number as
  rNALAG F2NDFL_SPR_NAL_AGENT%rowtype;
  nXMLID number;
@@ -2180,7 +2180,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
  end Zareg_XML;  
  
 
--- СЂР°СЃРїСЂРµРґРµР»РёС‚СЊ РґР°РЅРЅС‹Рµ СЃРїСЂР°РІРѕРє РїРѕ XML-С„Р°Р№Р»Р°Рј
+-- распределить данные справок по XML-файлам
 procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in number ) as
  maxSprNo number;
  nXMLID number;
@@ -2203,7 +2203,7 @@ procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in numb
                            end loop;
                        if gl_COMMIT then Commit; end if;   
                  else 
-                       Raise_application_Error( -20001, 'РџР°СЂР°РјРµС‚СЂ pForma РЅРµ СЂР°РІРµРЅ 2.' ); 
+                       Raise_application_Error( -20001, 'Параметр pForma не равен 2.' ); 
              end case;
    
     exception
@@ -2214,27 +2214,27 @@ procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in numb
  end RaspredSpravki_poXML;  
  
  
- ----------------------- ====  6-РќР”Р¤Р› ==== -----------------------
+ ----------------------- ====  6-НДФЛ ==== -----------------------
  
- -- Р’С‹Р±СЂР°С‚СЊ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СЃРїСЂР°РІРєРё, РµСЃР»Рё РЅРµС‚, С‚Рѕ СЃРѕР·РґР°С‚СЊ РЅРѕРІСѓСЋ
+ -- Выбрать идентификатор справки, если нет, то создать новую
  procedure Naiti_Spravku_f6 ( pErrInfo out varchar2, pSprId out number, pKodNA in number, pGod in number, pKodPeriod in number, pNomKorr in number, pPoMestu in number default 213 ) as
  nSPRID number;
  begin
  
-     -- РїРѕРёСЃРє СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ СЃРїСЂР°РІРєРё
+     -- поиск существующей справки
      begin
         Select Id into nSPRID from f6NDFL_ARH_SPRAVKI 
              where KOD_NA=pKodNA and GOD=pGod and PERIOD=pKodPeriod and NOM_KORR=pNomKorr;
      exception
         when NO_DATA_FOUND then nSPRID:=Null;
         when OTHERS then 
-             pErrInfo :=  'РџРѕРёСЃРє Р·Р°РїРёСЃРё Рѕ СЃРїСЂР°РІРєРµ РІ С‚Р°Р±Р»РёС†Рµ Р·Р°РіСЂСѓР·РѕРє. '||SQLERRM;
+             pErrInfo :=  'Поиск записи о справке в таблице загрузок. '||SQLERRM;
              pSprId   :=  Null;     
              return;
      end;
      
      if nSPRID>0 then  
-        -- РЎРїСЂР°РІРєР° СЃ Р·Р°РґР°РЅРЅС‹РјРё РїР°СЂР°РјРµС‚СЂР°РјРё СѓСЃРїРµС€РЅРѕ РЅР°Р№РґРµРЅР°
+        -- Справка с заданными параметрами успешно найдена
         pErrInfo := Null;
         pSprId   := nSPRID;
         Return;  
@@ -2257,13 +2257,13 @@ procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in numb
  exception
     when OTHERS then 
            if gl_COMMIT then Rollback; end if;
-           pErrInfo :=  'РЎРѕР·РґРЅРёРµ Р·Р°РїРёСЃРё Рѕ РЅРѕРІРѕР№ СЃРїСЂР°РІРєРµ РІ С‚Р°Р±Р»РёС†Рµ Р·Р°РіСЂСѓР·РѕРє. '||SQLERRM;     
+           pErrInfo :=  'Создние записи о новой справке в таблице загрузок. '||SQLERRM;     
            pSprId   :=  Null;
            
  end Naiti_Spravku_f6; 
   
  
- -- РЎРѕР·РґР°С‚СЊ СЃРїСЂР°РІРєСѓ 6РќР”Р¤Р› РІ С‚Р°Р±Р»РёС†Рµ Р·Р°РіСЂСѓР·РѕРє 
+ -- Создать справку 6НДФЛ в таблице загрузок 
  function Sozdat_Spravku_f6 ( pKodNA in number, pGod in number, pKodPeriod in number, pNomKorr in number, pPoMestu in number default 213 ) return varchar2 as
  nSPRID number;
  begin
@@ -2283,7 +2283,7 @@ procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in numb
      exception
         when OTHERS then
            if gl_COMMIT then Rollback; end if;
-           return 'РЎРѕР·РґРЅРёРµ Р·Р°РїРёСЃРё Рѕ РЅРѕРІРѕР№ СЃРїСЂР°РІРєРµ РІ С‚Р°Р±Р»РёС†Рµ Р·Р°РіСЂСѓР·РѕРє. '||SQLERRM;
+           return 'Создние записи о новой справке в таблице загрузок. '||SQLERRM;
  
  end Sozdat_Spravku_f6;
  
@@ -2294,10 +2294,10 @@ RC varchar2(1000);
 begin
   dbms_output.enable(10000);  
   FXNDFL_UTIL.Kopir_SprF6_vArhiv( RC, 15000x );
-  dbms_output.put_line( nvl(RC,'РћРљ') );
+  dbms_output.put_line( nvl(RC,'ОК') );
 END;
 */
- -- РђСЂС…РёРІРёСЂРѕРІР°С‚СЊ СЃРїСЂР°РІРєСѓ РїРѕ С„РѕСЂРјРµ 6-РќР”Р¤Р›
+ -- Архивировать справку по форме 6-НДФЛ
  procedure Kopir_SprF6_vArhiv ( pErrInfo out varchar2, pSPRID in number ) as
  dTermBeg date;
  dTermEnd date;
@@ -2308,8 +2308,8 @@ END;
  ErrPref  varchar2(100);
  begin
 
-    -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
-    ErrPref := 'Р’С‹Р±РѕСЂРєР° РїР°СЂР°РјРµС‚СЂРѕРІ СЃРїСЂР°РІРєРё. ';
+    -- выборка периода справки
+    ErrPref := 'Выборка параметров справки. ';
     Select KOD_NA, GOD, PERIOD, NOM_KORR into nKodNA, nGod, nPeriod, nKorr from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
     dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
     case nPeriod
@@ -2317,11 +2317,11 @@ END;
        when 31 then dTermEnd := add_months(dTermBeg,6);        
        when 33 then dTermEnd := add_months(dTermBeg,9);        
        when 34 then dTermEnd := add_months(dTermBeg,12);      
-       else  pErrInfo := 'РЎС‡РёС‚Р°РЅ РЅРµРїСЂР°РІРёР»СЊРЅС‹Р№ РєРѕРґ РїРµСЂРёРѕРґР° '||to_char(nPeriod)||' РґР»СЏ СЃРїСЂР°РІРєРё ID='||to_char(pSPRID);
+       else  pErrInfo := 'Считан неправильный код периода '||to_char(nPeriod)||' для справки ID='||to_char(pSPRID);
              return;                
     end case;
    
-    ErrPref := 'Р—Р°РїРёСЃСЊ РѕР±С‰РёС… РёС‚РѕРіРѕРІ СЃРїСЂР°РІРєРё. ';
+    ErrPref := 'Запись общих итогов справки. ';
     Update F6NDFL_ARH_SPRAVKI ar 
       set ar.DATA_DOK = trunc(SYSDATE),
           (ar.KOL_FL_DOH, ar.UDERZH_NAL_IT, ar.NE_UDERZH_NAL_IT, ar.VOZVRAT_NAL_IT)
@@ -2333,10 +2333,10 @@ END;
                   where KOD_NA=nKodNA and GOD=nGod and PERIOD=nPeriod and NOM_KORR=nKorr)
       where ar.ID=pSPRID;
       
-    ErrPref := 'Р§РёСЃС‚РєР° СЂР°РЅРµРµ СЃРѕР·РґР°РЅРЅС‹С… РёС‚РѕРіРѕРІ СЃРїСЂР°РІРєРё РїРѕ СЃС‚Р°РІРєР°Рј. ';  
+    ErrPref := 'Чистка ранее созданных итогов справки по ставкам. ';  
     Delete from F6NDFL_ARH_ITOGI where R_SPRID=pSPRID;  
     
-    ErrPref := 'Р—Р°РїРёСЃСЊ РёС‚РѕРіРѕРІ СЃРїСЂР°РІРєРё РїРѕ СЃС‚Р°РІРєР°Рј. ';
+    ErrPref := 'Запись итогов справки по ставкам. ';
     Insert into F6NDFL_ARH_ITOGI
           ( R_SPRID, KOD_STAVKI, NACHISL_DOH, NACH_DOH_DIV, VYCHET_NAL, 
             ISCHISL_NAL, ISCHISL_NAL_DIV, AVANS_PLAT)    
@@ -2349,10 +2349,10 @@ END;
       group by KOD_STAVKI  
     ;
 
-    ErrPref := 'Р§РёСЃС‚РєР° СЂР°РЅРµРµ СЃРѕР·РґР°РЅРЅС‹С… РґР°РЅРЅС‹С… РїРѕ РґР°С‚Р°Рј РІС‹РїР»Р°С‚. ';  
+    ErrPref := 'Чистка ранее созданных данных по датам выплат. ';  
     Delete from F6NDFL_ARH_SVEDDAT where R_SPRID=pSPRID; 
         
-    ErrPref := 'Р—Р°РїРёСЃСЊ РґР°РЅРЅС‹С… РїРѕ РґР°С‚Р°Рј РІС‹РїР»Р°С‚. ';
+    ErrPref := 'Запись данных по датам выплат. ';
     Insert into F6NDFL_ARH_SVEDDAT (
        R_SPRID, DATA_FACT_DOH, SROK_PERECH_NAL, 
        DATA_UDERZH_NAL, SUM_FACT_DOH, SUM_UDERZH_NAL, 
@@ -2373,18 +2373,18 @@ END;
      
  exception
         when OTHERS then
-           pErrInfo := 'РћРЁРР‘РљРђ: '||ErrPref||SQLERRM;
+           pErrInfo := 'ОШИБКА: '||ErrPref||SQLERRM;
            if gl_COMMIT then Rollback; end if;
  end Kopir_SprF6_vArhiv;
  
 /*  
--- РІС‹Р·РѕРІ 
+-- вызов 
 declare
 RC varchar2(1000);
 begin
   dbms_output.enable(10000);  
   RC:=FXNDFL_UTIL.Sozdat_Spravku_f6 ( 1, 2015, 21, 0, 213 );
-  dbms_output.put_line( nvl(RC,'РћРљ') );
+  dbms_output.put_line( nvl(RC,'ОК') );
 END;
 */
 
@@ -2397,7 +2397,7 @@ nGod        number;
 nPeriod    number; 
 begin
 
-   -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+   -- выборка периода справки
    Select KOD_NA, GOD, PERIOD into nKodNA, nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
    dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
    case nPeriod
@@ -2408,50 +2408,50 @@ begin
        else  return Null;                
    end case;
    
-   -- РїРѕРґСЃС‡РµС‚ С‡РёСЃР»Р° РќР°Р»РѕРіРѕРџР»Р°С‚РµР»СЊС‰РёРєРѕРІ (РќРџ), РїРѕР»СѓС‡РёРІС€РёС… РґРѕС…РѕРґ Р·Р° РїРµСЂРёРѕРґ, СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёР№ СЃРїСЂР°РІРєРµ
-   -- РґР»СЏ СЃС‚СЂРѕРєРё 060 СЂР°Р·РґРµР»Р° 1 СЃРїСЂР°РІРєРё 6-РќР”Р¤Р›
-   -- РїРѕРґСЃС‡РµС‚ СЃ РЅР°С‡Р°Р»Р° РіРѕРґР° РЅР°СЂР°СЃС‚Р°СЋС‰РёРј РёС‚РѕРіРѕРј
+   -- подсчет числа НалогоПлательщиков (НП), получивших доход за период, соответствующий справке
+   -- для строки 060 раздела 1 справки 6-НДФЛ
+   -- подсчет с начала года нарастающим итогом
 
-   -- С‚РµСЃС‚  СЃРїСЂР°РІРєР° ID=149565  1 РєРІР°СЂС‚Р°Р» 2016 РіРѕРґР°, РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР° 0 
+   -- тест  справка ID=149565  1 квартал 2016 года, корректировка 0 
    --   Select FXNDFL_UTIL.KolichNP( 149565 ) N from Dual;
   
    Select count(*) into nKolNP
    from(
            Select GF_PERSON,  sum( DOH_POLUCH ) SUM_DOH
-           from ( -- Р’РёРґ РґРѕС…РѕРґР°
-                     -- РїРµРЅСЃРёРё 
-                     -- РїРµРЅСЃРёСЏ (Р±РµР· РёСЃРїСЂР°РІР»РµРЅРЅС‹С… Р·Р°РїРёСЃРµР№)
+           from ( -- Вид дохода
+                     -- пенсии 
+                     -- пенсия (без исправленных записей)
                      Select sfl.GF_PERSON,  ds.SUMMA DOH_POLUCH
                         from DV_SR_LSPV ds
                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                 inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL       
-                        where ds.SHIFR_SCHET=60   -- РїРµРЅСЃРёСЏ
-                            and ds.NOM_VKL<991 -- РїРµРЅСЃРёСЏ РЅРµ РЅР° СЃРІРѕРё
-                            and ds.SERVICE_DOC=0  -- РІС‹РїР»Р°С‚С‹
-                            and ds.DATA_OP>=dTermBeg  -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР° 
-                            and ds.DATA_OP < dTermEnd  -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+                        where ds.SHIFR_SCHET=60   -- пенсия
+                            and ds.NOM_VKL<991 -- пенсия не на свои
+                            and ds.SERVICE_DOC=0  -- выплаты
+                            and ds.DATA_OP>=dTermBeg  -- с начала года 
+                            and ds.DATA_OP < dTermEnd  -- до конца отчетного периода справки
                      UNION
-                     -- РёСЃРїСЂР°РІР»РµРЅРёСЏ  Рє РїРµРЅСЃРёСЏРј
+                     -- исправления  к пенсиям
                         Select GF_PERSON, DOH_POLUCH from (
                         Select sfl.GF_PERSON, min(ds.DATA_OP) DATA_OSH_DOH, sum(SUMMA) DOH_POLUCH 
                         from  DV_SR_LSPV ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                         start with ds.SHIFR_SCHET=60  -- РїРµРЅСЃРёСЏ
-                                and ds.NOM_VKL<991 -- РїРµРЅСЃРёСЏ РЅРµ РЅР° СЃРІРѕРё
-                                and ds.SERVICE_DOC=-1  -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј СЃ -1)
-                                and ds.DATA_OP>=dTermBeg    -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                and ds.DATA_OP < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                         start with ds.SHIFR_SCHET=60  -- пенсия
+                                and ds.NOM_VKL<991 -- пенсия не на свои
+                                and ds.SERVICE_DOC=-1  -- коррекция (начинаем с -1)
+                                and ds.DATA_OP>=dTermBeg    -- исправление сделано
+                                and ds.DATA_OP < dTermEnd    -- в текущем отчетном периоде
                          connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS
                                     and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                     and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC         
                          group by sfl.GF_PERSON
                          )            
-                         where DATA_OSH_DOH>=dTermBeg    -- РѕС€РёР±РѕС‡РЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                            and DATA_OSH_DOH < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ           
+                         where DATA_OSH_DOH>=dTermBeg    -- ошибочное начисление сделано
+                            and DATA_OSH_DOH < dTermEnd    -- в текущем отчетном периоде           
                      UNION       
-                    -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                    -- ритаулки и наследуемые пенсии
                      Select vrp.GF_PERSON,  ds.SUMMA DOH_POLUCH
                      from DV_SR_LSPV ds
                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
@@ -2461,12 +2461,12 @@ begin
                                                    and DATA_VYPL>=dTermBeg 
                                                    and DATA_VYPL < dTermEnd
                                             ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                     where ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                        and ds.SERVICE_DOC=0  -- РІС‹РїР»Р°С‚Р° РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»Р°СЃСЊ
+                     where ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
+                        and ds.SERVICE_DOC=0  -- выплата не корректировалась
                         and ds.DATA_OP>=dTermBeg  
                         and ds.DATA_OP < dTermEnd           
                      UNION
-                     -- РёСЃРїСЂР°РІР»РµРЅРёСЏ Рє СЂРёС‚Р°СѓР»РєР°Рј
+                     -- исправления к ритаулкам
                         Select vrp.GF_PERSON,  dvs.DOH_POLUCH 
                         from (
                         Select  ds.NOM_VKL, ds.NOM_IPS,
@@ -2474,10 +2474,10 @@ begin
                                   min(ds.DATA_OP) DATA_OSH_DOH, 
                                   sum(SUMMA) DOH_POLUCH
                         from  DV_SR_LSPV ds                
-                         start with ds.SHIFR_SCHET=62  -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                and ds.SERVICE_DOC=-1  -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј СЃ -1)
-                                and ds.DATA_OP>=dTermBeg    -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                and ds.DATA_OP < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                         start with ds.SHIFR_SCHET=62  -- ритуалки и наследуемые пенсии
+                                and ds.SERVICE_DOC=-1  -- коррекция (начинаем с -1)
+                                and ds.DATA_OP>=dTermBeg    -- исправление сделано
+                                and ds.DATA_OP < dTermEnd    -- в текущем отчетном периоде
                          connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS
                                     and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
@@ -2491,37 +2491,37 @@ begin
                                                     and DATA_VYPL>=dTermBeg
                                                    and DATA_VYPL < dTermEnd
                                      ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=dvs.SSDOC                                    
-                         where dvs.DATA_OSH_DOH>=dTermBeg   -- РѕС€РёР±РѕС‡РЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                             and dvs.DATA_OSH_DOH < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ         
+                         where dvs.DATA_OSH_DOH>=dTermBeg   -- ошибочное начисление сделано
+                             and dvs.DATA_OSH_DOH < dTermEnd    -- в текущем отчетном периоде         
                      UNION       
-                     -- РІС‹РєСѓРїРЅС‹Рµ СЃСѓРјРјС‹
+                     -- выкупные суммы
                      Select sfl.GF_PERSON,  ds.SUMMA DOH_POLUCH
                      from DV_SR_LSPV ds
                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                              inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                  
-                     where ds.SHIFR_SCHET=55 -- РІС‹РєСѓРїРЅС‹Рµ СЃСѓРјРјС‹
-                        and ds.SERVICE_DOC=0  -- РІС‹РїР»Р°С‚Р° РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»Р°СЃСЊ
+                     where ds.SHIFR_SCHET=55 -- выкупные суммы
+                        and ds.SERVICE_DOC=0  -- выплата не корректировалась
                         and ds.DATA_OP>=dTermBeg  
                         and ds.DATA_OP < dTermEnd           
                      UNION
-                     -- РёСЃРїСЂР°РІР»РµРЅРёСЏ Рє РІС‹РєСѓРїРЅС‹Рј
+                     -- исправления к выкупным
                         Select GF_PERSON, DOH_POLUCH from (
                         Select sfl.GF_PERSON, min(ds.DATA_OP) DATA_OSH_DOH, sum(SUMMA) DOH_POLUCH 
                         from  DV_SR_LSPV ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                         start with ds.SHIFR_SCHET=55  -- РІС‹РєСѓРїРЅР°СЏ СЃСѓРјРјР°, РѕР±Р»Р°РіР°РµРјР°СЏ С‡Р°СЃС‚СЊ
-                                and ds.SERVICE_DOC=-1  -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј СЃ -1)
-                                and ds.DATA_OP>=dTermBeg    -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                and ds.DATA_OP < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                         start with ds.SHIFR_SCHET=55  -- выкупная сумма, облагаемая часть
+                                and ds.SERVICE_DOC=-1  -- коррекция (начинаем с -1)
+                                and ds.DATA_OP>=dTermBeg    -- исправление сделано
+                                and ds.DATA_OP < dTermEnd    -- в текущем отчетном периоде
                          connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS
                                     and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                     and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC         
                          group by sfl.GF_PERSON
                          )            
-                         where DATA_OSH_DOH>=dTermBeg    -- РѕС€РёР±РѕС‡РЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                            and DATA_OSH_DOH < dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ                           
+                         where DATA_OSH_DOH>=dTermBeg    -- ошибочное начисление сделано
+                            and DATA_OSH_DOH < dTermEnd    -- в текущем отчетном периоде                           
                     )
                 group by  GF_PERSON
                 having sum( DOH_POLUCH )>0
@@ -2543,20 +2543,20 @@ begin
    nNalRez  number;
    begin
    
-   -- РїРµСЂРµС…РѕРґ РѕС‚ РєРѕРґР° РЎРўРђР’РљР Рє РєРѕРґСѓ РќРђР›РѕРіРѕРІРѕРіРѕ Р Р•Р—РёРґРµРЅС‚Р°
+   -- переход от кода СТАВКИ к коду НАЛогового РЕЗидента
    case pSTAVKA
       when 13 then 
               nNalRez:=1;    -- 
       when 30 then 
-              nNalRez:=2;    -- РґР»СЏ РЅРµСЂРµР·РёРґРµРЅС‚РѕРІ РЅРёС‡РµРіРѕ СЃС‡РёС‚Р°С‚СЊ РЅРµ РЅР°РґРѕ, РІС‹С‡РµС‚РѕРІ РЅРµ Р±С‹РІР°РµС‚
-              return 0;         -- СЃСѓРјРјР° РІС‹С‡РµС‚РѕРІ СЂР°РІРЅР° 0
+              nNalRez:=2;    -- для нерезидентов ничего считать не надо, вычетов не бывает
+              return 0;         -- сумма вычетов равна 0
       else 
               return Null;    
    end case;  
 
-   -- Р”Р°Р»СЊС€Рµ СЂР°СЃС‡РµС‚ С‚РѕР»СЊРєРѕ РґР»СЏ РќРђР›РћР“РћР’Р«РҐ Р Р•Р—РР”Р•РќРўРћР’
+   -- Дальше расчет только для НАЛОГОВЫХ РЕЗИДЕНТОВ
 
-   -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+   -- выборка периода справки
    Select KOD_NA, GOD, PERIOD into nKodNA, nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
    dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
    case nPeriod
@@ -2580,35 +2580,35 @@ begin
                     from                 
                         (Select GF_PERSON, sum(SUM_DOH) DOX_SUMMA from F2NDFL_LOAD_NALISCH group by  GF_PERSON) sgd
                     left join
-                        (-- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ РІС‹С‡РµС‚С‹ РїРѕ РїРµСЂСЃРѕРЅР°Рј Р·Р° СЂР°СЃС‡РµС‚РЅС‹Р№ РїРµСЂРёРѕРґ    
+                        (-- предоставленные вычеты по персонам за расчетный период    
                         Select GF_PERSON, sum(VYCH_SUMMA) VYCH_PREDOST
                         from(    
-                            -- РїРµСЂРІРёС‡РЅС‹Рµ Р·Р°РїРёСЃРё, РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                            -- первичные записи, изначально правильные без исправлений
                             Select np.GF_PERSON, sum(SUMMA) VYCH_SUMMA
                             from DV_SR_LSPV ds    
                                 inner join F_NDFL_LOAD_NALPLAT np
                                     on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
-                                where ds.DATA_OP>=dTermBeg   -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРѕ РІ СЂР°СЃС‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                  and ds.DATA_OP< dTermEnd   -- РЅР°С‡Р°Р»Рѕ РіРѕРґР° - РєРѕРЅРµС† РѕС‚С‡РµС‚РЅРѕРіРѕ РєРІР°СЂС‚Р°Р»Р°
-                                  and ds.SERVICE_DOC=0        -- РЅРµРёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р·Р°РїРёСЃРё
-                                  and ds.SHIFR_SCHET>1000     -- РІС‹С‡РµС‚С‹
+                                where ds.DATA_OP>=dTermBeg   -- предоставлено в расчетном периоде
+                                  and ds.DATA_OP< dTermEnd   -- начало года - конец отчетного квартала
+                                  and ds.SERVICE_DOC=0        -- неисправленные записи
+                                  and ds.SHIFR_SCHET>1000     -- вычеты
                             group by np.GF_PERSON
                                   having sum(ds.SUMMA)<>0      
                           UNION ALL
-                            -- СЂРµР·СѓР»СЊС‚Р°С‚ РёСЃРїСЂР°РІР»РµРЅРёСЏ РІС‹С‡РµС‚РѕРІ
+                            -- результат исправления вычетов
                             Select np.GF_PERSON, sum(vc.VYCH_SUM) VYCH_SUMMA
                             from
                                (Select NOM_VKL, NOM_IPS, sum(SUMMA) VYCH_SUM
                                 from(Select * from (    
-                                        Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРµРЅСЃРёРё РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                                        from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                                        Select ds.*        -- все исправления пенсии должны выполняться в текущем году
+                                        from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                                             where  ds.SERVICE_DOC<>0
-                                            start with   ds.SHIFR_SCHET>1000         -- РІС‹С‡РµС‚
-                                                     and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                     and ds.DATA_OP >= dTermBeg     -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                                     and ds.DATA_OP <  dTermKor     -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            start with   ds.SHIFR_SCHET>1000         -- вычет
+                                                     and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                                     and ds.DATA_OP >= dTermBeg     -- исправление сделано после начала периода
+                                                     and ds.DATA_OP <  dTermKor     -- до конца квартала, в котором выполняется корректировка
+                                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                                      and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                      and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                      and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -2626,15 +2626,15 @@ begin
                         (
                           Select GF_PERSON, sum(NAL_SUM) NAL_SUMMA 
                           from(
-                                -- РїРµСЂРІРёС‡РЅС‹Рµ Р·Р°РїРёСЃРё, РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                                -- первичные записи, изначально правильные без исправлений
                                 Select np.GF_PERSON, sum(SUMMA) NAL_SUM
                                 from DV_SR_LSPV ds    
                                     inner join F_NDFL_LOAD_NALPLAT np
                                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
-                                    where ds.DATA_OP>=dTermBeg   -- СѓРґРµСЂР¶Р°РЅРѕ РІ СЂР°СЃС‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                      and ds.DATA_OP< dTermEnd   -- РЅР°С‡Р°Р»Рѕ РіРѕРґР° - РєРѕРЅРµС† РѕС‚С‡РµС‚РЅРѕРіРѕ РєРІР°СЂС‚Р°Р»Р°
-                                      and ds.SERVICE_DOC=0        -- РЅРµРёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р·Р°РїРёСЃРё
-                                      and ds.SHIFR_SCHET=85       -- РЅР°Р»РѕРі
+                                    where ds.DATA_OP>=dTermBeg   -- удержано в расчетном периоде
+                                      and ds.DATA_OP< dTermEnd   -- начало года - конец отчетного квартала
+                                      and ds.SERVICE_DOC=0        -- неисправленные записи
+                                      and ds.SHIFR_SCHET=85       -- налог
                                       and ds.SUB_SHIFR_SCHET in (0,2)  -- 13%
                                     group by np.GF_PERSON
                                     having sum(ds.SUMMA)<>0    
@@ -2643,29 +2643,29 @@ begin
                                 from DV_SR_LSPV ds    
                                     inner join F_NDFL_LOAD_NALPLAT np
                                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=1 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
-                                    where ds.DATA_OP>=dTermBeg   -- СѓРґРµСЂР¶Р°РЅРѕ РІ СЂР°СЃС‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                      and ds.DATA_OP< dTermEnd   -- РЅР°С‡Р°Р»Рѕ РіРѕРґР° - РєРѕРЅРµС† РѕС‚С‡РµС‚РЅРѕРіРѕ РєРІР°СЂС‚Р°Р»Р°
-                                      and ds.SERVICE_DOC=0        -- РЅРµРёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р·Р°РїРёСЃРё
-                                      and ds.SHIFR_SCHET=86       -- РЅР°Р»РѕРі
+                                    where ds.DATA_OP>=dTermBeg   -- удержано в расчетном периоде
+                                      and ds.DATA_OP< dTermEnd   -- начало года - конец отчетного квартала
+                                      and ds.SERVICE_DOC=0        -- неисправленные записи
+                                      and ds.SHIFR_SCHET=86       -- налог
                                       and ds.SUB_SHIFR_SCHET=0    -- 13%
                                     group by np.GF_PERSON
                                     having sum(ds.SUMMA)<>0    
                               UNION ALL              
-                                -- СЂРµР·СѓР»СЊС‚Р°С‚ РёСЃРїСЂР°РІР»РµРЅРёСЏ РЅР°Р»РѕРіРѕРІ
+                                -- результат исправления налогов
                                 Select np.GF_PERSON, sum(nl.NAL_SUM) NAL_SUM
                                 from
                                    (Select NOM_VKL, NOM_IPS, sum(SUMMA) NAL_SUM
                                     from(Select * from (    
-                                            Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРµРЅСЃРёРё РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                                            from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                                            Select ds.*        -- все исправления пенсии должны выполняться в текущем году
+                                            from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                                                 where  ds.SERVICE_DOC<>0
-                                                start with   ds.SHIFR_SCHET in 85   -- РЅР°Р»РѕРі
+                                                start with   ds.SHIFR_SCHET in 85   -- налог
                                                          and ds.SUB_SHIFR_SCHET in (0,2) -- 13%
-                                                         and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                         and ds.DATA_OP >= dTermBeg     -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                                         and ds.DATA_OP <  dTermKor     -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                                                connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                         and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                                         and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                                         and ds.DATA_OP >= dTermBeg     -- исправление сделано после начала периода
+                                                         and ds.DATA_OP <  dTermKor     -- до конца квартала, в котором выполняется корректировка
+                                                connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                                         and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                                          and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                          and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                          and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -2693,10 +2693,10 @@ begin
                           on kor.GF_PERSON=sgd.GF_PERSON   */
                   ); -- where abs(DLT_NEG_NEDOPL)   >=0.01
 /*
-        -- СЂР°СЃС‡РµС‚ СЃСѓРјРјС‹ РёСЃРїРѕР»СЊР·РѕРІР°РЅРЅС‹С… РІС‹С‡РµС‚РѕРІ
+        -- расчет суммы использованных вычетов
         with q as (
-                               -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (С‚РѕР»СЊРєРѕ РЈР§РђРЎРўРќРРљР)
-                               -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                               -- пенсии и выкупные (только УЧАСТНИКИ)
+                               -- изначально правильные, без исправлений
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
@@ -2705,17 +2705,17 @@ begin
                                                            where SHIFR_SCHET=85
                                                                and DATA_OP>=dTermBeg  
                                                                and DATA_OP < dTermEnd ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
-                                 where  ds.DATA_OP>=dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < dTermEnd        -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0              -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and sfl.NAL_REZIDENT=1              -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                     and sfl.PEN_SXEM<>7  -- РЅРµ РћРџРЎ
-                                     and ( ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                             or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                             or ds.SHIFR_SCHET>1000 )  -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ  
+                                 where  ds.DATA_OP>=dTermBeg        -- с начала года
+                                     and ds.DATA_OP < dTermEnd        -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений
+                                     and sfl.NAL_REZIDENT=1              -- по ставке 13%
+                                     and sfl.PEN_SXEM<>7  -- не ОПС
+                                     and ( ds.SHIFR_SCHET= 55 -- выкупные
+                                             or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) --  или пенсия не своя
+                                             or ds.SHIFR_SCHET>1000 )  -- предоставленные суммы вычетов  
                                UNION  ALL 
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds            
@@ -2725,60 +2725,60 @@ begin
                                                            where SHIFR_SCHET=85 
                                                                and DATA_OP>=dTermBeg  
                                                                and DATA_OP < dTermEnd ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
-                                            where  sfl.NAL_REZIDENT=1                 -- РїРѕ СЃС‚Р°РІРєРµ 13%        
-                                                 and sfl.PEN_SXEM<>7  -- РЅРµ РћРџРЎ
-                                             start with ( ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                                             or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                             or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                              
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            where  sfl.NAL_REZIDENT=1                 -- по ставке 13%        
+                                                 and sfl.PEN_SXEM<>7  -- не ОПС
+                                             start with ( ds.SHIFR_SCHET= 55 -- выкупные
+                                                             or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) --  или пенсия не своя
+                                                             or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано
+                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                              
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                             and MINDATOP < dTermEnd               -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ       
+                                       )  where MINDATOP>=dTermBeg               -- неправильное начисление было
+                                             and MINDATOP < dTermEnd               -- в текущем отчетном периоде       
                             UNION  ALL 
-                              -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                              -- ритуалки и наследуемые пенсии
+                               -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                      from DV_SR_LSPV ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
-                                                                where TIP_VYPL=1010                -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                                                   and NAL_REZIDENT=1             -- РїРѕ СЃС‚Р°РІРєРµ 13%      
-                                                                   and DATA_VYPL>=dTermBeg    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                                                   and DATA_VYPL < dTermEnd    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР° 
+                                                                where TIP_VYPL=1010                -- ритуалки и наследуемые пенсии
+                                                                   and NAL_REZIDENT=1             -- по ставке 13%      
+                                                                   and DATA_VYPL>=dTermBeg    -- с начала года
+                                                                   and DATA_VYPL < dTermEnd    -- до конца отчетного периода 
                                                             ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                                     where (ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                               or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                        and ds.SERVICE_DOC=0  -- РІС‹РїР»Р°С‚Р° РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»Р°СЃСЊ
+                                     where (ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
+                                               or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                        and ds.SERVICE_DOC=0  -- выплата не корректировалась
                                         and ds.DATA_OP>=dTermBeg  
                                         and ds.DATA_OP < dTermEnd         
                     --      UNION
-                               -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                     --          Рќ РЈ Р– Рќ Рћ   Р” Рћ Р‘ Рђ Р’ Р Рў Р¬ (РїРѕРєР° РјРѕР¶РЅРѕ Р±РµР· РЅРёС… - РѕРЅРё РЅСѓР»РµРІС‹Рµ)
+                               -- ритуалки и наследуемые пенсии
+                               -- начисленные и скорректированные в текущем периоде
+                     --          Н У Ж Н О   Д О Б А В И Т Ь (пока можно без них - они нулевые)
                                                                                         
                      )
     Select sum(SUMGOD_ISPOLZ_VYCH) into fSIV from (                    
-        Select    -- РІС‹С‡РµС‚С‹ С‚РѕР»СЊРєРѕ РґР»СЏ РЅР°Р»РѕРіРѕРІС‹С… СЂРµР·РёРґРµРЅС‚РѕРІ 
+        Select    -- вычеты только для налоговых резидентов 
                      case 
                          when nvl(vyc.SUMGOD_VYC,0)>doh.SUMGOD_DOH 
                             then doh.SUMGOD_DOH 
                             else nvl(vyc.SUMGOD_VYC,0) 
                      end SUMGOD_ISPOLZ_VYCH          
         from (    Select GF_PERSON,  sum(SUMMA) SUMGOD_DOH from q   
-                              where  SHIFR_SCHET<1000    -- РґРѕС…РѕРґС‹
+                              where  SHIFR_SCHET<1000    -- доходы
                               group by GF_PERSON
                 ) doh
         left join ( Select GF_PERSON, sum(SUMMA)  SUMGOD_VYC from  q 
-                              where SHIFR_SCHET>1000   --  СЌС‚Рѕ РІС‹С‡РµС‚С‹ 
+                              where SHIFR_SCHET>1000   --  это вычеты 
                               group by GF_PERSON
                 ) vyc  
                  on vyc.GF_PERSON=doh.GF_PERSON              
@@ -2800,8 +2800,8 @@ begin
    nVykSSS    number;
    begin
    
-   -- РїРµСЂРµС…РѕРґ РѕС‚ РєРѕРґР° РЎРўРђР’РљР Рє РєРѕРґСѓ РќРђР›РѕРіРѕРІРѕРіРѕ Р Р•Р—РёРґРµРЅС‚Р°
-   -- Рё РєРѕРґР°Рј СЃСѓР±С€РёС„СЂРѕРІ СЃС‡РµС‚РѕРІ
+   -- переход от кода СТАВКИ к коду НАЛогового РЕЗидента
+   -- и кодам субшифров счетов
    case pSTAVKA
       when 13 then 
               nNalRez := 1;
@@ -2815,7 +2815,7 @@ begin
               return Null;    
    end case;  
 
-   -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+   -- выборка периода справки
    Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
    dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
    case nPeriod
@@ -2825,18 +2825,18 @@ begin
        when 34 then dTermEnd := add_months(dTermBeg,12);      
        else  return Null;                
    end case;
-   -- РєРѕРЅРµС† РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰РёР№ СЂР°СЃС‡РµС‚ 
-   dTermKor := dTermEnd;  -- РёСЃРїСЂР°РІРёС‚СЊ, РєРѕРіРґР° Р±СѓРґРµС‚ РЅРµСЃРєРѕР»СЊРєРѕ РєРІР°СЂС‚Р°Р»РѕРІ
-                          -- С‡С‚РѕР±С‹ РїРѕР»СѓС‡Р°С‚СЊ РєР°СЂС‚РёРЅСѓ РІ РёСЃРїСЂР°РІР»РµРЅРёР№ РІ СЃР°РјРѕРј РєРІР°СЂС‚Р°Р»Рµ
-                          -- Рё РІ РїРѕСЃР»РµРґСѓСЋС‰РёС…
+   -- конец квартала, в котором выполняется корректирующий расчет 
+   dTermKor := dTermEnd;  -- исправить, когда будет несколько кварталов
+                          -- чтобы получать картину в исправлений в самом квартале
+                          -- и в последующих
                           
-        -- РїСЂРѕРІРµСЂРµРЅРѕ 18-04-2017  РЅР° РґР°РЅРЅС‹С… 1Р№ РєРІР°СЂС‚Р°Р» 2017 РіРѕРґР°
+        -- проверено 18-04-2017  на данных 1й квартал 2017 года
         
-        -- СЂР°СЃС‡РµС‚ СЃСѓРјРјС‹ РЅР°С‡РёСЃР»РµРЅРЅРѕРіРѕ РґРѕС…РѕРґР°,
-        -- РѕР±Р»Р°РіР°РµРјРѕРіРѕ РїРѕ СѓРєР°Р·Р°РЅРЅРѕР№ СЃС‚Р°РІРєРµ
+        -- расчет суммы начисленного дохода,
+        -- облагаемого по указанной ставке
         Select sum(NACH_DOH) into fSND 
-        from (  -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
-                -- РїРµРЅСЃРёРё
+        from (  -- изначально правильные, без исправлений
+                -- пенсии
                 Select nvl(sum(ds.SUMMA),0) NACH_DOH 
                 from DV_SR_LSPV ds
                      left join DV_SR_LSPV n13 
@@ -2849,7 +2849,7 @@ begin
                       and ds.NOM_VKL<991
                       and nvl(n13.SUB_SHIFR_SCHET,0)=nPenSSS
                 union all  
-                -- РїРѕСЃРѕР±РёСЏ 
+                -- пособия 
                 Select nvl(sum(ds.SUMMA),0) NACH_DOH                 
                 from DV_SR_LSPV ds
                      left join DV_SR_LSPV n13 
@@ -2861,7 +2861,7 @@ begin
                       and ds.SHIFR_SCHET=62
                       and nvl(n13.SUB_SHIFR_SCHET,0)=nPenSSS
                 union all  
-                -- РІС‹РєСѓРїРЅС‹Рµ 
+                -- выкупные 
                 Select nvl(sum(ds.SUMMA),0) NACH_DOH
                 from DV_SR_LSPV ds
                      left join DV_SR_LSPV n13 
@@ -2872,22 +2872,22 @@ begin
                       and ds.SERVICE_DOC=0
                       and ds.SHIFR_SCHET=55   
                       and nvl(n13.SUB_SHIFR_SCHET,2)=nVykSSS
-                -- РёСЃРїСЂР°РІР»РµРЅРёСЏ
+                -- исправления
                 union all                     
-                -- РїРµРЅСЃРёРё
+                -- пенсии
                 Select nvl(sum(dox.SUMMA),0) NACH_DOH
                 from
                    (Select * from (    
-                        Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРµРЅСЃРёРё РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                        from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                        Select ds.*        -- все исправления пенсии должны выполняться в текущем году
+                        from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                             where  ds.SERVICE_DOC<>0
-                            start with   ds.SHIFR_SCHET= 60          -- РїРµРЅСЃРёСЏ
-                                     and ds.NOM_VKL<991              -- Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                     and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                     and ds.DATA_OP >= dTermBeg      -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                     and ds.DATA_OP <  dTermKor      -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                            start with   ds.SHIFR_SCHET= 60          -- пенсия
+                                     and ds.NOM_VKL<991              -- и пенсия не своя
+                                     and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                     and ds.DATA_OP >= dTermBeg      -- исправление сделано после начала периода
+                                     and ds.DATA_OP <  dTermKor      -- до конца квартала, в котором выполняется корректировка
+                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                      and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                      and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                      and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -2898,19 +2898,19 @@ begin
                                  and n13.DATA_OP=dox.DATA_OP and n13.SSYLKA_DOC=dox.SSYLKA_DOC and n13.SERVICE_DOC=dox.SERVICE_DOC    
                     where nvl(n13.SUB_SHIFR_SCHET,0)=nPenSSS         
                 union all                     
-                -- РїРѕСЃРѕР±РёСЏ
+                -- пособия
                 Select nvl(sum(dox.SUMMA),0) NACH_DOH
                 from
                    (Select * from (    
-                        Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРѕСЃРѕР±РёР№ РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                        from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                        Select ds.*        -- все исправления пособий должны выполняться в текущем году
+                        from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                             where  ds.SERVICE_DOC<>0
-                            start with   ds.SHIFR_SCHET= 62          -- РїРѕСЃРѕР±РёРµ
-                                     and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                     and ds.DATA_OP >= dTermBeg      -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                     and ds.DATA_OP <  dTermKor      -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                            start with   ds.SHIFR_SCHET= 62          -- пособие
+                                     and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                     and ds.DATA_OP >= dTermBeg      -- исправление сделано после начала периода
+                                     and ds.DATA_OP <  dTermKor      -- до конца квартала, в котором выполняется корректировка
+                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                      and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                      and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                      and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -2921,19 +2921,19 @@ begin
                                  and n13.DATA_OP=dox.DATA_OP and n13.SSYLKA_DOC=dox.SSYLKA_DOC and n13.SERVICE_DOC=dox.SERVICE_DOC    
                     where nvl(n13.SUB_SHIFR_SCHET,0)=nPenSSS                               
                 union all                     
-                -- РІС‹РєСѓРїРЅС‹Рµ
+                -- выкупные
                 Select nvl(sum(dox.SUMMA),0) NACH_DOH
                 from
                    (Select * from (    
                         Select ds.*, min(DATA_OP) over(partition by ds.NOM_VKL, ds.NOM_IPS) MINDATOP
                         from DV_SR_LSPV ds
                             where  ds.SERVICE_DOC<>0
-                            start with   ds.SHIFR_SCHET= 55        -- РїРµРЅСЃРёСЏ
-  --                                 and ds.NOM_VKL<991            -- Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                     and ds.SERVICE_DOC=-1         -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                     and ds.DATA_OP >= dTermBeg   -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                            start with   ds.SHIFR_SCHET= 55        -- пенсия
+  --                                 and ds.NOM_VKL<991            -- и пенсия не своя
+                                     and ds.SERVICE_DOC=-1         -- коррекция (начинаем поиск с -1)
+                                     and ds.DATA_OP >= dTermBeg   -- исправление сделано после начала периода
+                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                      and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                      and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                      and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -2960,7 +2960,7 @@ begin
    nNalRez  number;
    begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
        Select KOD_NA, GOD, PERIOD into nKodNA, nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
        dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
        case nPeriod
@@ -2971,19 +2971,19 @@ begin
            else  return Null;                
        end case;
        
-       -- РµСЃР»Рё РЅСѓР¶РЅРѕ СЃРµРґР»Р°С‚СЊ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєСѓ РєРІР°СЂС‚Р°Р»Р°
-       -- РїРѕ СЂРµР·СѓР»СЊС‚Р°С‚Рј РёСЃРїСЂР°РІР»РµРЅРёР№ РІ РїРѕСЃР»РµРґСѓСЋС‰РёС… РєРІР°СЂС‚Р°Р»Р°С…,
-       -- С‚Рѕ РґРѕР±Р°РІРёС‚СЊ С‡РёСЃР»Рѕ РєРІР°СЂС‚Р°Р»РѕРІ РґР»СЏ РІС‹С‡РёСЃР»РµРЅРёСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРѕРє 
-       dTermKor := dTermEnd;   --  РїР»СЋСЃ РЅСѓР¶РЅРѕРµ С‡РёСЃР»Рѕ РєРІР°СЂС‚Р°Р»РѕРІ
+       -- если нужно седлать корректировку квартала
+       -- по результатм исправлений в последующих кварталах,
+       -- то добавить число кварталов для вычисления корректировок 
+       dTermKor := dTermEnd;   --  плюс нужное число кварталов
    
-       -- РїРµСЂРµС…РѕРґ РѕС‚ РєРѕРґР° РЎРўРђР’РљР Рє РєРѕРґСѓ РќРђР›РѕРіРѕРІРѕРіРѕ Р Р•Р—РёРґРµРЅС‚Р°
+       -- переход от кода СТАВКИ к коду НАЛогового РЕЗидента
        case pSTAVKA
           
           when 13 then 
                nNalRez:=1;
-               -- РґР»СЏ РЅР°Р»РѕРіРѕРІС‹С… СЂРµР·РёРґРµРЅС‚РѕРІ
-               -- РЅР°Р»РѕРі РІС‹С‡РёСЃР»СЏРµС‚СЃСЏ СЃ РіРѕРґРѕРІРѕРіРѕ РЅР°СЂР°СЃС‚Р°СЋС‰РµРіРѕ РёС‚РѕРіР°, 
-               -- СѓРјРµРЅСЊС€РµРЅРЅРѕРіРѕ РЅР° СЃСѓРјРјСѓ РІС‹С‡РµС‚РѕРІ, СЃ РѕРґРЅРѕРєСЂР°С‚РЅС‹Рј РѕРєСЂСѓРіР»РµРЅРёРµРј СЂРµР·СѓР»СЊС‚Р°С‚Р°
+               -- для налоговых резидентов
+               -- налог вычисляется с годового нарастающего итога, 
+               -- уменьшенного на сумму вычетов, с однократным округлением результата
                
                 Select sum(NAL_ISCHISL) into fSIN
                        --sum(DOX_SUMMA) DOX, sum(VYCH_ISPOLZ) VCHI, sum(NAL_ISCHISL) NALI, sum(DLT_NEG_NEDOPL) NEG_ZNACH_NEDOPL       
@@ -2996,35 +2996,35 @@ begin
                     from                 
                         (Select GF_PERSON, sum(SUM_DOH) DOX_SUMMA from F2NDFL_LOAD_NALISCH group by  GF_PERSON) sgd
                     left join
-                        (-- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ РІС‹С‡РµС‚С‹ РїРѕ РїРµСЂСЃРѕРЅР°Рј Р·Р° СЂР°СЃС‡РµС‚РЅС‹Р№ РїРµСЂРёРѕРґ    
+                        (-- предоставленные вычеты по персонам за расчетный период    
                         Select GF_PERSON, sum(VYCH_SUMMA) VYCH_PREDOST
                         from(    
-                            -- РїРµСЂРІРёС‡РЅС‹Рµ Р·Р°РїРёСЃРё, РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                            -- первичные записи, изначально правильные без исправлений
                             Select np.GF_PERSON, sum(SUMMA) VYCH_SUMMA
                             from DV_SR_LSPV ds    
                                 inner join F_NDFL_LOAD_NALPLAT np
                                     on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
-                                where ds.DATA_OP>=dTermBeg   -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРѕ РІ СЂР°СЃС‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                  and ds.DATA_OP< dTermEnd   -- РЅР°С‡Р°Р»Рѕ РіРѕРґР° - РєРѕРЅРµС† РѕС‚С‡РµС‚РЅРѕРіРѕ РєРІР°СЂС‚Р°Р»Р°
-                                  and ds.SERVICE_DOC=0        -- РЅРµРёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р·Р°РїРёСЃРё
-                                  and ds.SHIFR_SCHET>1000     -- РІС‹С‡РµС‚С‹
+                                where ds.DATA_OP>=dTermBeg   -- предоставлено в расчетном периоде
+                                  and ds.DATA_OP< dTermEnd   -- начало года - конец отчетного квартала
+                                  and ds.SERVICE_DOC=0        -- неисправленные записи
+                                  and ds.SHIFR_SCHET>1000     -- вычеты
                             group by np.GF_PERSON
                                   having sum(ds.SUMMA)<>0      
                           UNION ALL
-                            -- СЂРµР·СѓР»СЊС‚Р°С‚ РёСЃРїСЂР°РІР»РµРЅРёСЏ РІС‹С‡РµС‚РѕРІ
+                            -- результат исправления вычетов
                             Select np.GF_PERSON, sum(vc.VYCH_SUM) VYCH_SUMMA
                             from
                                (Select NOM_VKL, NOM_IPS, sum(SUMMA) VYCH_SUM
                                 from(Select * from (    
-                                        Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРµРЅСЃРёРё РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                                        from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                                        Select ds.*        -- все исправления пенсии должны выполняться в текущем году
+                                        from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                                             where  ds.SERVICE_DOC<>0
-                                            start with   ds.SHIFR_SCHET>1000         -- РІС‹С‡РµС‚
-                                                     and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                     and ds.DATA_OP >= dTermBeg     -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                                     and ds.DATA_OP <  dTermKor     -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            start with   ds.SHIFR_SCHET>1000         -- вычет
+                                                     and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                                     and ds.DATA_OP >= dTermBeg     -- исправление сделано после начала периода
+                                                     and ds.DATA_OP <  dTermKor     -- до конца квартала, в котором выполняется корректировка
+                                            connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                                     and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                                      and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                      and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                      and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -3042,15 +3042,15 @@ begin
                         (
                           Select GF_PERSON, sum(NAL_SUM) NAL_SUMMA 
                           from(
-                                -- РїРµСЂРІРёС‡РЅС‹Рµ Р·Р°РїРёСЃРё, РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                                -- первичные записи, изначально правильные без исправлений
                                 Select np.GF_PERSON, sum(SUMMA) NAL_SUM
                                 from DV_SR_LSPV ds    
                                     inner join F_NDFL_LOAD_NALPLAT np
                                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
-                                    where ds.DATA_OP>=dTermBeg   -- СѓРґРµСЂР¶Р°РЅРѕ РІ СЂР°СЃС‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                      and ds.DATA_OP< dTermEnd   -- РЅР°С‡Р°Р»Рѕ РіРѕРґР° - РєРѕРЅРµС† РѕС‚С‡РµС‚РЅРѕРіРѕ РєРІР°СЂС‚Р°Р»Р°
-                                      and ds.SERVICE_DOC=0        -- РЅРµРёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р·Р°РїРёСЃРё
-                                      and ds.SHIFR_SCHET=85       -- РЅР°Р»РѕРі
+                                    where ds.DATA_OP>=dTermBeg   -- удержано в расчетном периоде
+                                      and ds.DATA_OP< dTermEnd   -- начало года - конец отчетного квартала
+                                      and ds.SERVICE_DOC=0        -- неисправленные записи
+                                      and ds.SHIFR_SCHET=85       -- налог
                                       and ds.SUB_SHIFR_SCHET in (0,2)  -- 13%
                                     group by np.GF_PERSON
                                     having sum(ds.SUMMA)<>0    
@@ -3059,29 +3059,29 @@ begin
                                 from DV_SR_LSPV ds    
                                     inner join F_NDFL_LOAD_NALPLAT np
                                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=1 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
-                                    where ds.DATA_OP>=dTermBeg   -- СѓРґРµСЂР¶Р°РЅРѕ РІ СЂР°СЃС‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                      and ds.DATA_OP< dTermEnd   -- РЅР°С‡Р°Р»Рѕ РіРѕРґР° - РєРѕРЅРµС† РѕС‚С‡РµС‚РЅРѕРіРѕ РєРІР°СЂС‚Р°Р»Р°
-                                      and ds.SERVICE_DOC=0        -- РЅРµРёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р·Р°РїРёСЃРё
-                                      and ds.SHIFR_SCHET=86       -- РЅР°Р»РѕРі
+                                    where ds.DATA_OP>=dTermBeg   -- удержано в расчетном периоде
+                                      and ds.DATA_OP< dTermEnd   -- начало года - конец отчетного квартала
+                                      and ds.SERVICE_DOC=0        -- неисправленные записи
+                                      and ds.SHIFR_SCHET=86       -- налог
                                       and ds.SUB_SHIFR_SCHET=0    -- 13%
                                     group by np.GF_PERSON
                                     having sum(ds.SUMMA)<>0    
                               UNION ALL              
-                                -- СЂРµР·СѓР»СЊС‚Р°С‚ РёСЃРїСЂР°РІР»РµРЅРёСЏ РЅР°Р»РѕРіРѕРІ
+                                -- результат исправления налогов
                                 Select np.GF_PERSON, sum(nl.NAL_SUM) NAL_SUM
                                 from
                                    (Select NOM_VKL, NOM_IPS, sum(SUMMA) NAL_SUM
                                     from(Select * from (    
-                                            Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРµРЅСЃРёРё РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                                            from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                                            Select ds.*        -- все исправления пенсии должны выполняться в текущем году
+                                            from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                                                 where  ds.SERVICE_DOC<>0
-                                                start with   ds.SHIFR_SCHET in 85   -- РЅР°Р»РѕРі
+                                                start with   ds.SHIFR_SCHET in 85   -- налог
                                                          and ds.SUB_SHIFR_SCHET in (0,2) -- 13%
-                                                         and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                         and ds.DATA_OP >= dTermBeg     -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                                         and ds.DATA_OP <  dTermKor     -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                                                connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                         and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                                         and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                                         and ds.DATA_OP >= dTermBeg     -- исправление сделано после начала периода
+                                                         and ds.DATA_OP <  dTermKor     -- до конца квартала, в котором выполняется корректировка
+                                                connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                                         and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                                          and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                          and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                          and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -3111,38 +3111,38 @@ begin
 
                
 /*                           
-                -- РїСЂРµРґРІР°СЂРёС‚РµР»СЊРЅР°СЏ РІС‹Р±РѕСЂРєР°
+                -- предварительная выборка
                 with q as (
-                              -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (С‚РѕР»СЊРєРѕ РЈР§РђРЎРўРќРРљР)
-                              -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
-                              -- РџР•РќРЎРР 
+                              -- пенсии и выкупные (только УЧАСТНИКИ)
+                              -- изначально правильные, без исправлений
+                              -- ПЕНСИИ 
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         -- С‚РѕР»СЊРєРѕ С‚Рµ Р›РЎРџР’, СЃ РєРѕС‚РѕСЂС‹С… РїРµСЂРµС‡РёСЃР»СЏР»СЃСЏ РЅР°Р»РѕРі
+                                         -- только те ЛСПВ, с которых перечислялся налог
                                          inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                              where SHIFR_SCHET=85
-                                                               and SUB_SHIFR_SCHET in (0,1)  -- РїРµРЅСЃРёРё
+                                                               and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                and DATA_OP>=dTermBeg  
                                                                and DATA_OP < dTermEnd ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
-                                 where  ds.DATA_OP>=dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < dTermEnd      -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0           -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and sfl.NAL_REZIDENT=1         -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                     and sfl.PEN_SXEM<>7            -- РЅРµ РћРџРЎ
-                                     and ( ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) -- РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                          or ds.SHIFR_SCHET>1000 )                    -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ  
-                              -- Р’Р«РљРЈРџРќР«Р•
+                                 where  ds.DATA_OP>=dTermBeg        -- с начала года
+                                     and ds.DATA_OP < dTermEnd      -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0           -- выплаты без последующих исправлений
+                                     and sfl.NAL_REZIDENT=1         -- по ставке 13%
+                                     and sfl.PEN_SXEM<>7            -- не ОПС
+                                     and ( ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) -- пенсия не своя
+                                          or ds.SHIFR_SCHET>1000 )                    -- предоставленные суммы вычетов  
+                              -- ВЫКУПНЫЕ
                               UNION ALL
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         -- С‚РѕР»СЊРєРѕ С‚Рµ Р›РЎРџР’, СЃ РєРѕС‚РѕСЂС‹С… РїРµСЂРµС‡РёСЃР»СЏР»СЃСЏ РЅР°Р»РѕРі
+                                         -- только те ЛСПВ, с которых перечислялся налог
                                          inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                            where   SHIFR_SCHET=85
-                                                               and SUB_SHIFR_SCHET in (2,3)  -- РІС‹РєСѓРїРЅС‹Рµ
+                                                               and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                and DATA_OP>=dTermBeg  
                                                                and DATA_OP < dTermEnd 
                                                     ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
@@ -3150,17 +3150,17 @@ begin
                                                         where TIP_VYPL=1030
                                                           and DATA_VYPL>=dTermBeg
                                                           and DATA_VYPL < dTermEnd
-                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                                    ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ   
-                                 where  ds.DATA_OP>=dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < dTermEnd      -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0           -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and (    ds.SHIFR_SCHET= 55    -- РІС‹РєСѓРїРЅС‹Рµ
-                                           or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ                                               
+                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                                    ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО   
+                                 where  ds.DATA_OP>=dTermBeg        -- с начала года
+                                     and ds.DATA_OP < dTermEnd      -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0           -- выплаты без последующих исправлений
+                                     and (    ds.SHIFR_SCHET= 55    -- выкупные
+                                           or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов                                               
                                UNION ALL 
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               -- РџР•РќРЎРР
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
+                               -- ПЕНСИИ
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds            
@@ -3168,27 +3168,27 @@ begin
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                                      where SHIFR_SCHET=85 
-                                                                       and SUB_SHIFR_SCHET in (0,1)  -- РїРµРЅСЃРёРё
+                                                                       and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                        and DATA_OP>=dTermBeg  
                                                                        and DATA_OP < dTermEnd 
                                                                    ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
-                                            where  sfl.NAL_REZIDENT=1                 -- РїРѕ СЃС‚Р°РІРєРµ 13%        
-                                                 and sfl.PEN_SXEM<>7  -- РЅРµ РћРџРЎ
-                                             start with ( ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                         or ds.SHIFR_SCHET>1000 )  -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1          -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                              
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            where  sfl.NAL_REZIDENT=1                 -- по ставке 13%        
+                                                 and sfl.PEN_SXEM<>7  -- не ОПС
+                                             start with ( ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) --  или пенсия не своя
+                                                         or ds.SHIFR_SCHET>1000 )  -- предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано
+                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                              
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP < dTermEnd               -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ       
-                               -- Р’Р«РљРЈРџРќР«Р•
+                                       )  where MINDATOP>=dTermBeg               -- неправильное начисление было
+                                            and MINDATOP < dTermEnd               -- в текущем отчетном периоде       
+                               -- ВЫКУПНЫЕ
                                UNION ALL
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
@@ -3197,7 +3197,7 @@ begin
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                                        where SHIFR_SCHET=85 
-                                                                           and SUB_SHIFR_SCHET in (2,3)  -- РІС‹РєСѓРїРЅС‹Рµ
+                                                                           and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                            and DATA_OP>=dTermBeg  
                                                                            and DATA_OP < dTermEnd 
                                                                    ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
@@ -3205,60 +3205,60 @@ begin
                                                                         where TIP_VYPL=1030
                                                                           and DATA_VYPL>=dTermBeg
                                                                           and DATA_VYPL < dTermEnd
-                                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                                                   ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ                                                                      
-                                             start with (   ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                                         or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                              
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                                                   ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО                                                                      
+                                             start with (   ds.SHIFR_SCHET= 55 -- выкупные
+                                                         or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано
+                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                              
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP < dTermEnd               -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ       
+                                       )  where MINDATOP>=dTermBeg               -- неправильное начисление было
+                                            and MINDATOP < dTermEnd               -- в текущем отчетном периоде       
                               UNION ALL 
-                              -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                              -- ритуалки и наследуемые пенсии
+                               -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                      from DV_SR_LSPV ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
-                                                                where TIP_VYPL=1010                -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                                                   and NAL_REZIDENT=1             -- РїРѕ СЃС‚Р°РІРєРµ 13%      
-                                                                   and DATA_VYPL>=dTermBeg    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                                                   and DATA_VYPL < dTermEnd    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР° 
+                                                                where TIP_VYPL=1010                -- ритуалки и наследуемые пенсии
+                                                                   and NAL_REZIDENT=1             -- по ставке 13%      
+                                                                   and DATA_VYPL>=dTermBeg    -- с начала года
+                                                                   and DATA_VYPL < dTermEnd    -- до конца отчетного периода 
                                                             ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                                     where (ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                               or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                        and ds.SERVICE_DOC=0  -- РІС‹РїР»Р°С‚Р° РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»Р°СЃСЊ
+                                     where (ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
+                                               or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                        and ds.SERVICE_DOC=0  -- выплата не корректировалась
                                         and ds.DATA_OP>=dTermBeg  
                                         and ds.DATA_OP < dTermEnd         
                  --          UNION
-                               -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                 --            Рќ РЈ Р– Рќ Рћ   Р” Рћ Р‘ Рђ Р’ Р Рў Р¬ (РїРѕРєР° РјРѕР¶РЅРѕ Р±РµР· РЅРёС… - РѕРЅРё РЅСѓР»РµРІС‹Рµ)
+                               -- ритуалки и наследуемые пенсии
+                               -- начисленные и скорректированные в текущем периоде
+                 --            Н У Ж Н О   Д О Б А В И Т Ь (пока можно без них - они нулевые)
                  --                                                                      
                               )
-            -- СЃР°Рј СЂР°СЃС‡РµС‚                  
+            -- сам расчет                  
             Select sum(SGD_NAL) into fSIN from (                    
-                Select    -- РІС‹С‡РµС‚С‹ С‚РѕР»СЊРєРѕ РґР»СЏ РЅР°Р»РѕРіРѕРІС‹С… СЂРµР·РёРґРµРЅС‚РѕРІ 
-                             -- СЂР°СЃС‡РµС‚ Рё РѕРєСЂСѓРіР»РµРЅРёРµ РґР»СЏ РєР°Р¶РґРѕР№ РїРµСЂСЃРѕРЅС‹
+                Select    -- вычеты только для налоговых резидентов 
+                             -- расчет и округление для каждой персоны
                              round( 0.13* case when doh.SUMGOD_DOH < nvl(vyc.SUMGOD_VYC,0 )  
                                                    then 0
                                                    else doh.SUMGOD_DOH - nvl(vyc.SUMGOD_VYC,0)
                                                 end ) SGD_NAL        
                 from (    Select GF_PERSON,  sum(SUMMA) SUMGOD_DOH from q   
-                                      where  SHIFR_SCHET<1000    -- РґРѕС…РѕРґС‹
+                                      where  SHIFR_SCHET<1000    -- доходы
                                       group by GF_PERSON
                         ) doh
                 left join ( Select GF_PERSON, sum(SUMMA)  SUMGOD_VYC from  q 
-                                      where SHIFR_SCHET>1000   --  СЌС‚Рѕ РІС‹С‡РµС‚С‹ 
+                                      where SHIFR_SCHET>1000   --  это вычеты 
                                       group by GF_PERSON
                         ) vyc  
                          on vyc.GF_PERSON=doh.GF_PERSON              
@@ -3266,15 +3266,15 @@ begin
 */                                
           when 30 then 
                 nNalRez:=2;    
-                -- РґР»СЏ РЅР°Р»РѕРіРѕРІС‹С… РЅРµСЂРµР·РёРґРµРЅС‚РѕРІ
-                -- РЅСѓР¶РЅРѕ РІС‹С‡РёСЃР»СЏС‚СЊ РЅР°Р»РѕРі, СЃСѓРјРјРёСЂСѓСЏ РѕРєСЂСѓРіР»РµРЅРёСЏ РґР»СЏ РєР°Р¶РґРѕРіРѕ РїР»Р°С‚РµР¶Р°
+                -- для налоговых нерезидентов
+                -- нужно вычислять налог, суммируя округления для каждого платежа
                   
-                -- СЂР°СЃС‡РµС‚ СЃСѓРјРјС‹ РЅР°С‡РёСЃР»РµРЅРЅРѕРіРѕ РґРѕС…РѕРґР°,
-                -- РѕР±Р»Р°РіР°РµРјРѕРіРѕ РїРѕ СЃС‚Р°РІРєРµ 30%
-                -- СЂР°СЃС‡РµС‚ РќРђР›РћР“ РРЎР§РРЎР›Р•РќРќР«Р™ РїРѕ СЃС‚Р°РІРєРµ 30%
+                -- расчет суммы начисленного дохода,
+                -- облагаемого по ставке 30%
+                -- расчет НАЛОГ ИСЧИСЛЕННЫЙ по ставке 30%
                 Select sum(NALOG_ISCHISL)  into  fSIN 
-                    from (  -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
-                            -- РїРµРЅСЃРёРё   (РїРѕРґР·Р°РїСЂРѕСЃ РїСЂРѕРІРµСЂРµРЅ 1РєРІ 2017 18-04-2017) 
+                    from (  -- изначально правильные, без исправлений
+                            -- пенсии   (подзапрос проверен 1кв 2017 18-04-2017) 
                             Select nvl(sum(round(0.3*ds.SUMMA,0)),0) NALOG_ISCHISL 
                             from DV_SR_LSPV ds
                                  inner join DV_SR_LSPV n30 
@@ -3286,7 +3286,7 @@ begin
                                   and ds.SHIFR_SCHET=60
                                   and ds.NOM_VKL<991
                             union all  
-                            -- РїРѕСЃРѕР±РёСЏ   (РїРѕРґР·Р°РїСЂРѕСЃ РїСЂРѕРІРµСЂРµРЅ 1РєРІ 2017 18-04-2017) 
+                            -- пособия   (подзапрос проверен 1кв 2017 18-04-2017) 
                             Select nvl(sum(round(0.3*ds.SUMMA,0)),0) NALOG_ISCHISL                 
                             from DV_SR_LSPV ds
                                  inner join DV_SR_LSPV n30 
@@ -3297,7 +3297,7 @@ begin
                                   and ds.SERVICE_DOC=0
                                   and ds.SHIFR_SCHET=62
                             union all  
-                            -- РІС‹РєСѓРїРЅС‹Рµ  (РїРѕРґР·Р°РїСЂРѕСЃ РЅСѓР»РµРІРѕР№ 1РєРІ 2017 18-04-2017, РїСЂРѕРІРµСЂРёС‚СЊ РєРѕРіРґР° РѕРєР°Р¶РµС‚СЃСЏ РЅРµРЅСѓР»РµРІС‹Рј!) 
+                            -- выкупные  (подзапрос нулевой 1кв 2017 18-04-2017, проверить когда окажется ненулевым!) 
                             Select nvl(sum(round(0.3*ds.SUMMA,0)),0) NALOG_ISCHISL
                             from DV_SR_LSPV ds
                                  inner join DV_SR_LSPV n30 
@@ -3307,22 +3307,22 @@ begin
                                   and ds.DATA_OP< dTermEnd
                                   and ds.SERVICE_DOC=0
                                   and ds.SHIFR_SCHET=55   
-                            -- СЃСѓРјРјР°СЂРЅРѕ РїРµСЂРІРёС‡РЅС‹Рµ Р·Р°РїРёСЃРё СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
+                            -- суммарно первичные записи с исправлениями
                             union all                     
-                            -- РїРµРЅСЃРёРё      (РїРѕРґР·Р°РїСЂРѕСЃ РїСЂРѕРІРµСЂРµРЅ 1РєРІ 2017 18-04-2017, РІРµСЂРЅСѓР» РЅРѕР»СЊ, РЅРѕ Р±С‹Р» Р·Р°С‡РµС‚ 30%==>13%, СЂРµР·СѓР»СЊС‚Р°С‚ РїСЂР°РІРёР»СЊРЅС‹Р№) 
+                            -- пенсии      (подзапрос проверен 1кв 2017 18-04-2017, вернул ноль, но был зачет 30%==>13%, результат правильный) 
                             Select nvl(sum(round(0.3*dox.SUMMA,0)),0) NAL_ISCH
                             from
                                (Select * from (    
-                                    Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРµРЅСЃРёРё РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                                    from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                                    Select ds.*        -- все исправления пенсии должны выполняться в текущем году
+                                    from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                                         where  ds.SERVICE_DOC<>0
-                                        start with   ds.SHIFR_SCHET= 60          -- РїРµРЅСЃРёСЏ
-                                                 and ds.NOM_VKL<991              -- Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                 and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                 and ds.DATA_OP >= dTermBeg      -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                                 and ds.DATA_OP <  dTermKor      -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                        start with   ds.SHIFR_SCHET= 60          -- пенсия
+                                                 and ds.NOM_VKL<991              -- и пенсия не своя
+                                                 and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                                 and ds.DATA_OP >= dTermBeg      -- исправление сделано после начала периода
+                                                 and ds.DATA_OP <  dTermKor      -- до конца квартала, в котором выполняется корректировка
+                                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                                  and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                  and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -3332,19 +3332,19 @@ begin
                                           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=1
                                              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC                                           
                             union all                     
-                            -- РїРѕСЃРѕР±РёСЏ              (РїРѕРґР·Р°РїСЂРѕСЃ РЅСѓР»РµРІРѕР№ 1РєРІ 2017 18-04-2017, РїСЂРѕРІРµСЂРёС‚СЊ РєРѕРіРґР° РѕРєР°Р¶РµС‚СЃСЏ РЅРµРЅСѓР»РµРІС‹Рј!) 
+                            -- пособия              (подзапрос нулевой 1кв 2017 18-04-2017, проверить когда окажется ненулевым!) 
                             Select nvl(sum(dox.SUMMA),0) NALOG_ISCHISL
                             from
                                (Select * from (    
-                                    Select ds.*        -- РІСЃРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РїРѕСЃРѕР±РёР№ РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ
-                                    from DV_SR_LSPV ds -- С‚.Рє. РїСЂРѕРіСЂР°РјРјР° СЂР°СЃС‡РµС‚Р° РІС‹РїР»Р°С‚ РёРЅР°С‡Рµ РЅРµ РјРѕР¶РµС‚  
+                                    Select ds.*        -- все исправления пособий должны выполняться в текущем году
+                                    from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
                                         where  ds.SERVICE_DOC<>0
-                                        start with   ds.SHIFR_SCHET= 62          -- РїРѕСЃРѕР±РёРµ
-                                                 and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                 and ds.DATA_OP >= dTermBeg      -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                                 and ds.DATA_OP <  dTermKor      -- РґРѕ РєРѕРЅС†Р° РєРІР°СЂС‚Р°Р»Р°, РІ РєРѕС‚РѕСЂРѕРј РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°
-                                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                        start with   ds.SHIFR_SCHET= 62          -- пособие
+                                                 and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                                 and ds.DATA_OP >= dTermBeg      -- исправление сделано после начала периода
+                                                 and ds.DATA_OP <  dTermKor      -- до конца квартала, в котором выполняется корректировка
+                                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS -- неправильного начисления
                                                  and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                  and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
@@ -3354,41 +3354,41 @@ begin
                                           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=86 and n30.SUB_SHIFR_SCHET=1
                                              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC                                   
                             union all                     
-                            -- РІС‹РєСѓРїРЅС‹Рµ             (РїРѕРґР·Р°РїСЂРѕСЃ РЅСѓР»РµРІРѕР№ 1РєРІ 2017 18-04-2017, РїСЂРѕРІРµСЂРёС‚СЊ РєРѕРіРґР° РѕРєР°Р¶РµС‚СЃСЏ РЅРµРЅСѓР»РµРІС‹Рј!) 
+                            -- выкупные             (подзапрос нулевой 1кв 2017 18-04-2017, проверить когда окажется ненулевым!) 
                             Select nvl(sum(dox.SUMMA),0) NAL_ISCH
                             from
                                (Select * from (    
                                     Select ds.*, min(DATA_OP) over(partition by ds.NOM_VKL, ds.NOM_IPS) MINDATOP
                                     from DV_SR_LSPV ds
                                         where  ds.SERVICE_DOC<>0
-                                        start with   ds.SHIFR_SCHET= 55       -- РІС‹РєСѓРїРЅС‹Рµ
-                                                 and ds.SERVICE_DOC=-1        -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                 and ds.DATA_OP >= dTermBeg   -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°
-                                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                        start with   ds.SHIFR_SCHET= 55       -- выкупные
+                                                 and ds.SERVICE_DOC=-1        -- коррекция (начинаем поиск с -1)
+                                                 and ds.DATA_OP >= dTermBeg   -- исправление сделано после начала периода
+                                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                  and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                  and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
-                                    ) where MINDATOP>=dTermBeg                     -- РёСЃРїСЂР°РІР»РµРЅРёРµ РІС‹РєСѓРїРЅС‹С…, РїРѕР»СѓС‡РµРЅРЅС‹С… РІ С‚РµРєСѓС‰РµРј РіРѕРґСѓ 
-                                        and DATA_OP>=dTermBeg and DATA_OP<dTermEnd -- РёСЃРїСЂР°РІР»РµРЅРёСЏ СЃРґРµР»Р°РЅС‹ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ             
+                                    ) where MINDATOP>=dTermBeg                     -- исправление выкупных, полученных в текущем году 
+                                        and DATA_OP>=dTermBeg and DATA_OP<dTermEnd -- исправления сделаны в текущем периоде             
                                 ) dox 
                                 inner join DV_SR_LSPV n30 
                                           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=3
                                              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC                                
                            );               
-/* РІР°СЂРёР°РЅС‚, РёСЃРїРѕР»СЊР·РѕРІР°РЅРЅС‹Р№ РґРѕ 1 РєРІ 2017
-                with q as (-- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (РЈР§РђРЎРўРќРРљР)
+/* вариант, использованный до 1 кв 2017
+                with q as (-- пенсии и выкупные (УЧАСТНИКИ)
                                Select sfl.GF_PERSON, ds.*
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                 where  ds.DATA_OP>=dTermBeg    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < dTermEnd    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ( ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ                             
+                                 where  ds.DATA_OP>=dTermBeg    -- с начала года
+                                     and ds.DATA_OP < dTermEnd    -- до конца отчетного периода  
+                                     and ( ds.SHIFR_SCHET= 55 -- выкупные
+                                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  или пенсия не своя                             
                                      and sfl.NAL_REZIDENT=nNalRez         
-                               UNION    -- РѕС‚СЃРµРєР°РµС‚ РїРѕРІС‚РѕСЂС‹ РІ РґРІСѓС… РїРѕРґР·Р°РїСЂРѕСЃР°С…                                           
-                               -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                               UNION    -- отсекает повторы в двух подзапросах                                           
+                               -- ритаулки и наследуемые пенсии
                                Select vrp.GF_PERSON, ds.*
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
@@ -3399,18 +3399,18 @@ begin
                                                                 and DATA_VYPL < dTermEnd
                                                                 and NAL_REZIDENT = nNalRez
                                                     ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                                 where ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                                 where ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
                                     and ds.DATA_OP>=dTermBeg  
                                     and ds.DATA_OP < dTermEnd                                                               
                               )
-                     -- РґР»СЏ РЅРµСЂРµР·РёРґРµРЅС‚РѕРІ         
-                     -- РЅР°Р»РѕРі 30% СЃ РѕРєСЂСѓРіР»РµРЅРёРµРј РґРѕ СЂСѓР±Р»СЏ СѓРґРµСЂР¶РёРІР°РµС‚СЃСЏ СЃ РєР°Р¶РґРѕР№ РІС‹РїР»Р°С‚С‹         
+                     -- для нерезидентов         
+                     -- налог 30% с округлением до рубля удерживается с каждой выплаты         
                      Select sum(ISCH_NAL) into fSIN
                                        from( 
-                                                 -- РІС‹РїР»Р°С‚С‹ Р±РµР· Р±РѕР»РµРµ РїРѕР·РґРЅРёС… РёСЃРїСЂР°РІР»РµРЅРёР№  
+                                                 -- выплаты без более поздних исправлений  
                                                   Select GF_PERSON, DATA_OP, round( 0.30*SUMMA ) ISCH_NAL  from q   where SERVICE_DOC=0 and SHIFR_SCHET<1000
                                                   UNION ALL
-                                                  -- РІС‹РїР»Р°С‚С‹ СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
+                                                  -- выплаты с исправлениями
                                                   Select osh.GF_PERSON, osh.DATA_OP,  round( 0.30*(osh.SUMMA+kor.SUMMA) ) ISCH_NAL  
                                                            from q OSH  
                                                            inner join q KOR on kor.NOM_VKL=osh.NOM_VKL and kor.NOM_IPS=osh.NOM_IPS and kor.SHIFR_SCHET=osh.SHIFR_SCHET and kor.SSYLKA_DOC=osh.SERVICE_DOC
@@ -3437,7 +3437,7 @@ begin
    nNalRez   number;
    begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
        Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
        dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
        case nPeriod
@@ -3448,40 +3448,40 @@ begin
            else  return Null;                
        end case;
 
-                 -- Р·Р°РїСЂРѕСЃ РїСЂРѕРІРµСЂРµРЅ РЅР° РґР°РЅРЅС‹С… Р·Р° 1Рµ РїРѕР»СѓРіРѕРґРёРµ 2016 РіРѕРґР°   
-                 -- РїРѕР»РЅРѕРµ СЃРѕРІРїР°РґРµРЅРёРµ СЃ РЈР“Рњ РїРѕСЃР»Рµ РёСЃРїСЂР°РІР»РµРЅРёСЏ РІРѕР·РІСЂР°С‚РѕРІ
-                 -- РЅР°Р»РѕРіР° РІ РґРІРёР¶РµРЅРёРё СЃСЂРµРґСЃС‚РІ РЅР° Р›РЎРџР’ (РїРѕР»Рµ SERVICE_DOC)
+                 -- запрос проверен на данных за 1е полугодие 2016 года   
+                 -- полное совпадение с УГМ после исправления возвратов
+                 -- налога в движении средств на ЛСПВ (поле SERVICE_DOC)
                  Select sum(SUMNAL) into fSUN from (
-                             -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
-                             -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, РЅРµ СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РїРѕР·Р¶Рµ СѓРґРµСЂР¶Р°РЅРёСЏ РЅР°Р»РѕРіР°
+                             -- пенсии и выкупные
+                             -- изначально правильные, не скорректированные позже удержания налога
                              Select  sum( ds.SUMMA ) SUMNAL
                                  from DV_SR_LSPV ds
-                                 where  ds.DATA_OP>=dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < dTermEnd        -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0              -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and ds.SHIFR_SCHET=85  -- РЅР°Р»РѕРі  СЃ РїРµРЅСЃРёР№ Рё РІС‹РєСѓРїРЅС‹С…  
+                                 where  ds.DATA_OP>=dTermBeg        -- с начала года
+                                     and ds.DATA_OP < dTermEnd        -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений
+                                     and ds.SHIFR_SCHET=85  -- налог  с пенсий и выкупных  
                            UNION ALL
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
                                Select sum(SUMKORR) SUMNAL from (
                                             Select ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds                 
-                                         --  where ds.DATA_OP>dTermBeg -- РЈС‡РёС‚С‹РІР°РµРј РѕРїРµСЂР°С†РёРё С‚РѕР»СЊРєРѕ РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ                                       
-                                             start with ds.SHIFR_SCHET=85  -- РЅР°Р»РѕРі  СЃ РїРµРЅСЃРёР№ Рё РІС‹РєСѓРїРЅС‹С… 
-                                                    and ds.SERVICE_DOC=-1             -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg          -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                           
-                                                    and ds.DATA_OP < dTermEnd         -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                         --  where ds.DATA_OP>dTermBeg -- Учитываем операции только в текущем отчетном периоде                                       
+                                             start with ds.SHIFR_SCHET=85  -- налог  с пенсий и выкупных 
+                                                    and ds.SERVICE_DOC=-1             -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg          -- исправление сделано                           
+                                                    and ds.DATA_OP < dTermEnd         -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET   
-                                         --  РёСЃРїСЂР°СЏР»СЏРµРјРѕРµ С‚РѕР¶Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ  
-                                             having min(ds.DATA_OP)>=dTermBeg -- РёРіРЅРѕСЂРёСЂСѓРµРј РёСЃРїСЂР°РІР»РµРЅРёРµ РѕРїРµСЂР°С†РёР№, СЃРґРµР»Р°РЅРЅС‹С… РґРѕ РїРµСЂРёРѕРґР°     
+                                         --  испраяляемое тоже в текущем периоде  
+                                             having min(ds.DATA_OP)>=dTermBeg -- игнорируем исправление операций, сделанных до периода     
                                        )                
                           UNION ALL                                            
-                              -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                              -- ритаулки и наследуемые пенсии
                               Select sum(ds.SUMMA) SUMNAL
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
@@ -3491,7 +3491,7 @@ begin
                                                                 and DATA_VYPL>=dTermBeg 
                                                                 and DATA_VYPL < dTermEnd
                                                     ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                              where ds.SHIFR_SCHET=86 -- РЅР°Р»РѕРі РЅР° СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                              where ds.SHIFR_SCHET=86 -- налог на ритуалки и наследуемые пенсии
                                     and ds.DATA_OP >=dTermBeg  
                                     and ds.DATA_OP < dTermEnd                                                                            
                 
@@ -3529,8 +3529,8 @@ begin
    end SumNeUderzhNal;
 
 
-   -- РЎСѓРјРјР° РЅР°Р»РѕРіР°, РІРѕР·РІСЂР°С‰РµРЅРЅРѕРіРѕ РЅР°Р»РѕРіРѕРІС‹Рј Р°РіРµРЅС‚РѕРј
-   -- РёСЃРїСЂР°РІР»РµРЅРёРµ РѕС€РёР±РѕРє РїСЂРµРґС‹РґСѓС‰РёС… РїРµСЂРёРѕРґРѕРІ (С€РёС„СЂ 83)
+   -- Сумма налога, возвращенного налоговым агентом
+   -- исправление ошибок предыдущих периодов (шифр 83)
    function SumVozvraNal83( pSPRID in number ) return float as
    fSUM83   float;
    fSUMPV   float;
@@ -3541,7 +3541,7 @@ begin
    nNalRez  number;
    begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
        Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
        dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
        case nPeriod
@@ -3560,10 +3560,10 @@ begin
    end SumVozvraNal83;   
    
    
-   -- РЎСѓРјРјР° РЅР°Р»РѕРіР°, РІРѕР·РІСЂР°С‰РµРЅРЅРѕРіРѕ РЅР°Р»РѕРіРѕРІС‹Рј Р°РіРµРЅС‚РѕРј
-   -- С†РµРїРѕС‡РєР° РёСЃРїСЂР°РІР»РµРЅРЅС‹С… РґРѕРєСѓРјРµРЅС‚РѕРІ РґРѕС…РѕРґ/РЅР°Р»РѕРі СѓС…РѕРґРёС‚ РІ РїСЂРµРґС‹РґСѓС‰РёР№ РїРµСЂРёРѕРґ
-   -- СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РёСЃРїСЂР°РІР»РµРЅРёСЋ РЅР°Р»РѕРіР° СЃ РІС‹РєСѓРїРЅРѕР№ СЃСѓРјРјС‹
-   -- РїРѕ РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРёСЋ СѓРІРµРґРѕРјР»РµРЅРёСЏ
+   -- Сумма налога, возвращенного налоговым агентом
+   -- цепочка исправленных документов доход/налог уходит в предыдущий период
+   -- соответствует исправлению налога с выкупной суммы
+   -- по предоставлению уведомления
       
    function SumVozvraNalDoc( pSPRID in number ) return float as
    fSUM83   float;
@@ -3575,7 +3575,7 @@ begin
    nNalRez  number;
    begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
        Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
        dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
        case nPeriod
@@ -3586,24 +3586,24 @@ begin
            else  return Null;                
        end case;   
  
-       -- РђРЅРёРєРёРЅ 25-10-2016  
-       --   РїСЂРѕРІРµСЂРёР» РµС‰С‘ СЂР°Р· 17-04-2017
-       --   Р·Р°РїСЂРѕСЃ РІС‹РґР°РµС‚ СЃСѓРјРјС‹ РІРѕР·РІСЂР°С‚РѕРІ РќР”Р¤Р› Р·Р° РїРµСЂРёРѕРґ: РЅР°С‡Р°Р»Рѕ РіРѕРґР° - РєРѕРЅРµС† РѕС‚С‡РµС‚РЅРѕРіРѕ РєРІР°СЂС‚Р°Р»Р° 
-       --   РёСЃРїСЂР°РІР»СЏРµРјР°СЏ Р·Р°РїРёСЃСЊ РґРѕР»Р¶РЅР° Р±С‹С‚СЊ СЃРґРµР»Р°РЅР° РЅРµ РїРѕР·Р¶Рµ РєРѕРЅС†Р° С‚РµРєСѓС‰РµРіРѕ РїРµСЂРёРѕРґР°
-       --   РІ СЃСѓРјРјСѓ РІРѕР·РІСЂР°С‚РѕРІ РІРєР»СЋС‡Р°СЋС‚СЃСЏ РёСЃРїСЂР°РІР»РµРЅРёСЏ, СЃРґРµР»Р°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ 
+       -- Аникин 25-10-2016  
+       --   проверил ещё раз 17-04-2017
+       --   запрос выдает суммы возвратов НДФЛ за период: начало года - конец отчетного квартала 
+       --   исправляемая запись должна быть сделана не позже конца текущего периода
+       --   в сумму возвратов включаются исправления, сделанные в текущем периоде 
        with ispr as (   
                 Select q.*
-                --       ,sum(SUMMA)   over(partition by NOM_VKL, NOM_IPS) CHK_SUM   -- РїСЂРѕРІРµСЂРёС‚СЊ РЅР° СЃС‚РѕСЂРЅРѕ
-                --       ,min(DATA_OP) over(partition by NOM_VKL, NOM_IPS) MIN_DAT   -- РґР°С‚Р° РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅРѕРіРѕ СѓРґРµСЂР¶Р°РЅРёСЏ
-                --       ,count(*)     over(partition by NOM_VKL, NOM_IPS) CHK_CNT   -- С‡РёСЃР»Рѕ Р·Р°РїРёСЃРµР№: РїРµСЂРІРёС‡РЅРѕР№ Рё РёСЃРїСЂР°РІР»РµРЅРёР№
+                --       ,sum(SUMMA)   over(partition by NOM_VKL, NOM_IPS) CHK_SUM   -- проверить на сторно
+                --       ,min(DATA_OP) over(partition by NOM_VKL, NOM_IPS) MIN_DAT   -- дата первоначального удержания
+                --       ,count(*)     over(partition by NOM_VKL, NOM_IPS) CHK_CNT   -- число записей: первичной и исправлений
                 --       ,count(*)     over(partition by NOM_VKL, NOM_IPS order by DATA_OP rows unbounded preceding) CHK_ORD
                 from(
                      Select ds.*, CONNECT_BY_ISLEAF ISLEAF 
                      from DV_SR_LSPV ds
-                        start with ds.SHIFR_SCHET =85       -- СѓРґРµСЂР¶Р°РЅРёРµ РЅР°Р»РѕРіРѕРІ
-                                and ds.SUB_SHIFR_SCHET > 1  -- С‚РѕР»СЊРєРѕ РІС‹РєСѓРїРЅС‹Рµ, РїРµРЅСЃРёРё РёСЃРєР»СЋС‡Р°РµРј
-                                and ds.SERVICE_DOC= -1      -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј СЃ -1)
-                                and ds.DATA_OP>=dTermBeg    -- РїРѕСЃР»РµРґРЅСЏСЏ РєРѕСЂСЂРµРєС†РёСЏ РІРЅСѓС‚СЂРё РїРµСЂРёРѕРґР° РёР»Рё РїРѕР·Р¶Рµ
+                        start with ds.SHIFR_SCHET =85       -- удержание налогов
+                                and ds.SUB_SHIFR_SCHET > 1  -- только выкупные, пенсии исключаем
+                                and ds.SERVICE_DOC= -1      -- коррекция (начинаем с -1)
+                                and ds.DATA_OP>=dTermBeg    -- последняя коррекция внутри периода или позже
                         connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
                                and PRIOR ds.NOM_IPS=ds.NOM_IPS
                                and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
@@ -3612,13 +3612,13 @@ begin
                     UNION ALL           
                      Select ds.*, CONNECT_BY_ISLEAF ISLEAF 
                      from DV_SR_LSPV ds
-                        start with ds.SHIFR_SCHET =85       -- СѓРґРµСЂР¶Р°РЅРёРµ РЅР°Р»РѕРіРѕРІ
-                                and ds.SUB_SHIFR_SCHET <2  -- С‚РѕР»СЊРєРѕ РїРµРЅСЃРёРё
-                                and ds.SERVICE_DOC= -1      -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј СЃ -1)
-                                and ds.DATA_OP>=dTermBeg    -- РїРѕСЃР»РµРґРЅСЏСЏ РєРѕСЂСЂРµРєС†РёСЏ РІРЅСѓС‚СЂРё РїРµСЂРёРѕРґР° РёР»Рё РїРѕР·Р¶Рµ
+                        start with ds.SHIFR_SCHET =85       -- удержание налогов
+                                and ds.SUB_SHIFR_SCHET <2  -- только пенсии
+                                and ds.SERVICE_DOC= -1      -- коррекция (начинаем с -1)
+                                and ds.DATA_OP>=dTermBeg    -- последняя коррекция внутри периода или позже
                                 and exists (
-                                       -- РїРѕ С‚РѕРјСѓ Р¶Рµ РґРѕРіРѕРІРѕСЂСѓ Рё РґРѕРєСѓРјРµРЅС‚Сѓ РґРѕР»Р¶РЅР° Р±С‹С‚СЊ Р·Р°РїРёСЃСЊ РїРѕ С€РёС„СЂСѓ 83
-                                       -- СЌС‚Рѕ РїСЂРёР·РЅР°Рє РЅРµ СЃС‚РѕСЂРЅРѕ, Р° РІРѕР·РІСЂР°С‚Р° РїРµРЅСЃРёРё
+                                       -- по тому же договору и документу должна быть запись по шифру 83
+                                       -- это признак не сторно, а возврата пенсии
                                        Select * from DV_SR_LSPV vv
                                        where vv.NOM_VKL=ds.NOM_VKL and vv.NOM_IPS=ds.NOM_IPS and vv.SSYLKA_DOC=ds.SSYLKA_DOC
                                              and vv.SHIFR_SCHET=83 and vv.SERVICE_DOC=0
@@ -3631,18 +3631,18 @@ begin
                     ) q  
               )
         Select -sum(SUMMA) into fSUMPV 
-        from ispr                     -- РјРёРЅСѓСЃ, РїРѕС‚РѕРјСѓ С‡С‚Рѕ Р·РґРµСЃСЊ Р’РћР—Р’Р РђРў - РџРћР›РћР–РРўР•Р›Р¬РќРћР• Р§РРЎР›Рћ, Р° РІ РґРІРёР¶РµРЅРёРё РїРѕ Р›РЎРџР’ РѕС‚СЂРёС†Р°С‚РµР»СЊРЅРѕРµ
-          where DATA_OP >= dTermBeg   -- РѕСЃС‚Р°РІРёС‚СЊ РІ СЃСѓРјРјРµ РѕРїРµСЂР°С†РёРё РёСЃРїСЂР°РІР»РµРЅРёР№,
-            and DATA_OP  < dTermEnd   -- РІС‹РїРѕР»РЅРµРЅРЅС‹Рµ С‚РѕР»СЊРєРѕ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-            and ISLEAf = 0;           -- С‚РѕР»СЊРєРѕ РёСЃРїСЂР°РІР»РµРЅРёСЏ, Р±РµР· РїРµСЂРІРёС‡РЅРѕР№ СЃСѓРјРјС‹/ Р±РµР· РёСЃРїСЂР°РІР»СЏРµРјРѕР№ РїРµСЂРІРѕР№ Р·Р°РїРёСЃРё
+        from ispr                     -- минус, потому что здесь ВОЗВРАТ - ПОЛОЖИТЕЛЬНОЕ ЧИСЛО, а в движении по ЛСПВ отрицательное
+          where DATA_OP >= dTermBeg   -- оставить в сумме операции исправлений,
+            and DATA_OP  < dTermEnd   -- выполненные только в текущем периоде
+            and ISLEAf = 0;           -- только исправления, без первичной суммы/ без исправляемой первой записи
             
               
    return nvl(fSUMPV,0);         
       
    end SumVozvraNalDoc;    
    
-   -- РЎСѓРјРјР° РЅР°Р»РѕРіР°, РІРѕР·РІСЂР°С‰РµРЅРЅРѕРіРѕ РЅР°Р»РѕРіРѕРІС‹Рј Р°РіРµРЅС‚РѕРј
-   -- РС‚РѕРіРѕ
+   -- Сумма налога, возвращенного налоговым агентом
+   -- Итого
    
    function SumVozvraNal( pSPRID in number ) return float as
    fSUM83   float;
@@ -3654,13 +3654,13 @@ begin
    nNalRez  number;
    begin
 
- /*    РђРЅРёРєРёРЅ 25-10-2016      */
+ /*    Аникин 25-10-2016      */
  /*           18-04-2017      */
    
                     --fSUM83:= SumVozvraNal83(pSPRID);
    fSUMPV:= SumVozvraNalDoc(pSPRID);
 
-   return fSUMPV;   -- РІ РїРѕР»Рµ 090 С‚РѕР»СЊРєРѕ С‚Рѕ, С‡С‚Рѕ РІРµСЂРЅСѓР»Рё РїРѕ РґРєСѓРјРµРЅС‚Сѓ(Р·Р°СЏРІР»РµРЅРёСЋ)    РЅРµ РЅСѓР¶РЅРѕ + fSUM83;
+   return fSUMPV;   -- в поле 090 только то, что вернули по дкументу(заявлению)    не нужно + fSUM83;
    
    end SumVozvraNal;
    
@@ -3673,7 +3673,7 @@ begin
   dbms_output.enable(10000);  
   FXNDFL_UTIL.ZaPeriodPoDatam( TW, RC, 149565 );
   :CC := TW;
-  dbms_output.put_line( nvl(RC,'РћРљ') );
+  dbms_output.put_line( nvl(RC,'ОК') );
 END;
 */   
    procedure ZaPeriodPoDatam( pReportCursor out sys_refcursor, pErrInfo out varchar2, pSPRID in number, pKorKV in number default 0 ) as
@@ -3685,7 +3685,7 @@ END;
    nNalRez  number;
    begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
        Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
        dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
        case nPeriod
@@ -3693,56 +3693,56 @@ END;
            when 31 then dTermEnd := add_months(dTermBeg,6);        
            when 33 then dTermEnd := add_months(dTermBeg,9);        
            when 34 then dTermEnd := add_months(dTermBeg,12);      
-           else pErrInfo :='РћС€РёР±РєР° РёР·РІР»РµС‡РµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ СЃРїСЂР°РІРєРё.'; return;                
+           else pErrInfo :='Ошибка извлечения параметров справки.'; return;                
        end case;
        
-       -- РґР»СЏ РєРѕСЂСЂРµРєС‚РёСЂСѓР±С‰РёС… СЃРїСЂР°РІРѕРє
-       -- pKorKV - С‡РёСЃР»Рѕ РєРІР°СЂС‚Р°Р»РѕРІ РїРѕСЃР»Рµ РѕС‚С‡РµС‚РЅРѕРіРѕ, РІ РєРѕС‚СЂС‹С… РЅСѓР¶РЅРѕ СѓС‡РµСЃС‚СЊ РёСЃРїСЂР°РІР»РµРЅРёРµ РІ РѕС‚С‡РµС‚РЅРѕРј РєРІР°СЂС‚Р°Р»Рµ
+       -- для корректирубщих справок
+       -- pKorKV - число кварталов после отчетного, в котрых нужно учесть исправление в отчетном квартале
        if pKorKV>0 then
-          dTermKor := add_months(dTermEnd,3*pKorKV );  -- РїРѕСЃР»РµРґРЅСЏСЏ РґР°С‚Р° СѓС‡РµС‚Р° РёСЃРїСЂР°РІР»РµРЅРёР№
+          dTermKor := add_months(dTermEnd,3*pKorKV );  -- последняя дата учета исправлений
        else
           dTermKor := dTermEnd;
        end if;
    
        open pReportCursor for 
  
-             with    -- Р”РћРҐРћР” РІ РёС‚РѕРіРµ РїРѕР»СѓС‡РµР°С‚СЃСЏ РёСЃРїСЂР°РІР»РµРЅРЅС‹Р№
+             with    -- ДОХОД в итоге получеатся исправленный
              qDoh as (   
-                     -- РїРµРЅСЃРёРё, РІС‹РєСѓРїРЅС‹Рµ Рё СЂРёС‚СѓР°Р»РєРё
-                     -- Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                     -- пенсии, выкупные и ритуалки
+                     -- без исправлений
                      Select  DATA_OP, sum(SUMMA) SUMDOH
                      from(
                               Select ds.DATA_OP, ds.SUMMA
                                      from DV_SR_LSPV ds                                   
-                                     where  ds.DATA_OP >= dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                        and ds.DATA_OP <  dTermEnd        -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                        and ds.SERVICE_DOC=0              -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№   
-                                        and (    ds.SHIFR_SCHET= 55                      -- РІС‹РєСѓРїРЅС‹Рµ
-                                            or ( ds.SHIFR_SCHET= 60 and ds.NOM_VKL<991 ) -- РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                            or   ds.SHIFR_SCHET= 62 )                    -- СЂРёС‚СѓР°Р»РєРё
+                                     where  ds.DATA_OP >= dTermBeg        -- с начала года
+                                        and ds.DATA_OP <  dTermEnd        -- до конца отчетного периода  
+                                        and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений   
+                                        and (    ds.SHIFR_SCHET= 55                      -- выкупные
+                                            or ( ds.SHIFR_SCHET= 60 and ds.NOM_VKL<991 ) -- пенсия не своя
+                                            or   ds.SHIFR_SCHET= 62 )                    -- ритуалки
                           UNION ALL
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               -- РџР•РќРЎРР
-                               -- (РґР»СЏ РїРµРЅСЃРёР№ Р·РґРµСЃСЊ РґРѕР»Р¶РЅС‹ РїРѕР»СѓС‡РёС‚СЊСЃСЏ РІСЃРµ РЅСѓР»Рё, РїРѕС‚РѕРјСѓ С‡С‚Рѕ РЎРўРћР РќРћ)
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
+                               -- ПЕНСИИ
+                               -- (для пенсий здесь должны получиться все нули, потому что СТОРНО)
                                Select MINDATOP as DATA_OP, SUMKORR as SUMMA from (
                                             Select ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds                                           
-                                             start with ds.SHIFR_SCHET=60          -- РїРµРЅСЃРёСЏ
-                                                    and ds.NOM_VKL<991             --  РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ
-                                                    and ds.SERVICE_DOC=-1          -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=60          -- пенсия
+                                                    and ds.NOM_VKL<991             --  не из своих средств
+                                                    and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано                          
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET      
-                                       )  where MINDATOP >= dTermBeg              -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP <  dTermEnd              -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ    
+                                       )  where MINDATOP >= dTermBeg              -- неправильное начисление было
+                                            and MINDATOP <  dTermEnd              -- в текущем отчетном периоде    
                           UNION ALL                                            
-                               -- Р’Р«РљРЈРџРќР«Р•
+                               -- ВЫКУПНЫЕ
                                Select MINDATOP as DATA_OP, sum(SUMKORR) as SUMMA 
                                from (
                                             Select -- ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
@@ -3750,81 +3750,81 @@ END;
                                                    ds.SUMMA   SUMKORR,
                                                    min(ds.DATA_OP) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) MINDATOP
                                             from  DV_SR_LSPV ds                                    
-                                             start with ds.SHIFR_SCHET=55          -- РІС‹РєСѓРїРЅС‹Рµ
-                                                    and ds.SERVICE_DOC=-1          -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                --  and ds.DATA_OP < to_date('01.01.2017')      -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ Р РџРћР—Р–Р•                                               
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=55          -- выкупные
+                                                    and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано                          
+                                                --  and ds.DATA_OP < to_date('01.01.2017')      -- в текущем отчетном периоде И ПОЗЖЕ                                               
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                          -- group by  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET      
-                                       )  where MINDATOP >= dTermBeg       -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP <  dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                            and DATKORR  <  dTermKor       -- СЃСѓРјРјРёСЂСѓРµРј РёСЃРїСЂР°РІР»РµРЅРёСЏ, СЃРґРµР»Р°РЅРЅС‹Рµ РїРѕСЃР»Рµ РѕС‚С‡РµС‚РЅРѕРіРѕ РєРІР°СЂС‚Р°Р»Р° РЅР° С‡РёСЃР»Рѕ РєРІР°СЂС‚Р°Р»РѕРІ pKorKV
+                                       )  where MINDATOP >= dTermBeg       -- неправильное начисление было
+                                            and MINDATOP <  dTermEnd       -- в текущем отчетном периоде
+                                            and DATKORR  <  dTermKor       -- суммируем исправления, сделанные после отчетного квартала на число кварталов pKorKV
                                         group by MINDATOP                                                                             
                           ) group by DATA_OP    
                      ),
              qNal as (
-                     -- РЅР°Р»РѕРіРё СЃ РїРµРЅСЃРёР№ Рё РІС‹РєСѓРїРЅС‹С…
-                     -- Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                     -- налоги с пенсий и выкупных
+                     -- без исправлений
                      Select  DATA_OP, sum(SUMMA) SUMNAL
                      from(
                              Select ds.DATA_OP, ds.SUMMA 
                                  from DV_SR_LSPV ds
-                                 where ds.DATA_OP >= dTermBeg  -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                   and ds.DATA_OP <  dTermEnd  -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                   and ds.SERVICE_DOC=0        -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                   and ds.SHIFR_SCHET=85       -- РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
+                                 where ds.DATA_OP >= dTermBeg  -- с начала года
+                                   and ds.DATA_OP <  dTermEnd  -- до конца отчетного периода  
+                                   and ds.SERVICE_DOC=0        -- выплаты без последующих исправлений
+                                   and ds.SHIFR_SCHET=85       -- налоги на доходы пенсии и выкупные
                            UNION ALL
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               -- (РІРѕРѕР±С‰Рµ С‚Рѕ Р·РґРµСЃС‚СЊ РјРѕР¶РµС‚ Р±С‹С‚СЊ С‚РѕР»СЊРєРѕ РЎРўРћР РќРћ, Рё СЃСѓРјРјР° РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РЅСѓР»РµРј!)
+                               -- исправленные пенсии
+                               -- начисленные и скорректированные в текущем периоде
+                               -- (вообще то здесть может быть только СТОРНО, и сумма должна быть нулем!)
                                Select MINDATOP as DATA_OP, SUMKORR as SUMMA from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds 
                                         ---    
-                                        --   РЈС‡РёС‚С‹РІР°РµРј РѕРїРµСЂР°С†РёРё С‚РѕР»СЊРєРѕ РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                                        --   Учитываем операции только в текущем отчетном периоде
                                         ---                                                   
-                                             start with ds.SHIFR_SCHET=85      --  РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё 
-                                                    and ds.SUB_SHIFR_SCHET <2  --  РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP >= dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                         
-                                                    and ds.DATA_OP <  dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=85      --  налоги на доходы пенсии 
+                                                    and ds.SUB_SHIFR_SCHET <2  --  не из своих средств
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP >= dTermBeg       -- исправление сделано                         
+                                                    and ds.DATA_OP <  dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by   ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET         
-                                       )  where MINDATOP >= dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP <  dTermEnd              -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ      
+                                       )  where MINDATOP >= dTermBeg               -- неправильное начисление было
+                                            and MINDATOP <  dTermEnd              -- в текущем отчетном периоде      
                            UNION ALL
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РІС‹РєСѓРїРЅС‹Рµ
-                               -- РІ Р Р°Р·РґРµР» 2 РґРѕР»Р¶РЅР° РїРѕРїР°СЃС‚СЊ РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅРѕ СѓРґРµСЂР¶Р°РЅРЅР°СЏ СЃСѓРјРјР° РЅР°Р»РѕРіР°
-                               -- РёСЃРїСЂР°РІР»РµРЅРёСЏ/РІРѕР·РІСЂР°С‚С‹ РїРѕ Р·Р°СЏРІР»РµРЅРёСЋ РґРѕР»Р¶РЅС‹ РїРѕРїР°СЃС‚СЊ РІ РїРѕР»Рµ 090 Р Р°Р·РґРµР»Р° 1
+                               -- исправленные выкупные
+                               -- в Раздел 2 должна попасть первоначально удержанная сумма налога
+                               -- исправления/возвраты по заявлению должны попасть в поле 090 Раздела 1
                                Select DATA_OP, SUMMA 
                                from (
                                             Select  ds.DATA_OP, ds.SUMMA, CONNECT_BY_ISLEAF ISLEAF
                                             from  DV_SR_LSPV ds                                                   
-                                             start with ds.SHIFR_SCHET=85      --  РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ 
-                                                    and ds.SUB_SHIFR_SCHET >1  --  РІС‹РєСѓРїРЅС‹С… СЃСѓРјРј
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP >= dTermBeg       -- РїРѕСЃР»РµРґРЅРµРµ РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ Р РџРћР—Р–Р•                         
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=85      --  налоги на доходы 
+                                                    and ds.SUB_SHIFR_SCHET >1  --  выкупных сумм
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP >= dTermBeg       -- последнее исправление сделано в текущем отчетном периоде И ПОЗЖЕ                         
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC        
-                                    ) where DATA_OP >= dTermBeg    -- СЃСѓРјРјРёСЂСѓРµРј С‚РѕР»СЊРєРѕ РґРІРёР¶РµРЅРёСЏ
-                                        and DATA_OP <  dTermEnd    -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ 
-                                        and ISLEAF=1               -- РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅР°СЏ СЃСѓРјРјР° РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ                                                      
+                                    ) where DATA_OP >= dTermBeg    -- суммируем только движения
+                                        and DATA_OP <  dTermEnd    -- в текущем отчетном периоде 
+                                        and ISLEAF=1               -- первоначальная сумма в текущем периоде                                                      
                            UNION ALL                                      
-                               -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                               -- ритаулки и наследуемые пенсии
                                Select ds.DATA_OP, ds.SUMMA
                                   from DV_SR_LSPV ds          
-                                  where ds.SHIFR_SCHET=86 -- РЅР°Р»РѕРі РЅР° СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                                  where ds.SHIFR_SCHET=86 -- налог на ритуалки и наследуемые пенсии
                                       and ds.SERVICE_DOC=0  
                                       and ds.DATA_OP >= dTermBeg  
                                       and ds.DATA_OP <  dTermEnd    
@@ -3851,7 +3851,7 @@ END;
         
    end ZaPeriodPoDatam;
    
-    -- РЅРµСЃРѕРІРїР°РґРµРЅРёСЏ РёСЃС‡РёСЃР»РµРЅРЅС‹С… Рё СѓРґРµСЂР¶Р°РЅРЅС‹С… СЃСѓРјРј РЅР°Р»РѕРіРѕРІ
+    -- несовпадения исчисленных и удержанных сумм налогов
     procedure Sverka_NesovpadNal( pReportCursor out sys_refcursor, pErrInfo out varchar2, pSPRID in number ) as
     dTermBeg date;
     dTermEnd date;
@@ -3860,7 +3860,7 @@ END;
     nNalRez   number;
     begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
         Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
         dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
         case nPeriod
@@ -3868,19 +3868,19 @@ END;
             when 31 then dTermEnd := to_date( '01.07.'||to_char(nGod),'dd.mm.yyyy' );        
             when 33 then dTermEnd := to_date( '01.10.'||to_char(nGod),'dd.mm.yyyy' );        
             when 34 then dTermEnd := to_date( '01.01.'||to_char(nGod+1),'dd.mm.yyyy' );      
-            else pErrInfo :='РћС€РёР±РєР° РёР·РІР»РµС‡РµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ СЃРїСЂР°РІРєРё.'; return;                
+            else pErrInfo :='Ошибка извлечения параметров справки.'; return;                
         end case;
    
         open pReportCursor for 
         with  q13 as (
- /*     -- Р·Р° РїРѕСЃР»РµРґРЅРёР№ РјРµСЃСЏС† (РµС‰С‘ РЅРµ РґРѕР±Р°РІРёР»Рё РІ РґРІРёР¶РµРЅРёРµ)
-        -- РїРµРЅСЃРёСЏ
+ /*     -- за последний месяц (ещё не добавили в движение)
+        -- пенсия
         Select sfl.GF_PERSON, 60 SHIFR_SCHET, vp.DATA_VYPL DATA_OP, sum(vp.PENS) SUMMA
         from VYPLACH_PEN_BUF vp inner join SP_FIZ_LITS sfl on sfl.SSYLKA=vp.SSYLKA
         where vp.NOM_VKL<991 and SFL.NAL_REZIDENT=1  
         group by sfl.GF_PERSON, vp.DATA_VYPL
         union all
-        -- РІС‹С‡РµС‚С‹        
+        -- вычеты        
         Select sfl.GF_PERSON, 1111 SHIFR_SCHET, vp.DATA_VYPL DATA_OP, sum(vp.LPN_SUM) SUMMA
         from VYPLACH_PEN_BUF vp inner join SP_FIZ_LITS sfl on sfl.SSYLKA=vp.SSYLKA
         where vp.NOM_VKL<991 and SFL.NAL_REZIDENT=1  
@@ -3889,37 +3889,37 @@ END;
         UNION ALL
                
 */      --
-                              -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (С‚РѕР»СЊРєРѕ РЈР§РђРЎРўРќРРљР)
-                              -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
-                              -- РџР•РќРЎРР 
+                              -- пенсии и выкупные (только УЧАСТНИКИ)
+                              -- изначально правильные, без исправлений
+                              -- ПЕНСИИ 
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         -- С‚РѕР»СЊРєРѕ С‚Рµ Р›РЎРџР’, СЃ РєРѕС‚РѕСЂС‹С… РїРµСЂРµС‡РёСЃР»СЏР»СЃСЏ РЅР°Р»РѕРі
+                                         -- только те ЛСПВ, с которых перечислялся налог
                                          inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                              where SHIFR_SCHET=85
-                                                               and SUB_SHIFR_SCHET in (0,1)  -- РїРµРЅСЃРёРё
+                                                               and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                and DATA_OP>=dTermBeg  
                                                                and DATA_OP < dTermEnd
                                                       ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
-                                 where  ds.DATA_OP>=dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < dTermEnd      -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0           -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and sfl.NAL_REZIDENT=1         -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                     and sfl.PEN_SXEM<>7            -- РЅРµ РћРџРЎ
-                                     and ( ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) -- РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                          or ds.SHIFR_SCHET>1000 )                    -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ  
-                              -- Р’Р«РљРЈРџРќР«Р•
+                                 where  ds.DATA_OP>=dTermBeg        -- с начала года
+                                     and ds.DATA_OP < dTermEnd      -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0           -- выплаты без последующих исправлений
+                                     and sfl.NAL_REZIDENT=1         -- по ставке 13%
+                                     and sfl.PEN_SXEM<>7            -- не ОПС
+                                     and ( ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) -- пенсия не своя
+                                          or ds.SHIFR_SCHET>1000 )                    -- предоставленные суммы вычетов  
+                              -- ВЫКУПНЫЕ
                               UNION ALL
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         -- С‚РѕР»СЊРєРѕ С‚Рµ Р›РЎРџР’, СЃ РєРѕС‚РѕСЂС‹С… РїРµСЂРµС‡РёСЃР»СЏР»СЃСЏ РЅР°Р»РѕРі
+                                         -- только те ЛСПВ, с которых перечислялся налог
                                          inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                            where   SHIFR_SCHET=85
-                                                               and SUB_SHIFR_SCHET in (2,3)  -- РІС‹РєСѓРїРЅС‹Рµ
+                                                               and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                and DATA_OP>=dTermBeg  
                                                                and DATA_OP < dTermEnd 
                                                     ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
@@ -3927,17 +3927,17 @@ END;
                                                         where TIP_VYPL=1030
                                                           and DATA_VYPL>=dTermBeg
                                                           and DATA_VYPL < dTermEnd
-                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                                    ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ   
-                                 where  ds.DATA_OP>=dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < dTermEnd      -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0           -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and ds.SHIFR_SCHET= 55    -- РІС‹РєСѓРїРЅС‹Рµ
-                                       --    or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ     РџРћ Р’Р«РљРЈРџРќР«Рњ Р’Р«Р§Р•РўРћР’ РќР• Р”РђР®Рў  ???                                       
+                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                                    ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО   
+                                 where  ds.DATA_OP>=dTermBeg        -- с начала года
+                                     and ds.DATA_OP < dTermEnd      -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0           -- выплаты без последующих исправлений
+                                     and ds.SHIFR_SCHET= 55    -- выкупные
+                                       --    or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов     ПО ВЫКУПНЫМ ВЫЧЕТОВ НЕ ДАЮТ  ???                                       
                                UNION ALL 
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРёРµ Рё РєРѕСЂСЂРµРєС†РёСЏ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               -- РџР•РќРЎРР
+                               -- исправленные пенсии и выкупные 
+                               -- начисление и коррекция в текущем периоде
+                               -- ПЕНСИИ
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds            
@@ -3945,27 +3945,27 @@ END;
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                                      where SHIFR_SCHET=85 
-                                                                       and SUB_SHIFR_SCHET in (0,1)  -- РїРµРЅСЃРёРё
+                                                                       and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                        and DATA_OP>=dTermBeg  
                                                                        and DATA_OP < dTermEnd 
                                                                    ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
-                                            where  sfl.NAL_REZIDENT=1                 -- РїРѕ СЃС‚Р°РІРєРµ 13%        
-                                                 and sfl.PEN_SXEM<>7  -- РЅРµ РћРџРЎ
-                                             start with ( ( ds.SHIFR_SCHET=60  and ds.NOM_VKL<991 ) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                       or (ds.SHIFR_SCHET>1000 and ds.NOM_VKL<991 ) )  -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1          -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                              
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            where  sfl.NAL_REZIDENT=1                 -- по ставке 13%        
+                                                 and sfl.PEN_SXEM<>7  -- не ОПС
+                                             start with ( ( ds.SHIFR_SCHET=60  and ds.NOM_VKL<991 ) --  или пенсия не своя
+                                                       or (ds.SHIFR_SCHET>1000 and ds.NOM_VKL<991 ) )  -- предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано
+                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                              
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP < dTermEnd               -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ       
-                               -- Р’Р«РљРЈРџРќР«Р•
+                                       )  where MINDATOP>=dTermBeg               -- неправильное начисление было
+                                            and MINDATOP < dTermEnd               -- в текущем отчетном периоде       
+                               -- ВЫКУПНЫЕ
                                UNION ALL
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
@@ -3974,7 +3974,7 @@ END;
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                                        where SHIFR_SCHET=85 
-                                                                           and SUB_SHIFR_SCHET in (2,3)  -- РІС‹РєСѓРїРЅС‹Рµ
+                                                                           and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                            and DATA_OP>=dTermBeg  
                                                                            and DATA_OP < dTermEnd 
                                                                    ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
@@ -3982,58 +3982,58 @@ END;
                                                                         where TIP_VYPL=1030
                                                                           and DATA_VYPL>=dTermBeg
                                                                           and DATA_VYPL < dTermEnd
-                                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                                                   ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ                                                                      
-                                             start with ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                                       --  or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ  РџРћ Р’Р«РљРЈРџРќР«Рњ Р’Р«Р§Р•РўРћР’ РќР• Р”РђР®Рў ???
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                              
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                                                   ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО                                                                      
+                                             start with ds.SHIFR_SCHET= 55 -- выкупные
+                                                       --  or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов  ПО ВЫКУПНЫМ ВЫЧЕТОВ НЕ ДАЮТ ???
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано
+                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                              
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP < dTermEnd               -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ       
+                                       )  where MINDATOP>=dTermBeg               -- неправильное начисление было
+                                            and MINDATOP < dTermEnd               -- в текущем отчетном периоде       
                               UNION ALL 
-                              -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                              -- ритуалки и наследуемые пенсии
+                               -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                      from DV_SR_LSPV ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
-                                                                where TIP_VYPL=1010                -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                                                   and NAL_REZIDENT=1             -- РїРѕ СЃС‚Р°РІРєРµ 13%      
-                                                                   and DATA_VYPL>=dTermBeg    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                                                   and DATA_VYPL < dTermEnd    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР° 
+                                                                where TIP_VYPL=1010                -- ритуалки и наследуемые пенсии
+                                                                   and NAL_REZIDENT=1             -- по ставке 13%      
+                                                                   and DATA_VYPL>=dTermBeg    -- с начала года
+                                                                   and DATA_VYPL < dTermEnd    -- до конца отчетного периода 
                                                             ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                                     where (ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                               or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                        and ds.SERVICE_DOC=0  -- РІС‹РїР»Р°С‚Р° РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»Р°СЃСЊ
+                                     where (ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
+                                               or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                        and ds.SERVICE_DOC=0  -- выплата не корректировалась
                                         and ds.DATA_OP>=dTermBeg  
                                         and ds.DATA_OP < dTermEnd         
                   /*           UNION
-                               -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               Рќ РЈ Р– Рќ Рћ   Р” Рћ Р‘ Рђ Р’ Р Рў Р¬ (РїРѕРєР° РјРѕР¶РЅРѕ Р±РµР· РЅРёС… - РѕРЅРё РЅСѓР»РµРІС‹Рµ)
+                               -- ритуалки и наследуемые пенсии
+                               -- начисленные и скорректированные в текущем периоде
+                               Н У Ж Н О   Д О Б А В И Т Ь (пока можно без них - они нулевые)
                   */                                                                      
                               ),
-       q30 as (-- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (РЈР§РђРЎРўРќРРљР)
+       q30 as (-- пенсии и выкупные (УЧАСТНИКИ)
                Select sfl.GF_PERSON, ds.*
                  from DV_SR_LSPV ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                 where  ds.DATA_OP>=dTermBeg    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                     and ds.DATA_OP < dTermEnd    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                     and ( ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ                             
+                 where  ds.DATA_OP>=dTermBeg    -- с начала года
+                     and ds.DATA_OP < dTermEnd    -- до конца отчетного периода  
+                     and ( ds.SHIFR_SCHET= 55 -- выкупные
+                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  или пенсия не своя                             
                      and sfl.NAL_REZIDENT=2        
-               UNION    -- РѕС‚СЃРµРєР°РµС‚ РїРѕРІС‚РѕСЂС‹ РІ РґРІСѓС… РїРѕРґР·Р°РїСЂРѕСЃР°С…                                           
-               -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+               UNION    -- отсекает повторы в двух подзапросах                                           
+               -- ритаулки и наследуемые пенсии
                Select vrp.GF_PERSON, ds.*
                  from DV_SR_LSPV ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
@@ -4044,11 +4044,11 @@ END;
                                                 and DATA_VYPL < dTermEnd
                                                 and NAL_REZIDENT = 2
                                     ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                 where ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                 where ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
                     and ds.DATA_OP>=dTermBeg  
                     and ds.DATA_OP < dTermEnd                                                               
               ) 
-          -- РІС‹С‡РёСЃР»РµРЅРёРµ  
+          -- вычисление  
        Select res.*, ISCH_NAL-UDERZH_NAL NEDOPLATA,
               pe.Lastname, pe.Firstname, pe.Secondname 
        from(         
@@ -4097,28 +4097,28 @@ END;
                    ) bn on bn.GF_PERSON=cn.GF_PERSON           
                where cn.ISCH_NAL <> bn.UDERZH_NAL
          Union 
-            -- СЃР°Рј СЂР°СЃС‡РµС‚   
+            -- сам расчет   
             Select 13 STAVKA, GF_PERSON, ISCH_NAL, UDERZH_NAL  from (
             --Select q.*, ISCH_NAL-UDERZH_NAL RAZN from (                                 
                 Select  doh.GF_PERSON,  -- 149.611
-                   -- РІС‹С‡РµС‚С‹ С‚РѕР»СЊРєРѕ РґР»СЏ РЅР°Р»РѕРіРѕРІС‹С… СЂРµР·РёРґРµРЅС‚РѕРІ 
-                             -- СЂР°СЃС‡РµС‚ Рё РѕРєСЂСѓРіР»РµРЅРёРµ РґР»СЏ РєР°Р¶РґРѕР№ РїРµСЂСЃРѕРЅС‹
+                   -- вычеты только для налоговых резидентов 
+                             -- расчет и округление для каждой персоны
                              round( 0.13* case when doh.SUMGOD_DOH < nvl(vyc.SUMGOD_VYC,0 )  
                                                    then 0
                                                    else doh.SUMGOD_DOH - nvl(vyc.SUMGOD_VYC,0)
                                                 end ) ISCH_NAL, 
                         nvl(bn.UD_NAL,0) UDERZH_NAL                               
                 from (    Select GF_PERSON,  sum(SUMMA) SUMGOD_DOH from q13  
-                                      where  SHIFR_SCHET<1000    -- РґРѕС…РѕРґС‹
+                                      where  SHIFR_SCHET<1000    -- доходы
                                       group by GF_PERSON
                         ) doh
                 left join ( Select GF_PERSON, sum(SUMMA)  SUMGOD_VYC from  q13 
-                                      where SHIFR_SCHET>1000   --  СЌС‚Рѕ РІС‹С‡РµС‚С‹ 
+                                      where SHIFR_SCHET>1000   --  это вычеты 
                                       group by GF_PERSON
                         ) vyc  
                          on vyc.GF_PERSON=doh.GF_PERSON     
                 left join ( Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UD_NAL from (
-                              -- РїСЂР°РІРёР»СЊРЅС‹Рµ РїРµРЅСЃРёРё
+                              -- правильные пенсии
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -4130,10 +4130,10 @@ END;
                                   and ds.DATA_OP < dTermEnd 
                                   and sfl.NAL_REZIDENT=1
                                        
-/* С‚РѕР»СЊРєРѕ РґР»СЏ РґРµРєР°Р±СЂСЏ, РґР»СЏ РїСЂРѕРІРµСЂРєРё РЅРµРґРѕРїР»Р°С‚/РїРµСЂРµРїР»Р°С‚ Сѓ РѕРґРЅРѕРіРѕ РќРџ СЃ РЅРµСЃРєРѕР»СЊРєРёРјРё РґРѕС…РѕРґР°РјРё
-     -- РїРѕСЃР»РµРґРЅРёР№ РјРµСЃСЏС† РёР· Р±СѓС„РµСЂР°                             
+/* только для декабря, для проверки недоплат/переплат у одного НП с несколькими доходами
+     -- последний месяц из буфера                             
         union all
-        -- РЅР°Р»РѕРі
+        -- налог
         Select sfl.GF_PERSON, sum(vp.UDERGANO) SUMPOTIPU
         from VYPLACH_PEN_BUF vp inner join SP_FIZ_LITS sfl on sfl.SSYLKA=vp.SSYLKA
         where vp.NOM_VKL<991 and SFL.NAL_REZIDENT=1  
@@ -4141,7 +4141,7 @@ END;
      --
 */                                  
                             UNION ALL         
-                              -- РїСЂР°РІРёР»СЊРЅС‹Рµ РІС‹РєСѓРїРЅС‹Рµ       
+                              -- правильные выкупные       
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -4149,26 +4149,26 @@ END;
                                                         where TIP_VYPL=1030
                                                           and DATA_VYPL>=dTermBeg
                                                           and DATA_VYPL < dTermEnd 
-                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                              ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ 
+                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                              ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО 
                                 where ds.SERVICE_DOC=0
                                   and ds.SHIFR_SCHET=85 
                                   and ds.SUB_SHIFR_SCHET=2
                                   and ds.DATA_OP >= dTermBeg  
                                   and ds.DATA_OP <  dTermEnd 
                             UNION ALL   
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
                                Select sfl.GF_PERSON, kor.SUMKORR as SUMPOTIPU from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds
-                                            where  ds.SUB_SHIFR_SCHET in (0,2) -- С‚РѕР»СЊРєРѕ 13%                                                   
-                                             start with ds.SHIFR_SCHET=85    --  РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                         
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            where  ds.SUB_SHIFR_SCHET in (0,2) -- только 13%                                                   
+                                             start with ds.SHIFR_SCHET=85    --  налоги на доходы пенсии и выкупные
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано                         
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
@@ -4176,10 +4176,10 @@ END;
                                        ) kor  
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=kor.NOM_VKL and lspv.NOM_IPS=kor.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                                       
-                                         where kor.MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                           and kor.MINDATOP < dTermEnd              -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ   
+                                         where kor.MINDATOP>=dTermBeg               -- неправильное начисление было
+                                           and kor.MINDATOP < dTermEnd              -- в текущем отчетном периоде   
                             UNION ALL
-                              -- РІРѕР·РІСЂР°С‚ РІ РїСЂРµРґС‹РґСѓС‰РёРµ РіРѕРґС‹
+                              -- возврат в предыдущие годы
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -4192,7 +4192,7 @@ END;
                                   and ds.DATA_OP <  dTermEnd  
                                   and vv.NOM_VKL is Null
                             UNION ALL      
-                              -- СЂРёС‚СѓР°Р»РєРё
+                              -- ритуалки
                               Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
@@ -4218,7 +4218,7 @@ END;
         
     end Sverka_NesovpadNal;
    
--- РєРѕРїРёСЏ РґР»СЏ РѕС‚РґР»Р°РґРєРё РїСЂРѕС†РµРґСѓСЂС‹
+-- копия для отдладки процедуры
     procedure Sverka_NesovpadNal_v2( pReportCursor out sys_refcursor, pErrInfo out varchar2, pSPRID in number ) as
     dTermBeg date;
     dTermEnd date;
@@ -4227,7 +4227,7 @@ END;
     nNalRez   number;
     begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
         Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
         dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
         case nPeriod
@@ -4235,19 +4235,19 @@ END;
             when 31 then dTermEnd := to_date( '01.07.'||to_char(nGod),'dd.mm.yyyy' );        
             when 33 then dTermEnd := to_date( '01.10.'||to_char(nGod),'dd.mm.yyyy' );        
             when 34 then dTermEnd := to_date( '01.01.'||to_char(nGod+1),'dd.mm.yyyy' );      
-            else pErrInfo :='РћС€РёР±РєР° РёР·РІР»РµС‡РµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ СЃРїСЂР°РІРєРё.'; return;                
+            else pErrInfo :='Ошибка извлечения параметров справки.'; return;                
         end case;
    
         open pReportCursor for 
         with  q13 as (
- /*     -- Р·Р° РїРѕСЃР»РµРґРЅРёР№ РјРµСЃСЏС† (РµС‰С‘ РЅРµ РґРѕР±Р°РІРёР»Рё РІ РґРІРёР¶РµРЅРёРµ)
-        -- РїРµРЅСЃРёСЏ
+ /*     -- за последний месяц (ещё не добавили в движение)
+        -- пенсия
         Select sfl.GF_PERSON, 60 SHIFR_SCHET, vp.DATA_VYPL DATA_OP, sum(vp.PENS) SUMMA
         from VYPLACH_PEN_BUF vp inner join SP_FIZ_LITS sfl on sfl.SSYLKA=vp.SSYLKA
         where vp.NOM_VKL<991 and SFL.NAL_REZIDENT=1  
         group by sfl.GF_PERSON, vp.DATA_VYPL
         union all
-        -- РІС‹С‡РµС‚С‹        
+        -- вычеты        
         Select sfl.GF_PERSON, 1111 SHIFR_SCHET, vp.DATA_VYPL DATA_OP, sum(vp.LPN_SUM) SUMMA
         from VYPLACH_PEN_BUF vp inner join SP_FIZ_LITS sfl on sfl.SSYLKA=vp.SSYLKA
         where vp.NOM_VKL<991 and SFL.NAL_REZIDENT=1  
@@ -4256,95 +4256,95 @@ END;
         UNION ALL
                
 */      --
-                              -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (С‚РѕР»СЊРєРѕ РЈР§РђРЎРўРќРРљР)
-                              -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                              -- пенсии и выкупные (только УЧАСТНИКИ)
+                              -- изначально правильные, без исправлений
                               
-                              -- РџР•РќРЎРР 
+                              -- ПЕНСИИ 
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         -- РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ СЃС‚Р°РІРєРё
+                                         -- для определения ставки
                                          left join 
                                              (Select * from DV_SR_LSPV
                                                  where SHIFR_SCHET=85
-                                                   and SUB_SHIFR_SCHET=1 -- РїРµРЅСЃРёРё РќР”Р¤Р› РїРѕ 30%
+                                                   and SUB_SHIFR_SCHET=1 -- пенсии НДФЛ по 30%
                                                    and DATA_OP >= dTermBeg  
                                                    and DATA_OP <  dTermEnd
                                              ) c85  
                                                  on ds.NOM_VKL=c85.NOM_VKL and ds.NOM_IPS=c85.NOM_IPS 
                                                 and ds.DATA_OP=c85.DATA_OP and ds.SHIFR_SCHET=c85.SHIFR_SCHET   
                                                 and ds.SSYLKA_DOC=c85.SSYLKA_DOC             
-                                 where   ds.DATA_OP >=dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < dTermEnd        -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0             -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and ds.NOM_VKL<991               -- РїРµРЅСЃРёСЏ РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ
-                                     and (   ds.SHIFR_SCHET=60        -- РІС‹РїР»Р°С‡РµРЅРЅР°СЏ СЃСѓРјРјР° РїРµРЅСЃРёРё
-                                          or ds.SHIFR_SCHET>1000 )    -- РёР»Рё РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ  
-                                     and c85.SUB_SHIFR_SCHET is Null  -- РїРѕ СЃС‚Р°РІРєРµ 13% РўРђРљ РџР РђР’РР›Р¬РќРћ!    
-                              -- Р’Р«РљРЈРџРќР«Р•
+                                 where   ds.DATA_OP >=dTermBeg        -- с начала года
+                                     and ds.DATA_OP < dTermEnd        -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0             -- выплаты без последующих исправлений
+                                     and ds.NOM_VKL<991               -- пенсия не из своих средств
+                                     and (   ds.SHIFR_SCHET=60        -- выплаченная сумма пенсии
+                                          or ds.SHIFR_SCHET>1000 )    -- или предоставленные суммы вычетов  
+                                     and c85.SUB_SHIFR_SCHET is Null  -- по ставке 13% ТАК ПРАВИЛЬНО!    
+                              -- ВЫКУПНЫЕ
                               UNION ALL
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         -- РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ СЃС‚Р°РІРєРё
+                                         -- для определения ставки
                                          left join 
                                              (Select * from DV_SR_LSPV
                                                  where SHIFR_SCHET=85
-                                                   and SUB_SHIFR_SCHET=3 -- РїРµРЅСЃРёРё РќР”Р¤Р› РїРѕ 30%
+                                                   and SUB_SHIFR_SCHET=3 -- пенсии НДФЛ по 30%
                                                    and DATA_OP >= dTermBeg  
                                                    and DATA_OP <  dTermEnd
                                              ) c85  
                                                  on ds.NOM_VKL=c85.NOM_VKL and ds.NOM_IPS=c85.NOM_IPS 
                                                 and ds.DATA_OP=c85.DATA_OP and ds.SHIFR_SCHET=c85.SHIFR_SCHET   
                                                 and ds.SSYLKA_DOC=c85.SSYLKA_DOC
-                                 where  ds.DATA_OP >=dTermBeg     -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                    and ds.DATA_OP < dTermEnd     -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                    and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                    and (ds.SHIFR_SCHET= 55       -- РІС‹РєСѓРїРЅС‹Рµ
-                                         or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ  
-                                    and c85.SUB_SHIFR_SCHET is Null -- РїРѕ СЃС‚Р°РІРєРµ 13%
+                                 where  ds.DATA_OP >=dTermBeg     -- с начала года
+                                    and ds.DATA_OP < dTermEnd     -- до конца отчетного периода  
+                                    and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений
+                                    and (ds.SHIFR_SCHET= 55       -- выкупные
+                                         or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов  
+                                    and c85.SUB_SHIFR_SCHET is Null -- по ставке 13%
                                                                                       
                                UNION ALL 
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРёРµ Рё РєРѕСЂСЂРµРєС†РёСЏ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               -- РџР•РќРЎРР
-                    -- С‚РµРѕСЂРµС‚РёС‡РµСЃРєРё, СЌС‚РѕС‚ Р·Р°РїСЂРѕСЃ РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ РІСЃРµ РЅСѓР»Рё,
-                    -- С‚.Рє. РґР»СЏ РїРµРЅСЃРёРѕРЅРµСЂРѕРІ Р·РґРµСЃСЊ РјРѕР¶РµС‚ Р±С‹С‚СЊ С‚РѕР»СЊРєРѕ СЃС‚РѕСЂРЅРѕ РїРѕ СѓРјРµСЂС€РёРј           
+                               -- исправленные пенсии и выкупные 
+                               -- начисление и коррекция в текущем периоде
+                               -- ПЕНСИИ
+                    -- теоретически, этот запрос должен вернуть все нули,
+                    -- т.к. для пенсионеров здесь может быть только сторно по умершим           
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(ds.SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        -- РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ СЃС‚Р°РІРєРё
+                                                        -- для определения ставки
                                                         left join 
                                                             (Select * from DV_SR_LSPV
                                                                 where SHIFR_SCHET=85
-                                                                  and SUB_SHIFR_SCHET=1 -- РїРµРЅСЃРёРё РќР”Р¤Р› РїРѕ 30%
+                                                                  and SUB_SHIFR_SCHET=1 -- пенсии НДФЛ по 30%
                                                                   and DATA_OP>=dTermBeg  
                                                                   and DATA_OP < dTermEnd
                                                             ) c85
                                                             on ds.NOM_VKL=c85.NOM_VKL and ds.NOM_IPS=c85.NOM_IPS 
                                                                 and ds.DATA_OP=c85.DATA_OP and ds.SHIFR_SCHET=c85.SHIFR_SCHET   
                                                                 and ds.SSYLKA_DOC=c85.SSYLKA_DOC
-                                            where c85.SUB_SHIFR_SCHET is Null -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                             start with ds.NOM_VKL<991        -- РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                    and ( ds.SHIFR_SCHET=60 or ds.SHIFR_SCHET>1000 )  -- СЃСѓРјРјР° РїРµРЅСЃРёРё РёР»Рё РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP >=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    and ds.DATA_OP < dTermEnd       -- РґР»СЏ РїРµРЅСЃРёР№ С‚РѕР»СЊРєРѕ РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            where c85.SUB_SHIFR_SCHET is Null -- по ставке 13%
+                                             start with ds.NOM_VKL<991        -- пенсия не своя
+                                                    and ( ds.SHIFR_SCHET=60 or ds.SHIFR_SCHET>1000 )  -- сумма пенсии или предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP >=dTermBeg       -- исправление сделано
+                                                    and ds.DATA_OP < dTermEnd       -- для пенсий только в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP < dTermEnd               -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ     
-                    -- РєРѕРЅРµС† СЃС‚РѕСЂРЅРѕ РїРµРЅСЃРёР№
+                                       )  where MINDATOP>=dTermBeg               -- неправильное начисление было
+                                            and MINDATOP < dTermEnd               -- в текущем отчетном периоде     
+                    -- конец сторно пенсий
                                               
-                               -- Р’Р«РљРЈРџРќР«Р•
+                               -- ВЫКУПНЫЕ
                                UNION ALL
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, sum(SUMKORR) SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA SUMKORR,
@@ -4352,11 +4352,11 @@ END;
                                             from  DV_SR_LSPV ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        -- РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ СЃС‚Р°РІРєРё
+                                                        -- для определения ставки
                                                         left join 
                                                             (Select * from DV_SR_LSPV
                                                                 where SHIFR_SCHET=85
-                                                                  and SUB_SHIFR_SCHET=3 -- РїРµРЅСЃРёРё РќР”Р¤Р› РїРѕ 30%
+                                                                  and SUB_SHIFR_SCHET=3 -- пенсии НДФЛ по 30%
                                                                   and DATA_OP >= dTermBeg  
                                                                   and DATA_OP <  dTermEnd
                                                             ) c85  
@@ -4364,63 +4364,63 @@ END;
                                                                and ds.DATA_OP=c85.DATA_OP and ds.SHIFR_SCHET=c85.SHIFR_SCHET   
                                                                and ds.SSYLKA_DOC=c85.SSYLKA_DOC
                                              where c85.SUB_SHIFR_SCHET is Null    -- 13%                   
-                                             start with (   ds.SHIFR_SCHET= 55    -- РІС‹РєСѓРїРЅС‹Рµ
-                                                         or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1         -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg      -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    and ds.DATA_OP < dTermEnd     -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ Р РџРћР—Р–Р• РґР»СЏ РІС‹РєСѓРїРЅС‹С…                                                  
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with (   ds.SHIFR_SCHET= 55    -- выкупные
+                                                         or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1         -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg      -- исправление сделано
+                                                    and ds.DATA_OP < dTermEnd     -- в текущем отчетном периоде И ПОЗЖЕ для выкупных                                                  
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
-                                       )  where MINDATOP >= dTermBeg              -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP <  dTermEnd              -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ    
-                                            and DATA_OP  >= dTermBeg              -- СѓС‡РёС‚С‹РІР°РµРј РёСЃРїСЂР°РІР»РµРЅРёСЏ С‚РѕР»СЊРєРѕ
-                                            and DATA_OP  <  dTermEnd              -- Р·Р° С‚РµРєСѓС‰РёР№ РѕС‚С‡РµС‚РЅС‹Р№ РїРµСЂРёРѕРґ
+                                       )  where MINDATOP >= dTermBeg              -- неправильное начисление было
+                                            and MINDATOP <  dTermEnd              -- в текущем отчетном периоде    
+                                            and DATA_OP  >= dTermBeg              -- учитываем исправления только
+                                            and DATA_OP  <  dTermEnd              -- за текущий отчетный период
                                           group by GF_PERSON, SHIFR_SCHET, MINDATOP   
                               UNION ALL 
-                              -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                              -- ритуалки и наследуемые пенсии
+                               -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                      from DV_SR_LSPV ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
-                                                                where TIP_VYPL=1010                -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                                                   and NAL_REZIDENT=1             -- РїРѕ СЃС‚Р°РІРєРµ 13%      
-                                                                   and DATA_VYPL>=dTermBeg    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                                                   and DATA_VYPL < dTermEnd    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР° 
+                                                                where TIP_VYPL=1010                -- ритуалки и наследуемые пенсии
+                                                                   and NAL_REZIDENT=1             -- по ставке 13%      
+                                                                   and DATA_VYPL>=dTermBeg    -- с начала года
+                                                                   and DATA_VYPL < dTermEnd    -- до конца отчетного периода 
                                                             ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                                     where (ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                               or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                        and ds.SERVICE_DOC=0  -- РІС‹РїР»Р°С‚Р° РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»Р°СЃСЊ
+                                     where (ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
+                                               or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                        and ds.SERVICE_DOC=0  -- выплата не корректировалась
                                         and ds.DATA_OP>=dTermBeg  
                                         and ds.DATA_OP < dTermEnd         
                   /*           UNION
-                               -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               Рќ РЈ Р– Рќ Рћ   Р” Рћ Р‘ Рђ Р’ Р Рў Р¬ (РїРѕРєР° РјРѕР¶РЅРѕ Р±РµР· РЅРёС… - РѕРЅРё РЅСѓР»РµРІС‹Рµ)
+                               -- ритуалки и наследуемые пенсии
+                               -- начисленные и скорректированные в текущем периоде
+                               Н У Ж Н О   Д О Б А В И Т Ь (пока можно без них - они нулевые)
                   */                                                                      
                               ),
-       q30 as (-- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (РЈР§РђРЎРўРќРРљР)
+       q30 as (-- пенсии и выкупные (УЧАСТНИКИ)
                Select sfl.GF_PERSON, ds.*
                  from DV_SR_LSPV ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                          inner join (Select * from DV_SR_LSPV
                                          where SHIFR_SCHET=85
-                                           and SUB_SHIFR_SCHET=1 -- РїРµРЅСЃРёРё РќР”Р¤Р› РїРѕ 30%
+                                           and SUB_SHIFR_SCHET=1 -- пенсии НДФЛ по 30%
                                            and DATA_OP >= dTermBeg  
                                            and DATA_OP <  dTermEnd
                                     ) c85  
                                          on ds.NOM_VKL=c85.NOM_VKL and ds.NOM_IPS=c85.NOM_IPS 
                                         and ds.DATA_OP=c85.DATA_OP and ds.SHIFR_SCHET=c85.SHIFR_SCHET   
                                         and ds.SSYLKA_DOC=c85.SSYLKA_DOC
-                 where  ds.DATA_OP >= dTermBeg    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                     and ds.DATA_OP < dTermEnd    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                     and ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                     and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
+                 where  ds.DATA_OP >= dTermBeg    -- с начала года
+                     and ds.DATA_OP < dTermEnd    -- до конца отчетного периода  
+                     and ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 --  или пенсия не своя
+                     and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений
                      
                UNION ALL
                  Select sfl.GF_PERSON, ds.*
@@ -4429,24 +4429,24 @@ END;
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                          inner join (Select * from DV_SR_LSPV
                                          where SHIFR_SCHET=85
-                                           and SUB_SHIFR_SCHET=3 -- РІС‹РєСѓРїРЅС‹Рµ РќР”Р¤Р› РїРѕ 30%
+                                           and SUB_SHIFR_SCHET=3 -- выкупные НДФЛ по 30%
                                            and DATA_OP >= dTermBeg  
                                            and DATA_OP <  dTermEnd
                                     ) c85  
                                          on ds.NOM_VKL=c85.NOM_VKL and ds.NOM_IPS=c85.NOM_IPS 
                                         and ds.DATA_OP=c85.DATA_OP and ds.SHIFR_SCHET=c85.SHIFR_SCHET   
                                         and ds.SSYLKA_DOC=c85.SSYLKA_DOC
-                 where  ds.DATA_OP >= dTermBeg    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                     and ds.DATA_OP < dTermEnd    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                     and ds.SHIFR_SCHET=55 -- РІС‹РєСѓРїРЅС‹Рµ   
-                     and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№  
+                 where  ds.DATA_OP >= dTermBeg    -- с начала года
+                     and ds.DATA_OP < dTermEnd    -- до конца отчетного периода  
+                     and ds.SHIFR_SCHET=55 -- выкупные   
+                     and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений  
                      
 UNION ALL 
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРёРµ Рё РєРѕСЂСЂРµРєС†РёСЏ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               -- РџР•РќРЎРР
-                    -- С‚РµРѕСЂРµС‚РёС‡РµСЃРєРё, СЌС‚РѕС‚ Р·Р°РїСЂРѕСЃ РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ РІСЃРµ РЅСѓР»Рё,
-                    -- С‚.Рє. РґР»СЏ РїРµРЅСЃРёРѕРЅРµСЂРѕРІ Р·РґРµСЃСЊ РјРѕР¶РµС‚ Р±С‹С‚СЊ С‚РѕР»СЊРєРѕ СЃС‚РѕСЂРЅРѕ РїРѕ СѓРјРµСЂС€РёРј           
+                               -- исправленные пенсии и выкупные 
+                               -- начисление и коррекция в текущем периоде
+                               -- ПЕНСИИ
+                    -- теоретически, этот запрос должен вернуть все нули,
+                    -- т.к. для пенсионеров здесь может быть только сторно по умершим           
                                Select distinct GF_PERSON,
                                       NOM_VKL, NOM_IPS, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA, SSYLKA_DOC, KOD_OPER, SUB_SHIFR_SCHET, SERVICE_DOC -- DS
                                from (
@@ -4456,31 +4456,31 @@ UNION ALL
                                             from  DV_SR_LSPV ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        -- РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ СЃС‚Р°РІРєРё
+                                                        -- для определения ставки
                                                         inner join 
                                                             (Select * from DV_SR_LSPV
                                                                 where SHIFR_SCHET=85
-                                                                  and SUB_SHIFR_SCHET=1 -- РїРµРЅСЃРёРё РќР”Р¤Р› РїРѕ 30%
+                                                                  and SUB_SHIFR_SCHET=1 -- пенсии НДФЛ по 30%
                                                                   and DATA_OP>=dTermBeg  
                                                                   and DATA_OP < dTermEnd
                                                             ) c85
                                                             on ds.NOM_VKL=c85.NOM_VKL and ds.NOM_IPS=c85.NOM_IPS 
                                                                 and ds.DATA_OP=c85.DATA_OP and ds.SHIFR_SCHET=c85.SHIFR_SCHET   
                                                                 and ds.SSYLKA_DOC=c85.SSYLKA_DOC
-                                             start with ds.NOM_VKL<991        -- РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                    and ( ds.SHIFR_SCHET=60 or ds.SHIFR_SCHET>1000 )  -- СЃСѓРјРјР° РїРµРЅСЃРёРё РёР»Рё РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1           -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP >=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    and ds.DATA_OP < dTermEnd       -- РґР»СЏ РїРµРЅСЃРёР№ С‚РѕР»СЊРєРѕ РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.NOM_VKL<991        -- пенсия не своя
+                                                    and ( ds.SHIFR_SCHET=60 or ds.SHIFR_SCHET>1000 )  -- сумма пенсии или предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP >=dTermBeg       -- исправление сделано
+                                                    and ds.DATA_OP < dTermEnd       -- для пенсий только в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                             -- group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP < dTermEnd               -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ           
--- Р’Р«РљРЈРџРќР«Р•
+                                       )  where MINDATOP>=dTermBeg               -- неправильное начисление было
+                                            and MINDATOP < dTermEnd               -- в текущем отчетном периоде           
+-- ВЫКУПНЫЕ
 UNION ALL
                                Select distinct GF_PERSON,
                                       NOM_VKL, NOM_IPS, SHIFR_SCHET, MINDATOP DATA_OP, 
@@ -4492,34 +4492,34 @@ UNION ALL
                                             from  DV_SR_LSPV ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        -- РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ СЃС‚Р°РІРєРё
+                                                        -- для определения ставки
                                                         inner join 
                                                             (Select * from DV_SR_LSPV
                                                                 where SHIFR_SCHET=85
-                                                                  and SUB_SHIFR_SCHET=3 -- РїРµРЅСЃРёРё РќР”Р¤Р› РїРѕ 30%
+                                                                  and SUB_SHIFR_SCHET=3 -- пенсии НДФЛ по 30%
                                                                   and DATA_OP >= dTermBeg  
                                                                   and DATA_OP <  dTermEnd
                                                             ) c85  
                                                                 on ds.NOM_VKL=c85.NOM_VKL and ds.NOM_IPS=c85.NOM_IPS 
                                                                and ds.DATA_OP=c85.DATA_OP and ds.SHIFR_SCHET=c85.SHIFR_SCHET   
                                                                and ds.SSYLKA_DOC=c85.SSYLKA_DOC
-                                             start with (   ds.SHIFR_SCHET= 55    -- РІС‹РєСѓРїРЅС‹Рµ
-                                                         or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1         -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg      -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    and ds.DATA_OP < dTermEnd     -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ Р РџРћР—Р–Р• РґР»СЏ РІС‹РєСѓРїРЅС‹С…                                                  
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with (   ds.SHIFR_SCHET= 55    -- выкупные
+                                                         or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1         -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg      -- исправление сделано
+                                                    and ds.DATA_OP < dTermEnd     -- в текущем отчетном периоде И ПОЗЖЕ для выкупных                                                  
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
-                                       )  where MINDATOP >= dTermBeg              -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP <  dTermEnd              -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ    
-                                            and DATA_OP  >= dTermBeg              -- СѓС‡РёС‚С‹РІР°РµРј РёСЃРїСЂР°РІР»РµРЅРёСЏ С‚РѕР»СЊРєРѕ
-                                            and DATA_OP  <  dTermEnd              -- Р·Р° С‚РµРєСѓС‰РёР№ РѕС‚С‡РµС‚РЅС‹Р№ РїРµСЂРёРѕРґ
+                                       )  where MINDATOP >= dTermBeg              -- неправильное начисление было
+                                            and MINDATOP <  dTermEnd              -- в текущем отчетном периоде    
+                                            and DATA_OP  >= dTermBeg              -- учитываем исправления только
+                                            and DATA_OP  <  dTermEnd              -- за текущий отчетный период
                       
                UNION ALL                                         
-               -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+               -- ритаулки и наследуемые пенсии
                Select vrp.GF_PERSON, ds.*
                  from DV_SR_LSPV ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
@@ -4530,11 +4530,11 @@ UNION ALL
                                                 and DATA_VYPL < dTermEnd
                                                 and NAL_REZIDENT = 2
                                     ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                 where ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                 where ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
                     and ds.DATA_OP>=dTermBeg  
                     and ds.DATA_OP < dTermEnd                                                               
               ) 
-          -- РІС‹С‡РёСЃР»РµРЅРёРµ  
+          -- вычисление  
        Select res.*, ISCH_NAL-UDERZH_NAL NEDOPLATA,
               pe.Lastname, pe.Firstname, pe.Secondname 
        from(         
@@ -4583,28 +4583,28 @@ UNION ALL
                    ) bn on bn.GF_PERSON=cn.GF_PERSON           
                where cn.ISCH_NAL <> bn.UDERZH_NAL
          Union 
-            -- СЃР°Рј СЂР°СЃС‡РµС‚   
+            -- сам расчет   
             Select 13 STAVKA, GF_PERSON, ISCH_NAL, UDERZH_NAL  from (
             --Select q.*, ISCH_NAL-UDERZH_NAL RAZN from (                                 
                 Select  doh.GF_PERSON,  -- 149.611
-                   -- РІС‹С‡РµС‚С‹ С‚РѕР»СЊРєРѕ РґР»СЏ РЅР°Р»РѕРіРѕРІС‹С… СЂРµР·РёРґРµРЅС‚РѕРІ 
-                             -- СЂР°СЃС‡РµС‚ Рё РѕРєСЂСѓРіР»РµРЅРёРµ РґР»СЏ РєР°Р¶РґРѕР№ РїРµСЂСЃРѕРЅС‹
+                   -- вычеты только для налоговых резидентов 
+                             -- расчет и округление для каждой персоны
                              round( 0.13* case when doh.SUMGOD_DOH < nvl(vyc.SUMGOD_VYC,0 )  
                                                    then 0
                                                    else doh.SUMGOD_DOH - nvl(vyc.SUMGOD_VYC,0)
                                                 end ) ISCH_NAL, 
                         nvl(bn.UD_NAL,0) UDERZH_NAL                               
                 from (    Select GF_PERSON,  sum(SUMMA) SUMGOD_DOH from q13  
-                                      where  SHIFR_SCHET<1000    -- РґРѕС…РѕРґС‹
+                                      where  SHIFR_SCHET<1000    -- доходы
                                       group by GF_PERSON
                         ) doh
                 left join ( Select GF_PERSON, sum(SUMMA)  SUMGOD_VYC from  q13 
-                                      where SHIFR_SCHET>1000   --  СЌС‚Рѕ РІС‹С‡РµС‚С‹ 
+                                      where SHIFR_SCHET>1000   --  это вычеты 
                                       group by GF_PERSON
                         ) vyc  
                          on vyc.GF_PERSON=doh.GF_PERSON     
                 left join ( Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UD_NAL from (
-                              -- РїСЂР°РІРёР»СЊРЅС‹Рµ РїРµРЅСЃРёРё
+                              -- правильные пенсии
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -4616,10 +4616,10 @@ UNION ALL
                                   and ds.DATA_OP < dTermEnd 
                                   and sfl.NAL_REZIDENT=1
                                        
-/* С‚РѕР»СЊРєРѕ РґР»СЏ РґРµРєР°Р±СЂСЏ, РґР»СЏ РїСЂРѕРІРµСЂРєРё РЅРµРґРѕРїР»Р°С‚/РїРµСЂРµРїР»Р°С‚ Сѓ РѕРґРЅРѕРіРѕ РќРџ СЃ РЅРµСЃРєРѕР»СЊРєРёРјРё РґРѕС…РѕРґР°РјРё
-     -- РїРѕСЃР»РµРґРЅРёР№ РјРµСЃСЏС† РёР· Р±СѓС„РµСЂР°                             
+/* только для декабря, для проверки недоплат/переплат у одного НП с несколькими доходами
+     -- последний месяц из буфера                             
         union all
-        -- РЅР°Р»РѕРі
+        -- налог
         Select sfl.GF_PERSON, sum(vp.UDERGANO) SUMPOTIPU
         from VYPLACH_PEN_BUF vp inner join SP_FIZ_LITS sfl on sfl.SSYLKA=vp.SSYLKA
         where vp.NOM_VKL<991 and SFL.NAL_REZIDENT=1  
@@ -4627,7 +4627,7 @@ UNION ALL
      --
 */                                  
                             UNION ALL         
-                              -- РїСЂР°РІРёР»СЊРЅС‹Рµ РІС‹РєСѓРїРЅС‹Рµ       
+                              -- правильные выкупные       
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -4635,26 +4635,26 @@ UNION ALL
                                                         where TIP_VYPL=1030
                                                           and DATA_VYPL>=dTermBeg
                                                           and DATA_VYPL < dTermEnd 
-                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                              ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ 
+                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                              ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО 
                                 where ds.SERVICE_DOC=0
                                   and ds.SHIFR_SCHET=85 
                                   and ds.SUB_SHIFR_SCHET=2
                                   and ds.DATA_OP >= dTermBeg  
                                   and ds.DATA_OP <  dTermEnd 
                             UNION ALL   
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
                                Select sfl.GF_PERSON, kor.SUMKORR as SUMPOTIPU from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds
-                                            where  ds.SUB_SHIFR_SCHET in (0,2) -- С‚РѕР»СЊРєРѕ 13%                                                   
-                                             start with ds.SHIFR_SCHET=85    --  РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                         
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            where  ds.SUB_SHIFR_SCHET in (0,2) -- только 13%                                                   
+                                             start with ds.SHIFR_SCHET=85    --  налоги на доходы пенсии и выкупные
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg       -- исправление сделано                         
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
@@ -4662,10 +4662,10 @@ UNION ALL
                                        ) kor  
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=kor.NOM_VKL and lspv.NOM_IPS=kor.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                                       
-                                         where kor.MINDATOP>=dTermBeg               -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                           and kor.MINDATOP < dTermEnd              -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ   
+                                         where kor.MINDATOP>=dTermBeg               -- неправильное начисление было
+                                           and kor.MINDATOP < dTermEnd              -- в текущем отчетном периоде   
                             UNION ALL
-                              -- РІРѕР·РІСЂР°С‚ РІ РїСЂРµРґС‹РґСѓС‰РёРµ РіРѕРґС‹
+                              -- возврат в предыдущие годы
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -4674,7 +4674,7 @@ UNION ALL
                                   and ds.DATA_OP >= dTermBeg  
                                   and ds.DATA_OP <  dTermEnd                                                 
                             UNION ALL      
-                              -- СЂРёС‚СѓР°Р»РєРё
+                              -- ритуалки
                               Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
@@ -4707,10 +4707,10 @@ begin
   dbms_output.enable(10000);  
   FXNDFL_UTIL.Sverka_KvOtchet( TW, RC, 149568 );
   :CC := TW;
-  dbms_output.put_line( nvl(RC,'РћРљ') );
+  dbms_output.put_line( nvl(RC,'ОК') );
 END;
 */  
-   -- РєСѓСЂСЃРѕСЂ РґР»СЏ РІС‹РІРѕРґР° СЃСѓРјРј РЅР°Р»РѕРіР° РїРѕ РїРµРЅСЃРёРѕРЅРЅС‹Рј СЃС…РµРјР°Рј РґР»СЏ СЃРІРµСЂРєРё СЃ РєРІР°СЂС‚Р°Р»СЊРЅС‹Рј РѕС‚С‡РµС‚РѕРј
+   -- курсор для вывода сумм налога по пенсионным схемам для сверки с квартальным отчетом
    procedure Sverka_KvOtchet( pReportCursor out sys_refcursor, pErrInfo out varchar2, pSPRID in number ) as
        dTermBeg date;
        dTermEnd date;
@@ -4719,7 +4719,7 @@ END;
        nNalRez   number;
    begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
        Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
        dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
        case nPeriod
@@ -4727,33 +4727,33 @@ END;
            when 31 then dTermEnd := add_months(dTermBeg,6);        
            when 33 then dTermEnd := add_months(dTermBeg,9);        
            when 34 then dTermEnd := add_months(dTermBeg,12);      
-           else pErrInfo :='РћС€РёР±РєР° РёР·РІР»РµС‡РµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ СЃРїСЂР°РІРєРё.'; return;                
+           else pErrInfo :='Ошибка извлечения параметров справки.'; return;                
        end case;
    
     open pReportCursor for 
     With q as (     
-        -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+        -- пенсии и выкупные без исправлений
             Select org.*, kor.SUMNAL SUMKOR, nvl(org.SUMNAL,0)+nvl(kor.SUMNAL,0) SUMITG
             from ( 
-                    Select case when SUB_SHIFR_SCHET<2 then '1РџР’' else '3Р’РЎ' end TIP_VYPL,
-                           case when mod(SUB_SHIFR_SCHET,2)=0 then 'РЎ13' else 'РЎ30' end STAVKA,
+                    Select case when SUB_SHIFR_SCHET<2 then '1ПВ' else '3ВС' end TIP_VYPL,
+                           case when mod(SUB_SHIFR_SCHET,2)=0 then 'С13' else 'С30' end STAVKA,
                            PEN_SXEM, SUMNAL
                     from (       
                             Select ds.SUB_SHIFR_SCHET, sfl.PEN_SXEM, sum( ds.SUMMA ) SUMNAL
                                 from DV_SR_LSPV ds
                                     inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                     inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                where  ds.DATA_OP>=dTermBeg        -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                    and ds.DATA_OP < dTermEnd         -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                    and ds.SERVICE_DOC=0              -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                    and ds.SHIFR_SCHET=85  -- РЅР°Р»РѕРі  СЃ РїРµРЅСЃРёР№ Рё РІС‹РєСѓРїРЅС‹С… 
+                                where  ds.DATA_OP>=dTermBeg        -- с начала года
+                                    and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
+                                    and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений
+                                    and ds.SHIFR_SCHET=85  -- налог  с пенсий и выкупных 
                                 group by ds.SUB_SHIFR_SCHET, sfl.PEN_SXEM   
                                 order by ds.SUB_SHIFR_SCHET, sfl.PEN_SXEM   
                          ) 
                     UNION     
-                    -- СЂРёС‚СѓР°Р»РєРё Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
-                    Select '2Р Рџ' TIP_VYPL,
-                           case when mod(SUB_SHIFR_SCHET,2)=0 then 'РЎ13' else 'РЎ30' end STAVKA,
+                    -- ритуалки без исправлений
+                    Select '2РП' TIP_VYPL,
+                           case when mod(SUB_SHIFR_SCHET,2)=0 then 'С13' else 'С30' end STAVKA,
                            1 PEN_SXEM, SUMNAL
                     from(
                             Select ds.SUB_SHIFR_SCHET, sum(ds.SUMMA) SUMNAL
@@ -4765,7 +4765,7 @@ END;
                                                             and DATA_VYPL>=dTermBeg 
                                                             and DATA_VYPL < dTermEnd
                                                 ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                            where ds.SHIFR_SCHET=86 -- РЅР°Р»РѕРі РЅР° СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                            where ds.SHIFR_SCHET=86 -- налог на ритуалки и наследуемые пенсии
                                 and ds.DATA_OP>=dTermBeg  
                                 and ds.DATA_OP < dTermEnd
                             group by  ds.SUB_SHIFR_SCHET      
@@ -4773,11 +4773,11 @@ END;
                          )  
                   ) org
                full join   
-                  ( Select case when SUB_SHIFR_SCHET<2 then '1РџР’' else '3Р’РЎ' end TIP_VYPL,
-                           case when mod(SUB_SHIFR_SCHET,2)=0 then 'РЎ13' else 'РЎ30' end STAVKA,
+                  ( Select case when SUB_SHIFR_SCHET<2 then '1ПВ' else '3ВС' end TIP_VYPL,
+                           case when mod(SUB_SHIFR_SCHET,2)=0 then 'С13' else 'С30' end STAVKA,
                            PEN_SXEM, SUMNAL
                     from (   
-                       -- РџР•РќРЎРР                                   
+                       -- ПЕНСИИ                                   
                        Select SUB_SHIFR_SCHET, PEN_SXEM, sum(SUMMA) SUMNAL 
                        from (
                                     Select ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, sfl.PEN_SXEM
@@ -4789,20 +4789,20 @@ END;
                                     from  DV_SR_LSPV ds            
                                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                 inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                                      
-                                     start with ds.SHIFR_SCHET=85  -- РЅР°Р»РѕРі  СЃ РїРµРЅСЃРёР№ Рё РІС‹РєСѓРїРЅС‹С… 
+                                     start with ds.SHIFR_SCHET=85  -- налог  с пенсий и выкупных 
                                             and ds.SUB_SHIFR_SCHET < 2
-                                            and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                            and ds.DATA_OP>=dTermBeg       -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                           
-                                            and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                     connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                            and ds.DATA_OP>=dTermBeg       -- исправление сделано                           
+                                            and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                     connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                 and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                 and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                 and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC         
-                               ) where DATA_OP>=dTermBeg     -- РЈС‡РёС‚С‹РІР°РµРј РѕРїРµСЂР°С†РёРё С‚РѕР»СЊРєРѕ РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ            --   
+                               ) where DATA_OP>=dTermBeg     -- Учитываем операции только в текущем отчетном периоде            --   
                                group by SUB_SHIFR_SCHET, PEN_SXEM 
                        UNION ALL        
-                       -- Р’Р«РљРЈРџРќР«Р•                                   
+                       -- ВЫКУПНЫЕ                                   
                        Select SUB_SHIFR_SCHET, PEN_SXEM, sum(SUMMA) SUMNAL 
                        from (
                                     Select ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, sfl.PEN_SXEM
@@ -4814,17 +4814,17 @@ END;
                                     from  DV_SR_LSPV ds            
                                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                 inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                                      
-                                     start with ds.SHIFR_SCHET=85  -- РЅР°Р»РѕРі  СЃ РїРµРЅСЃРёР№ Рё РІС‹РєСѓРїРЅС‹С… 
+                                     start with ds.SHIFR_SCHET=85  -- налог  с пенсий и выкупных 
                                             and ds.SUB_SHIFR_SCHET > 1
-                                            and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                            and ds.DATA_OP>=dTermBeg         -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                           
-                                        --   and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ, РёР»Рё РїРѕСЃР»Рµ
-                                     connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                            and ds.DATA_OP>=dTermBeg         -- исправление сделано                           
+                                        --   and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде, или после
+                                     connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                 and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                 and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                 and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC         
-                               ) where DATA_OP>= dTermBeg     -- РЈС‡РёС‚С‹РІР°РµРј РѕРїРµСЂР°С†РёРё С‚РѕР»СЊРєРѕ РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ      
+                               ) where DATA_OP>= dTermBeg     -- Учитываем операции только в текущем отчетном периоде      
                                    and DATA_OP < dTermEnd   --   
                                group by SUB_SHIFR_SCHET, PEN_SXEM                               
                          )
@@ -4835,11 +4835,11 @@ END;
     Select A.*, nvl(B.K13,0) K13, nvl(B.K30,0) K30 
     from
         (Select * from ( Select TIP_VYPL, PEN_SXEM, STAVKA, SUMITG from q )
-           pivot( min(SUMITG) for STAVKA in ( 'РЎ13' as S13, 'РЎ30' as S30 ) ) 
+           pivot( min(SUMITG) for STAVKA in ( 'С13' as S13, 'С30' as S30 ) ) 
          ) A
     full join 
          (Select * from ( Select TIP_VYPL, PEN_SXEM, STAVKA, SUMKOR from q )
-           pivot( min(SUMKOR) for STAVKA in ( 'РЎ13' as K13, 'РЎ30' as K30 ) ) 
+           pivot( min(SUMKOR) for STAVKA in ( 'С13' as K13, 'С30' as K30 ) ) 
          ) B
        on B.TIP_VYPL=A.TIP_VYPL and B.PEN_SXEM=A.PEN_SXEM   
     order by A.TIP_VYPL, A.PEN_SXEM;
@@ -4858,7 +4858,7 @@ begin
   dbms_output.enable(10000);  
   FXNDFL_UTIL.ZaPeriodPoDokum( TW, RC, 149565 );
   :CC := TW;
-  dbms_output.put_line( nvl(RC,'РћРљ') );
+  dbms_output.put_line( nvl(RC,'ОК') );
 END;
 */      
    procedure ZaPeriodPoDokum( pReportCursor out sys_refcursor, pErrInfo out varchar2, pSPRID in number ) as
@@ -4869,7 +4869,7 @@ END;
    nNalRez   number;
    begin
 
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
        Select GOD, PERIOD into nGod, nPeriod from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
        dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
        case nPeriod
@@ -4877,27 +4877,27 @@ END;
            when 31 then dTermEnd := add_months(dTermBeg,6);        
            when 33 then dTermEnd := add_months(dTermBeg,9);        
            when 34 then dTermEnd := add_months(dTermBeg,12);      
-           else pErrInfo :='РћС€РёР±РєР° РёР·РІР»РµС‡РµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ СЃРїСЂР°РІРєРё.'; return;                
+           else pErrInfo :='Ошибка извлечения параметров справки.'; return;                
        end case;
    
        open pReportCursor for 
-       -- Р·Р° РїРµСЂРёРѕРґ РїРѕ РґРѕРєСѓРјРµРЅС‚Р°Рј
+       -- за период по документам
        with 
              qDoh as (
-                     -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
-                     -- Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                     -- пенсии и выкупные
+                     -- без исправлений
                      Select  SSYLKA_DOC, SERVICE_DOC, DATA_OP, sum(SUMMA) SUMDOH
                      from(
                               Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA
                                      from DV_SR_LSPV ds
-                                     where  ds.DATA_OP>=dTermBeg         -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                         and ds.DATA_OP < dTermEnd        -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                         and ds.SERVICE_DOC=0              -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№   
-                                         and  ( ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                                  or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
+                                     where  ds.DATA_OP>=dTermBeg         -- с начала года
+                                         and ds.DATA_OP < dTermEnd        -- до конца отчетного периода  
+                                         and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений   
+                                         and  ( ds.SHIFR_SCHET= 55 -- выкупные
+                                                  or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  или пенсия не своя
                               UNION ALL                    
-                              -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                              -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                              -- исправленные пенсии и выкупные 
+                              -- начисленные и скорректированные в текущем периоде
                               Select SSYLKA_DOC, DOCF as SERVICE_DOC, DATA_OP, SUM_ISPRAV  SUMMA
                                   from (
                                             Select level as LVL, ds.* 
@@ -4905,41 +4905,41 @@ END;
                                                      , last_value(SSYLKA_DOC) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET order by level)    DOCL       
                                                      , sum(SUMMA)   over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUM_ISPRAV                                            
                                             from  DV_SR_LSPV ds                                                    
-                                             start with  ( ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with  ( ds.SHIFR_SCHET= 55 -- выкупные
+                                                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  или пенсия не своя
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg        -- исправление сделано                          
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                      ) where SSYLKA_DOC=DOCL 
                                            and SSYLKA_DOC<>DOCF    
-                                           and DATA_OP>=dTermBeg      -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ                       
-                                           and DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ                                                      
+                                           and DATA_OP>=dTermBeg      -- неправильное начисление было                       
+                                           and DATA_OP < dTermEnd       -- в текущем отчетном периоде                                                      
                  /*          UNION ALL
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
                                Select MINDATOP as DATA_OP, SUMKORR as SUMMA from (
                                             Select ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, ds.SSYLKA_DOC, ds.SERVICE_DOC , min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds                                                    
-                                             start with  ( ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with  ( ds.SHIFR_SCHET= 55 -- выкупные
+                                                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  или пенсия не своя
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg        -- исправление сделано                          
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET     
-                                       )  where MINDATOP>=dTermBeg                -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                              and MINDATOP < dTermEnd              -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ    
+                                       )  where MINDATOP>=dTermBeg                -- неправильное начисление было
+                                              and MINDATOP < dTermEnd              -- в текущем отчетном периоде    
                  */          UNION ALL                                      
-                               -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                               -- ритаулки и наследуемые пенсии
                                Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
@@ -4947,26 +4947,26 @@ END;
                                                             from VYPLACH_POSOB 
                                                             where TIP_VYPL=1010
                                                     ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC and vrp.DATA_VYPL=ds.DATA_OP            
-                                 where ds.SHIFR_SCHET=62 --  СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                                 where ds.SHIFR_SCHET=62 --  ритуалки и наследуемые пенсии
                                     and ds.DATA_OP>=dTermBeg   
                                     and ds.DATA_OP < dTermEnd          
                                     and ds.SERVICE_DOC=0                                            
                           ) group by SSYLKA_DOC, SERVICE_DOC, DATA_OP    
                      ),
              qNal as (
-                             -- РЅР°Р»РѕРіРё СЃ РїРµРЅСЃРёР№ Рё РІС‹РєСѓРїРЅС‹С…
-                             -- Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                             -- налоги с пенсий и выкупных
+                             -- без исправлений
                              Select  SSYLKA_DOC, SERVICE_DOC, DATA_OP, sum(SUMMA) SUMNAL
                              from(
                                      Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA 
                                          from DV_SR_LSPV ds
-                                         where  ds.DATA_OP>=dTermBeg         -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                             and ds.DATA_OP < dTermEnd         -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                             and ds.SERVICE_DOC=0              -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                             and ds.SHIFR_SCHET=85    -- РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
+                                         where  ds.DATA_OP>=dTermBeg         -- с начала года
+                                             and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
+                                             and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений
+                                             and ds.SHIFR_SCHET=85    -- налоги на доходы пенсии и выкупные
                               UNION ALL                    
-                              -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                              -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                              -- исправленные пенсии и выкупные 
+                              -- начисленные и скорректированные в текущем периоде
                               Select SSYLKA_DOC, DOCF as SERVICE_DOC, DATA_OP, SUM_ISPRAV  SUMMA
                                   from (
                                             Select level as LVL, ds.* 
@@ -4974,42 +4974,42 @@ END;
                                                      , last_value(SSYLKA_DOC) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET order by level)    DOCL       
                                                      , sum(SUMMA)   over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUM_ISPRAV                                            
                                             from  DV_SR_LSPV ds                                                    
-                                             start with  ds.SHIFR_SCHET= 85  --  РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with  ds.SHIFR_SCHET= 85  --  налоги на доходы пенсии и выкупные
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg        -- исправление сделано                          
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                      ) where SSYLKA_DOC=DOCL 
                                            and SSYLKA_DOC<>DOCF    
-                                           and DATA_OP>=dTermBeg      -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ                       
-                                           and DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ                                       
+                                           and DATA_OP>=dTermBeg      -- неправильное начисление было                       
+                                           and DATA_OP < dTermEnd       -- в текущем отчетном периоде                                       
                  /*          UNION ALL
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
                                Select MINDATOP as DATA_OP, SUMKORR as SUMMA from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds                                                
-                                             start with ds.SHIFR_SCHET=85    --  РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                         
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=85    --  налоги на доходы пенсии и выкупные
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg        -- исправление сделано                         
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by   ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET         
-                                       )  where MINDATOP>=dTermBeg                -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                              and MINDATOP < dTermEnd              -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ         
+                                       )  where MINDATOP>=dTermBeg                -- неправильное начисление было
+                                              and MINDATOP < dTermEnd              -- в текущем отчетном периоде         
                  */          UNION ALL                                      
-                               -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                               -- ритаулки и наследуемые пенсии
                                Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA
                                   from DV_SR_LSPV ds          
-                                  where ds.SHIFR_SCHET=86 -- РЅР°Р»РѕРі РЅР° СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                                  where ds.SHIFR_SCHET=86 -- налог на ритуалки и наследуемые пенсии
                                       and ds.SERVICE_DOC=0  
                                       and ds.DATA_OP>=dTermBeg   
                                       and ds.DATA_OP < dTermEnd    
@@ -5042,7 +5042,7 @@ END;
    begin
 null;
 /*
-          -- РІС‹Р±РѕСЂРєР° РїРµСЂРёРѕРґР° СЃРїСЂР°РІРєРё
+          -- выборка периода справки
        Select * into rSprDat  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
        dTermBeg :=   to_date( '01.01.'||to_char(rSprDat.GOD),'dd.mm.yyyy' );
        case rSprDat.PERIOD
@@ -5063,20 +5063,20 @@ null;
        from (
                    Select SSYLKA_DOC, SERVICE_DOC, DATA_OP, sum(SUMMA) SUM_DOH, sum(DV_SUMMA) SUM_NAL
                    from (
-                             -- РїРµРЅСЃРёРё РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                             -- пенсии правильные, без исправлений
                              Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, nvl(dv.SUM85,0) DV_SUMMA
                              from DV_SR_LSPV ds
                                                  inner join (Select NOM_VKL, NOM_IPS, DATA_OP, sum( case when SHIFR_SCHET= 85 then SUMMA else 0 end ) SUM85
                                                                   from DV_SR_LSPV where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                                                       
-                             where  ds.DATA_OP>=dTermBeg          -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                 and ds.DATA_OP < dTermEnd         -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                 and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№   
-                                 and ds.SHIFR_SCHET=60          -- РїРµРЅСЃРёСЏ
-                                 and ds.NOM_VKL<991               -- РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ
+                             where  ds.DATA_OP>=dTermBeg          -- с начала года
+                                 and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
+                                 and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
+                                 and ds.SHIFR_SCHET=60          -- пенсия
+                                 and ds.NOM_VKL<991               -- не из своих средств
                              UNION ALL                    
-                              -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё, РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                              -- исправленные пенсии, начисленные и скорректированные в текущем периоде
                               Select SSYLKA_DOC, DOCF as SERVICE_DOC, DATA_OP, SUMDOH_ISPRAV  SUMMA, SUMNAL_ISPRAV DV_SUMMA
                                   from (
                                             Select level as LVL, ds.* 
@@ -5090,22 +5090,22 @@ null;
                                                                   from DV_SR_LSPV where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                            
-                                             start with ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 --  РїРµРЅСЃРёСЏ РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ
-                                                   -- and dv.SUB_SHIFR_SCHET=0    -- РЅР°Р»РѕРі 13%
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 --  пенсия не из своих средств
+                                                   -- and dv.SUB_SHIFR_SCHET=0    -- налог 13%
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg        -- исправление сделано                          
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                      ) where CNTT=LVL --SSYLKA_DOC=DOCL 
                                            --and SSYLKA_DOC<>DOCF    
-                                           and DATA_OP>=dTermBeg      -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ                       
-                                           and DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ          
+                                           and DATA_OP>=dTermBeg      -- неправильное начисление было                       
+                                           and DATA_OP < dTermEnd       -- в текущем отчетном периоде          
                                             
-                           -- РІС‹РєСѓРїРЅС‹Рµ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№                                        
+                           -- выкупные правильные, без исправлений                                        
                            Union ALL     
                            Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUM85 DV_SUMMA
                              from DV_SR_LSPV ds
@@ -5113,14 +5113,14 @@ null;
                                                                   from DV_SR_LSPV where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=2) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP  
-                             where  ds.DATA_OP>=dTermBeg          -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                 and ds.DATA_OP < dTermEnd         -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                 and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№   
-                                 and ds.SHIFR_SCHET= 55         -- РІС‹РєСѓРїРЅС‹Рµ
-                          --       and dv.SUB_SHIFR_SCHET=2    -- РЅР°Р»РѕРі 13%
+                             where  ds.DATA_OP>=dTermBeg          -- с начала года
+                                 and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
+                                 and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
+                                 and ds.SHIFR_SCHET= 55         -- выкупные
+                          --       and dv.SUB_SHIFR_SCHET=2    -- налог 13%
                              
                              UNION ALL                    
-                              -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РІС‹РєСѓРїРЅС‹Рµ, РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                              -- исправленные выкупные, начисленные и скорректированные в текущем периоде
                               Select SSYLKA_DOC, DOCF as SERVICE_DOC, DATA_OP, SUMDOH_ISPRAV  SUMMA, SUMNAL_ISPRAV DV_SUMMA
                                   from (
                                             Select level as LVL, ds.* 
@@ -5133,19 +5133,19 @@ null;
                                                                   from DV_SR_LSPV where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=2) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                                                                 
-                                             start with ds.SHIFR_SCHET=55          --  РІС‹РєСѓРїРЅС‹Рµ 
-                                              --      and dv.SUB_SHIFR_SCHET=2    -- РЅР°Р»РѕРі 13%
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=55          --  выкупные 
+                                              --      and dv.SUB_SHIFR_SCHET=2    -- налог 13%
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg        -- исправление сделано                          
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                      ) where CNTT=LVL 
-                                           and DATA_OP>=dTermBeg      -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ                       
-                                           and DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ                                  
+                                           and DATA_OP>=dTermBeg      -- неправильное начисление было                       
+                                           and DATA_OP < dTermEnd       -- в текущем отчетном периоде                                  
                                  
                                  
                            Union ALL     
@@ -5155,11 +5155,11 @@ null;
                                                                   from DV_SR_LSPV where (SHIFR_SCHET= 86 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP    
-                             where  ds.DATA_OP>=dTermBeg          -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                 and ds.DATA_OP < dTermEnd         -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                 and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№   
-                                 and ds.SHIFR_SCHET= 62         -- СЂРёС‚СѓР°Р»РєРё
-                         --        and dv.SUB_SHIFR_SCHET=0    -- РЅР°Р»РѕРі 13%                                 
+                             where  ds.DATA_OP>=dTermBeg          -- с начала года
+                                 and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
+                                 and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
+                                 and ds.SHIFR_SCHET= 62         -- ритуалки
+                         --        and dv.SUB_SHIFR_SCHET=0    -- налог 13%                                 
                         ) group by SSYLKA_DOC, SERVICE_DOC, DATA_OP                            
                 );
                 
@@ -5176,15 +5176,15 @@ null;
                              Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUMMA DV_SUMMA
                              from DV_SR_LSPV ds
                                      inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
-                             where  ds.DATA_OP>=dTermBeg          -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                 and ds.DATA_OP < dTermEnd         -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                 and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№   
-                                 and ds.SHIFR_SCHET=60          -- РїРµРЅСЃРёСЏ
-                                 and ds.NOM_VKL<991               -- РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ
-                                 and dv.SUB_SHIFR_SCHET=1    -- РЅР°Р»РѕРі 30%
+                             where  ds.DATA_OP>=dTermBeg          -- с начала года
+                                 and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
+                                 and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
+                                 and ds.SHIFR_SCHET=60          -- пенсия
+                                 and ds.NOM_VKL<991               -- не из своих средств
+                                 and dv.SUB_SHIFR_SCHET=1    -- налог 30%
                                  
                              UNION ALL                    
-                              -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё, РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                              -- исправленные пенсии, начисленные и скорректированные в текущем периоде
                               Select SSYLKA_DOC, DOCF as SERVICE_DOC, DATA_OP, SUMDOH_ISPRAV  SUMMA, SUMNAL_ISPRAV DV_SUMMA
                                   from (
                                             Select level as LVL, ds.* 
@@ -5195,33 +5195,33 @@ null;
                                                      , sum(dv.SUMMA) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMNAL_ISPRAV                  
                                             from  DV_SR_LSPV ds                 
                                                     inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                    
-                                             start with ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 --  РїРµРЅСЃРёСЏ РЅРµ РёР· СЃРІРѕРёС… СЃСЂРµРґСЃС‚РІ
-                                                    and dv.SUB_SHIFR_SCHET=1    -- РЅР°Р»РѕРі 30%
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 --  пенсия не из своих средств
+                                                    and dv.SUB_SHIFR_SCHET=1    -- налог 30%
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg        -- исправление сделано                          
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                      ) where CNTT=LVL --SSYLKA_DOC=DOCL 
                                            --and SSYLKA_DOC<>DOCF    
-                                           and DATA_OP>=dTermBeg      -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ                       
-                                           and DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ                                   
+                                           and DATA_OP>=dTermBeg      -- неправильное начисление было                       
+                                           and DATA_OP < dTermEnd       -- в текущем отчетном периоде                                   
                                  
                            Union ALL     
                            Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUMMA DV_SUMMA
                              from DV_SR_LSPV ds
                                      inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
-                             where  ds.DATA_OP>=dTermBeg          -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                 and ds.DATA_OP < dTermEnd         -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                 and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№   
-                                 and ds.SHIFR_SCHET= 55         -- РІС‹РєСѓРїРЅС‹Рµ
-                                 and dv.SUB_SHIFR_SCHET=3    -- РЅР°Р»РѕРі 30%
+                             where  ds.DATA_OP>=dTermBeg          -- с начала года
+                                 and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
+                                 and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
+                                 and ds.SHIFR_SCHET= 55         -- выкупные
+                                 and dv.SUB_SHIFR_SCHET=3    -- налог 30%
                                  
                              UNION ALL                    
-                              -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РІС‹РєСѓРїРЅС‹Рµ, РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                              -- исправленные выкупные, начисленные и скорректированные в текущем периоде
                               Select SSYLKA_DOC, DOCF as SERVICE_DOC, DATA_OP, SUMDOH_ISPRAV  SUMMA, SUMNAL_ISPRAV DV_SUMMA
                                   from (
                                             Select level as LVL, ds.* 
@@ -5232,30 +5232,30 @@ null;
                                                      , sum(dv.SUMMA) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMNAL_ISPRAV                  
                                             from  DV_SR_LSPV ds                 
                                                     inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                    
-                                             start with ds.SHIFR_SCHET=55          --  РІС‹РєСѓРїРЅС‹Рµ 
-                                                    and dv.SUB_SHIFR_SCHET=3    -- РЅР°Р»РѕРі 30%
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=dTermBeg        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                          
-                                                    and ds.DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                             start with ds.SHIFR_SCHET=55          --  выкупные 
+                                                    and dv.SUB_SHIFR_SCHET=3    -- налог 30%
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=dTermBeg        -- исправление сделано                          
+                                                    and ds.DATA_OP < dTermEnd       -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                      ) where CNTT=LVL --SSYLKA_DOC=DOCL 
                                            -- and SSYLKA_DOC<>DOCF    
-                                           and DATA_OP>=dTermBeg      -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ                       
-                                           and DATA_OP < dTermEnd       -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ                                  
+                                           and DATA_OP>=dTermBeg      -- неправильное начисление было                       
+                                           and DATA_OP < dTermEnd       -- в текущем отчетном периоде                                  
                                  
                            Union ALL     
                            Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUMMA DV_SUMMA
                              from DV_SR_LSPV ds
                                      inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 86) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
-                             where  ds.DATA_OP>=dTermBeg          -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                 and ds.DATA_OP < dTermEnd         -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                 and ds.SERVICE_DOC=0          -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№   
-                                 and ds.SHIFR_SCHET= 62         -- СЂРёС‚СѓР°Р»РєРё
-                                 and dv.SUB_SHIFR_SCHET=1    -- РЅР°Р»РѕРі 30%                                       
+                             where  ds.DATA_OP>=dTermBeg          -- с начала года
+                                 and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
+                                 and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
+                                 and ds.SHIFR_SCHET= 62         -- ритуалки
+                                 and dv.SUB_SHIFR_SCHET=1    -- налог 30%                                       
                         ) group by SSYLKA_DOC, SERVICE_DOC, DATA_OP                                
                 );
 
@@ -5267,7 +5267,7 @@ null;
             Raise;    
    end f6_ZagrSvedDoc; 
    
--- Р—Р°РїРѕР»РЅРµРЅРёРµ Р·Р°РіСЂСѓР·РѕС‡РЅС‹С… С‚Р°Р±Р»РёС† РґР»СЏ 6РќР”Р¤Р› РїРѕ РґРІРёР¶РµРЅРёСЋ СЃСЂРµРґСЃС‚РІ РЅР° Р›РЎРџР’
+-- Заполнение загрузочных таблиц для 6НДФЛ по движению средств на ЛСПВ
 procedure ZagruzTabl_poLSPV( pErrInfo out varchar2, pSPRID in number ) is
 
   rSPR  F6NDFL_LOAD_SPRAVKI%rowtype;
@@ -5286,18 +5286,18 @@ procedure ZagruzTabl_poLSPV( pErrInfo out varchar2, pSPRID in number ) is
   vErrPref varchar2(100);
   
 begin
-    -- РїСЂРѕРІРµСЂРєР° РЅР° Р±Р»РѕРєРёСЂРѕРІРєСѓ
+    -- проверка на блокировку
     if TestArhivBlok(pSPRID)<>0 then
-       pErrInfo := 'РЎРїСЂР°РІРєР° СѓР¶Рµ Р·Р°РїРёСЃР°РЅР° РІ Р°СЂС…РёРІ. РџСЂРµСЃС‡РµС‚ РґР°РЅРЅС‹С… Р·Р°РїСЂРµС‰РµРЅ.';
+       pErrInfo := 'Справка уже записана в архив. Пресчет данных запрещен.';
        return;
        end if;
        
-    -- РёР·РІР»РµРєР°РµРј РєР»СЋС‡Рё
-    vErrPref := 'Р’С‹Р±РѕСЂРєР° РїР°СЂР°РјРµС‚СЂРѕРІ СЃРїСЂР°РІРєРё.';
+    -- извлекаем ключи
+    vErrPref := 'Выборка параметров справки.';
     Select * into rSPR from F6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
     
-    -- С‡РёСЃС‚РёРј РїСЂРµРґС‹РґСѓС‰РёРµ СЂРµР·СѓР»СЊС‚Р°С‚С‹
-    vErrPref := 'РЈРґР°Р»РµРЅРёРµ РїСЂРµРґС‹РґСѓС‰РµРіРѕ СЂР°СЃС‡РµС‚Р°.';
+    -- чистим предыдущие результаты
+    vErrPref := 'Удаление предыдущего расчета.';
     Update F6NDFL_LOAD_SPRAVKI
        set KOL_FL_DOHOD=0
        where R_SPRID=pSPRID;
@@ -5308,23 +5308,23 @@ begin
     Delete from F6NDFL_LOAD_SUMGOD 
        where KOD_NA=rSPR.KOD_NA and GOD=rSPR.GOD and PERIOD=rSPR.PERIOD and NOM_KORR=rSPR.NOM_KORR and KOD_PODR=0;
        
-    -- РЅРѕРІС‹Р№ СЂР°СЃС‡РµС‚
+    -- новый расчет
     
-    -- СѓРґРµСЂР¶Р°РЅРЅС‹Р№ РЅР°Р»РѕРі РґР»СЏ РёС‚РѕРіРѕРІ
+    -- удержанный налог для итогов
     for i in 1..2 loop
        Case i
          when 1 then nStavka := 13;  Zapoln_Buf_NalogIschisl( pSPRID );
          when 2 then nStavka := 30;
        end case;  
 
-        vErrPref := 'Р Р°СЃС‡РµС‚ РёСЃС‡РёСЃР»РµРЅРЅС‹С… РЅР°Р»РѕРіРѕРІ РїРѕ СЃС‚Р°РІРєРµ '||to_char(nStavka);
+        vErrPref := 'Расчет исчисленных налогов по ставке '||to_char(nStavka);
           fIschislNalog :=SumIschislNal(pSPRID,nStavka);
-        vErrPref := 'Р Р°СЃС‡РµС‚ РґРѕС…РѕРґРѕРІ, РѕР±Р»Р°РіР°РµРјС‹С… РїРѕ СЃС‚Р°РІРєРµ '||to_char(nStavka);      
-          fNachislDoh   :=SumNachislDoh(pSPRID,nStavka);                       -- РїСЂРѕРІРµСЂРµРЅРѕ 1 РєРІ 2017 18-04-2017
-        vErrPref := 'Р Р°СЃС‡РµС‚ РІС‹С‡РµС‚РѕРІ РїРѕ СЃС‚Р°РІРєРµ '||to_char(nStavka);      
+        vErrPref := 'Расчет доходов, облагаемых по ставке '||to_char(nStavka);      
+          fNachislDoh   :=SumNachislDoh(pSPRID,nStavka);                       -- проверено 1 кв 2017 18-04-2017
+        vErrPref := 'Расчет вычетов по ставке '||to_char(nStavka);      
           fIspolzVych   :=SumIspolzVych(pSPRID,nStavka);
 
-       vErrPref := 'Р Р°СЃС‡РµС‚ Рё Р·Р°РїРёСЃСЊ - РС‚РѕРіРё РїРѕ СЃС‚Р°РІРєРµ '||to_char(nStavka);
+       vErrPref := 'Расчет и запись - Итоги по ставке '||to_char(nStavka);
        Insert into F6NDFL_LOAD_SUMPOSTAVKE (   
           KOD_NA, KOD_PODR, GOD, PERIOD, NOM_KORR, KOD_STAVKI, 
           NACHISL_DOH, NACH_DOH_DIV, VYCHET_PREDOST, VYCHET_ISPOLZ, 
@@ -5334,22 +5334,22 @@ begin
        
        end loop;
 
-    vErrPref := 'РС‚РѕРіРё РѕР±С‰РёРµ - Р Р°СЃС‡РµС‚ СѓРґРµСЂР¶Р°РЅРЅРѕРіРѕ РЅР°Р»РѕРіР°.';
-      fUderzhNalog :=SumUderzhNal(pSPRID);                                     -- РїСЂРѕРІРµСЂРµРЅРѕ 1 РєРІ 2017 18-04-2017
-     vErrPref := 'РС‚РѕРіРё РѕР±С‰РёРµ - Р Р°СЃС‡РµС‚ РЅРµ СѓРґРµСЂР¶Р°РЅРЅРѕРіРѕ РЅР°Р»РѕРіР°.';
-      fNeUderzhNalog := 0; --SumNeUderzhNal(pSPRID);                           -- РќР• РќРћР›Р¬, С‚РѕР»СЊРєРѕ СЂСѓРєР°РјРё, РєРѕРіРґР° 2-РќР”Р¤Р› СЃ РџСЂРёР·РЅР°РєРѕРј 2  
-    vErrPref := 'РС‚РѕРіРё РѕР±С‰РёРµ - Р Р°СЃС‡РµС‚ РІРѕР·РІСЂР°С‰РµРЅРЅРѕРіРѕ РЅР°Р»РѕРіР°.';
-      fVozvraNalog :=SumVozvraNal(pSPRID);                                     -- РїСЂРѕРІРµСЂРµРЅРѕ 1 РєРІ 2017 18-04-2017            
-    vErrPref := 'РС‚РѕРіРё РѕР±С‰РёРµ - Р Р°СЃС‡РµС‚ С‡РёСЃР»Р° РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ.';
+    vErrPref := 'Итоги общие - Расчет удержанного налога.';
+      fUderzhNalog :=SumUderzhNal(pSPRID);                                     -- проверено 1 кв 2017 18-04-2017
+     vErrPref := 'Итоги общие - Расчет не удержанного налога.';
+      fNeUderzhNalog := 0; --SumNeUderzhNal(pSPRID);                           -- НЕ НОЛЬ, только руками, когда 2-НДФЛ с Признаком 2  
+    vErrPref := 'Итоги общие - Расчет возвращенного налога.';
+      fVozvraNalog :=SumVozvraNal(pSPRID);                                     -- проверено 1 кв 2017 18-04-2017            
+    vErrPref := 'Итоги общие - Расчет числа налогоплательщиков.';
       nKolNP       :=KolichNP(pSPRID);      
-    vErrPref := 'РС‚РѕРіРё РѕР±С‰РёРµ - Р—Р°РїРёСЃСЊ.';
+    vErrPref := 'Итоги общие - Запись.';
     Insert into FND.F6NDFL_LOAD_SUMGOD (
         KOD_NA, KOD_PODR, GOD, PERIOD, NOM_KORR, 
         KOL_FL_DOHOD, UDERZH_NAL, NE_UDERZH_NAL, VOZVRAT_NAL, KOL_FL_SOVPAD)
     values( rSPR.KOD_NA, 0, rSPR.GOD, rSPR.PERIOD, rSPR.NOM_KORR,
         nKolNP, fUderzhNalog, fNeUderzhNalog, fVozvraNalog, 0);
     
-    vErrPref := 'Р—Р°РїРёСЃСЊ С‡РёСЃР»Р° РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ.';
+    vErrPref := 'Запись числа налогоплательщиков.';
     Update F6NDFL_LOAD_SPRAVKI
        set KOL_FL_DOHOD=nvl((
                 Select nvl(sum(KOL_FL_DOHOD),0)-nvl(sum(KOL_FL_SOVPAD),0) 
@@ -5358,8 +5358,8 @@ begin
                 ,0)    
        where R_SPRID=pSPRID;
     
-    vErrPref := 'Р’С‹Р±РѕСЂРєР° РґРѕС…РѕРґРѕРІ РїРѕ РґР°С‚Р°Рј.';
-    ZaPeriodPoDatam( cPoDatam , pErrInfo, pSPRID );                            -- РїСЂРѕРІРµСЂРµРЅРѕ 1 РєРІ 2017 18-04-2017    
+    vErrPref := 'Выборка доходов по датам.';
+    ZaPeriodPoDatam( cPoDatam , pErrInfo, pSPRID );                            -- проверено 1 кв 2017 18-04-2017    
     if pErrInfo is not Null then 
        if gl_COMMIT then Rollback; end if;
        return;
@@ -5368,7 +5368,7 @@ begin
     loop
        Fetch cPoDatam into rSVED.DATA_FACT_DOH, rSVED.DATA_UDERZH_NAL, rSVED.SROK_PERECH_NAL, rSVED.SUM_FACT_DOH, rSVED.SUM_UDERZH_NAL; 
        Exit when cPoDatam%NOTFOUND;
-       vErrPref := 'Р—Р°РїРёСЃСЊ РґРѕС…РѕРґРѕРІ РїРѕ РґР°С‚Р°Рј.';
+       vErrPref := 'Запись доходов по датам.';
        Insert into FND.F6NDFL_LOAD_SVED (
             KOD_NA, KOD_PODR, GOD, PERIOD, NOM_KORR, 
             DATA_FACT_DOH, DATA_UDERZH_NAL, SROK_PERECH_NAL, SUM_FACT_DOH, SUM_UDERZH_NAL)
@@ -5406,41 +5406,41 @@ fOKRUGL  float;
 fUDERZH  float;
 fNEDOPL  float;
 begin
---  СЌС‚Рѕ РїСЂРѕС†РµРґСѓСЂР° РїСЂРѕСЃС‚Рѕ РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ Р·Р°РїСЂРѕСЃР° РїСЂРѕРІРµСЂРєРё
---  РїСЂРѕРІРµСЂРєР° Р·Р° 2Р№ РєРІР°СЂС‚Р°Р»
---  РїРѕ СЃС‚Р°РІРєРµ 13%
+--  это процедура просто для сохранения запроса проверки
+--  проверка за 2й квартал
+--  по ставке 13%
 with  q13 as (
-                              -- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (С‚РѕР»СЊРєРѕ РЈР§РђРЎРўРќРРљР)
-                              -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
-                              -- РџР•РќРЎРР 
+                              -- пенсии и выкупные (только УЧАСТНИКИ)
+                              -- изначально правильные, без исправлений
+                              -- ПЕНСИИ 
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         -- С‚РѕР»СЊРєРѕ С‚Рµ Р›РЎРџР’, СЃ РєРѕС‚РѕСЂС‹С… РїРµСЂРµС‡РёСЃР»СЏР»СЃСЏ РЅР°Р»РѕРі
+                                         -- только те ЛСПВ, с которых перечислялся налог
                                          inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                              where SHIFR_SCHET=85
-                                                               and SUB_SHIFR_SCHET in (0,1)  -- РїРµРЅСЃРёРё
+                                                               and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
                                                                and DATA_OP < to_date('01.07.2016','dd.mm.yyyy') 
                                                       ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
-                                 where  ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')         -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')       -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0           -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and sfl.NAL_REZIDENT=1         -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                     and sfl.PEN_SXEM<>7            -- РЅРµ РћРџРЎ
-                                     and ( ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) -- РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                          or ds.SHIFR_SCHET>1000 )                    -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ  
-                              -- Р’Р«РљРЈРџРќР«Р•
+                                 where  ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')         -- с начала года
+                                     and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')       -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0           -- выплаты без последующих исправлений
+                                     and sfl.NAL_REZIDENT=1         -- по ставке 13%
+                                     and sfl.PEN_SXEM<>7            -- не ОПС
+                                     and ( ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 ) -- пенсия не своя
+                                          or ds.SHIFR_SCHET>1000 )                    -- предоставленные суммы вычетов  
+                              -- ВЫКУПНЫЕ
                               UNION ALL
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                  from DV_SR_LSPV ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         -- С‚РѕР»СЊРєРѕ С‚Рµ Р›РЎРџР’, СЃ РєРѕС‚РѕСЂС‹С… РїРµСЂРµС‡РёСЃР»СЏР»СЃСЏ РЅР°Р»РѕРі
+                                         -- только те ЛСПВ, с которых перечислялся налог
                                          inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                            where   SHIFR_SCHET=85
-                                                               and SUB_SHIFR_SCHET in (2,3)  -- РІС‹РєСѓРїРЅС‹Рµ
+                                                               and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
                                                                and DATA_OP < to_date('01.07.2016','dd.mm.yyyy')  
                                                     ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
@@ -5448,17 +5448,17 @@ with  q13 as (
                                                         where TIP_VYPL=1030
                                                           and DATA_VYPL>=to_date('01.01.2016','dd.mm.yyyy') 
                                                           and DATA_VYPL < to_date('01.07.2016','dd.mm.yyyy') 
-                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                                    ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ   
-                                 where  ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')         -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                     and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')       -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                     and ds.SERVICE_DOC=0           -- РІС‹РїР»Р°С‚С‹ Р±РµР· РїРѕСЃР»РµРґСѓСЋС‰РёС… РёСЃРїСЂР°РІР»РµРЅРёР№
-                                     and (    ds.SHIFR_SCHET= 55    -- РІС‹РєСѓРїРЅС‹Рµ
-                                           or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ                                               
+                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                                    ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО   
+                                 where  ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')         -- с начала года
+                                     and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')       -- до конца отчетного периода  
+                                     and ds.SERVICE_DOC=0           -- выплаты без последующих исправлений
+                                     and (    ds.SHIFR_SCHET= 55    -- выкупные
+                                           or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов                                               
                                UNION ALL 
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               -- РџР•РќРЎРР
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
+                               -- ПЕНСИИ
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds            
@@ -5466,27 +5466,27 @@ with  q13 as (
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                                      where SHIFR_SCHET=85 
-                                                                       and SUB_SHIFR_SCHET in (0,1)  -- РїРµРЅСЃРёРё
+                                                                       and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                        and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
                                                                        and DATA_OP < to_date('01.07.2016','dd.mm.yyyy')  
                                                                    ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
-                                            where  sfl.NAL_REZIDENT=1                 -- РїРѕ СЃС‚Р°РІРєРµ 13%        
-                                                 and sfl.PEN_SXEM<>7  -- РЅРµ РћРџРЎ
-                                             start with ( ( ds.SHIFR_SCHET=60  and ds.NOM_VKL<991 ) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
-                                                       or (ds.SHIFR_SCHET>1000 and ds.NOM_VKL<991 ) )  -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1          -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                              
-                                                    and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')        -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            where  sfl.NAL_REZIDENT=1                 -- по ставке 13%        
+                                                 and sfl.PEN_SXEM<>7  -- не ОПС
+                                             start with ( ( ds.SHIFR_SCHET=60  and ds.NOM_VKL<991 ) --  или пенсия не своя
+                                                       or (ds.SHIFR_SCHET>1000 and ds.NOM_VKL<991 ) )  -- предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')        -- исправление сделано
+                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                              
+                                                    and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')        -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=to_date('01.01.2016','dd.mm.yyyy')                -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP < to_date('01.07.2016','dd.mm.yyyy')                -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ       
-                               -- Р’Р«РљРЈРџРќР«Р•
+                                       )  where MINDATOP>=to_date('01.01.2016','dd.mm.yyyy')                -- неправильное начисление было
+                                            and MINDATOP < to_date('01.07.2016','dd.mm.yyyy')                -- в текущем отчетном периоде       
+                               -- ВЫКУПНЫЕ
                                UNION ALL
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
@@ -5495,7 +5495,7 @@ with  q13 as (
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
                                                                        where SHIFR_SCHET=85 
-                                                                           and SUB_SHIFR_SCHET in (2,3)  -- РІС‹РєСѓРїРЅС‹Рµ
+                                                                           and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                            and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
                                                                            and DATA_OP < to_date('01.07.2016','dd.mm.yyyy')  
                                                                    ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
@@ -5503,58 +5503,58 @@ with  q13 as (
                                                                         where TIP_VYPL=1030
                                                                           and DATA_VYPL>=to_date('01.01.2016','dd.mm.yyyy') 
                                                                           and DATA_VYPL < to_date('01.07.2016','dd.mm.yyyy') 
-                                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                                                   ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ                                                                      
-                                             start with (   ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                                                         or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ
-                                                    -- РёСЃРїСЂР°РІР»РµРЅРёРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРґРµР»Р°РЅРѕ Рё РїРѕР·Р¶Рµ, РїРѕРєР° РЅРµРїРѕРЅСЏС‚РЅРѕ, РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РёРІР°С‚СЊ РёРЅС‚РµСЂРІР°Р» СЃРІРµСЂС…Сѓ?                              
-                                                    and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')        -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                                                   ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО                                                                      
+                                             start with (   ds.SHIFR_SCHET= 55 -- выкупные
+                                                         or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')        -- исправление сделано
+                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                              
+                                                    and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')        -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                                              group by  sfl.GF_PERSON, ds.SHIFR_SCHET          
-                                       )  where MINDATOP>=to_date('01.01.2016','dd.mm.yyyy')                -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                            and MINDATOP < to_date('01.07.2016','dd.mm.yyyy')                -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ       
+                                       )  where MINDATOP>=to_date('01.01.2016','dd.mm.yyyy')                -- неправильное начисление было
+                                            and MINDATOP < to_date('01.07.2016','dd.mm.yyyy')                -- в текущем отчетном периоде       
                               UNION ALL 
-                              -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅС‹Рµ, Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                              -- ритуалки и наследуемые пенсии
+                               -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
                                      from DV_SR_LSPV ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
-                                                                where TIP_VYPL=1010                -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                                                   and NAL_REZIDENT=1             -- РїРѕ СЃС‚Р°РІРєРµ 13%      
-                                                                   and DATA_VYPL>=to_date('01.01.2016','dd.mm.yyyy')     -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                                                   and DATA_VYPL < to_date('01.07.2016','dd.mm.yyyy')     -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР° 
+                                                                where TIP_VYPL=1010                -- ритуалки и наследуемые пенсии
+                                                                   and NAL_REZIDENT=1             -- по ставке 13%      
+                                                                   and DATA_VYPL>=to_date('01.01.2016','dd.mm.yyyy')     -- с начала года
+                                                                   and DATA_VYPL < to_date('01.07.2016','dd.mm.yyyy')     -- до конца отчетного периода 
                                                             ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                                     where (ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                                               or ds.SHIFR_SCHET>1000 ) -- РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅРЅС‹Рµ СЃСѓРјРјС‹ РІС‹С‡РµС‚РѕРІ
-                                        and ds.SERVICE_DOC=0  -- РІС‹РїР»Р°С‚Р° РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»Р°СЃСЊ
+                                     where (ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
+                                               or ds.SHIFR_SCHET>1000 ) -- предоставленные суммы вычетов
+                                        and ds.SERVICE_DOC=0  -- выплата не корректировалась
                                         and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
                                         and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')          
                   /*           UNION
-                               -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
-                               Рќ РЈ Р– Рќ Рћ   Р” Рћ Р‘ Рђ Р’ Р Рў Р¬ (РїРѕРєР° РјРѕР¶РЅРѕ Р±РµР· РЅРёС… - РѕРЅРё РЅСѓР»РµРІС‹Рµ)
+                               -- ритуалки и наследуемые пенсии
+                               -- начисленные и скорректированные в текущем периоде
+                               Н У Ж Н О   Д О Б А В И Т Ь (пока можно без них - они нулевые)
                     */                                                                      
                               ),
-       q30 as (-- РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ (РЈР§РђРЎРўРќРРљР)
+       q30 as (-- пенсии и выкупные (УЧАСТНИКИ)
                Select sfl.GF_PERSON, ds.*
                  from DV_SR_LSPV ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                 where  ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')     -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                     and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')     -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                     and ( ds.SHIFR_SCHET= 55 -- РІС‹РєСѓРїРЅС‹Рµ
-                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  РёР»Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ                             
+                 where  ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')     -- с начала года
+                     and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')     -- до конца отчетного периода  
+                     and ( ds.SHIFR_SCHET= 55 -- выкупные
+                              or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  или пенсия не своя                             
                      and sfl.NAL_REZIDENT=2        
-               UNION    -- РѕС‚СЃРµРєР°РµС‚ РїРѕРІС‚РѕСЂС‹ РІ РґРІСѓС… РїРѕРґР·Р°РїСЂРѕСЃР°С…                                           
-               -- СЂРёС‚Р°СѓР»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+               UNION    -- отсекает повторы в двух подзапросах                                           
+               -- ритаулки и наследуемые пенсии
                Select vrp.GF_PERSON, ds.*
                  from DV_SR_LSPV ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
@@ -5565,11 +5565,11 @@ with  q13 as (
                                                 and DATA_VYPL < to_date('01.07.2016','dd.mm.yyyy') 
                                                 and NAL_REZIDENT = 2
                                     ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC              
-                 where ds.SHIFR_SCHET=62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ РїРµРЅСЃРёРё
+                 where ds.SHIFR_SCHET=62 -- ритуалки и наследуемые пенсии
                     and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
                     and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')                                                                
               ) 
-          -- РІС‹С‡РёСЃР»РµРЅРёРµ  
+          -- вычисление  
        --Select res.*, ISCH_NAL-UDERZH_NAL NEDOPLATA from(
        Select res.*, ISCHISL-UDERZH NEDOPL  
           into fNEOKRUG, fOKRUGL, fUDERZH, fNEDOPL
@@ -5619,13 +5619,13 @@ with  q13 as (
                    ) bn on bn.GF_PERSON=cn.GF_PERSON           
                where cn.ISCH_NAL <> bn.UDERZH_NAL 
          Union */
-            -- СЃР°Рј СЂР°СЃС‡РµС‚   
+            -- сам расчет   
             --Select 13 STAVKA, GF_PERSON, NEORUGL_NAL, ISCH_NAL, UDERZH_NAL  from (
             Select sum(NEORUGL_NAL) NEOKRUGL, sum(ISCH_NAL) ISCHISL, sum(UDERZH_NAL) UDERZH  from (
             --Select q.*, ISCH_NAL-UDERZH_NAL RAZN from (                                 
                 Select  doh.GF_PERSON,  -- 149.611
-                   -- РІС‹С‡РµС‚С‹ С‚РѕР»СЊРєРѕ РґР»СЏ РЅР°Р»РѕРіРѕРІС‹С… СЂРµР·РёРґРµРЅС‚РѕРІ 
-                             -- СЂР°СЃС‡РµС‚ Рё РѕРєСЂСѓРіР»РµРЅРёРµ РґР»СЏ РєР°Р¶РґРѕР№ РїРµСЂСЃРѕРЅС‹
+                   -- вычеты только для налоговых резидентов 
+                             -- расчет и округление для каждой персоны
                              0.13* case when doh.SUMGOD_DOH < nvl(vyc.SUMGOD_VYC,0 )  
                                                    then 0
                                                    else doh.SUMGOD_DOH - nvl(vyc.SUMGOD_VYC,0)
@@ -5636,16 +5636,16 @@ with  q13 as (
                                                 end ) ISCH_NAL, 
                         nvl(bn.UD_NAL,0) UDERZH_NAL                               
                 from (    Select GF_PERSON,  sum(SUMMA) SUMGOD_DOH from q13  
-                                      where  SHIFR_SCHET<1000    -- РґРѕС…РѕРґС‹
+                                      where  SHIFR_SCHET<1000    -- доходы
                                       group by GF_PERSON
                         ) doh
                 left join ( Select GF_PERSON, sum(SUMMA)  SUMGOD_VYC from  q13 
-                                      where SHIFR_SCHET>1000   --  СЌС‚Рѕ РІС‹С‡РµС‚С‹ 
+                                      where SHIFR_SCHET>1000   --  это вычеты 
                                       group by GF_PERSON
                         ) vyc  
                          on vyc.GF_PERSON=doh.GF_PERSON     
                 left join ( Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UD_NAL from (
-                              -- РїСЂР°РІРёР»СЊРЅС‹Рµ РїРµРЅСЃРёРё
+                              -- правильные пенсии
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -5657,7 +5657,7 @@ with  q13 as (
                                   and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')  
                                   and sfl.NAL_REZIDENT=1     
                             UNION ALL         
-                              -- РїСЂР°РІРёР»СЊРЅС‹Рµ РІС‹РєСѓРїРЅС‹Рµ       
+                              -- правильные выкупные       
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -5665,26 +5665,26 @@ with  q13 as (
                                                         where TIP_VYPL=1030
                                                           and DATA_VYPL>=to_date('01.01.2016','dd.mm.yyyy') 
                                                           and DATA_VYPL < to_date('01.07.2016','dd.mm.yyyy')  
-                                                          and NAL_REZIDENT=1  -- РїРѕ СЃС‚Р°РІРєРµ 13%
-                                              ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- РµСЃР»Рё РІСЏР¶РµС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ, С‚Рѕ СЌС‚Рѕ РќРџРћ 
+                                                          and NAL_REZIDENT=1  -- по ставке 13%
+                                              ) rp on rp.SSYLKA=lspv.SSYLKA_FL  -- если вяжется по ссылке, то это НПО 
                                 where ds.SERVICE_DOC=0
                                   and ds.SHIFR_SCHET=85 
                                   and ds.SUB_SHIFR_SCHET=2
                                   and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
                                   and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')  
                             UNION ALL   
-                               -- РёСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ 
-                               -- РЅР°С‡РёСЃР»РµРЅРЅС‹Рµ Рё СЃРєРѕСЂСЂРµРєС‚РёСЂРѕРІР°РЅРЅС‹Рµ РІ С‚РµРєСѓС‰РµРј РїРµСЂРёРѕРґРµ
+                               -- исправленные пенсии и выкупные 
+                               -- начисленные и скорректированные в текущем периоде
                                Select sfl.GF_PERSON, kor.SUMKORR as SUMPOTIPU from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
                                             from  DV_SR_LSPV ds
-                                            where  ds.SUB_SHIFR_SCHET in (0,2) -- С‚РѕР»СЊРєРѕ 13%                                                   
-                                             start with ds.SHIFR_SCHET=85    --  РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ
-                                                    and ds.SERVICE_DOC=-1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                                    and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')        -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ                         
-                                                    and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')        -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                            where  ds.SUB_SHIFR_SCHET in (0,2) -- только 13%                                                   
+                                             start with ds.SHIFR_SCHET=85    --  налоги на доходы пенсии и выкупные
+                                                    and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
+                                                    and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')        -- исправление сделано                         
+                                                    and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')        -- в текущем отчетном периоде
+                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
@@ -5692,10 +5692,10 @@ with  q13 as (
                                        ) kor  
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=kor.NOM_VKL and lspv.NOM_IPS=kor.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                                       
-                                         where kor.MINDATOP>=to_date('01.01.2016','dd.mm.yyyy')                -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРµ РЅР°С‡РёСЃР»РµРЅРёРµ Р±С‹Р»Рѕ
-                                           and kor.MINDATOP < to_date('01.07.2016','dd.mm.yyyy')               -- РІ С‚РµРєСѓС‰РµРј РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ   
+                                         where kor.MINDATOP>=to_date('01.01.2016','dd.mm.yyyy')                -- неправильное начисление было
+                                           and kor.MINDATOP < to_date('01.07.2016','dd.mm.yyyy')               -- в текущем отчетном периоде   
                             UNION ALL
-                              -- РІРѕР·РІСЂР°С‚ РІ РїСЂРµРґС‹РґСѓС‰РёРµ РіРѕРґС‹
+                              -- возврат в предыдущие годы
                               Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -5704,7 +5704,7 @@ with  q13 as (
                                   and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
                                   and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')                                                  
                             UNION ALL      
-                              -- СЂРёС‚СѓР°Р»РєРё
+                              -- ритуалки
                               Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
@@ -5730,45 +5730,45 @@ with  q13 as (
  
  procedure SAVE_QUERY as
  
- -- Рџ Р  Рђ Р’ Р Р› Рћ
+ -- П Р А В И Л О
  -- ============================================================== --
- --  РІ DV_SR_LSPV                                                  --
- --  РїРѕР»Рµ SERVICE_DOC                                              --
- --  = 0  - СЃСѓРјРјР° РІ РґРІРёР¶РµРЅРёРё Р°РєС‚СѓР°Р»СЊРЅР°СЏ                            --
- --  > 0  - СЃСЃС‹Р»РєР° РЅР° SSYLKA_DOC Р·Р°РїРёСЃРё СЃ РєРѕСЂСЂРµРєС†РёРµР№ СЃСѓРјРјС‹         --
- --         NOM_VKL, NOM_IPS, SHIFR_SCHET, SUB_SHIFR_SCHET С‚Рµ Р¶Рµ   --
- --  = -1 - РєРѕСЂСЂРµРєС†РёСЏ, РїРѕСЃР»РµРґРЅСЏСЏ РІ С†РµРїРѕС‡РєРµ SERVICE_DOC-SSYLKA_DOC  --
+ --  в DV_SR_LSPV                                                  --
+ --  поле SERVICE_DOC                                              --
+ --  = 0  - сумма в движении актуальная                            --
+ --  > 0  - ссылка на SSYLKA_DOC записи с коррекцией суммы         --
+ --         NOM_VKL, NOM_IPS, SHIFR_SCHET, SUB_SHIFR_SCHET те же   --
+ --  = -1 - коррекция, последняя в цепочке SERVICE_DOC-SSYLKA_DOC  --
  -- ============================================================== -- 
  
- -- СѓРґРµСЂР¶Р°РЅРЅС‹Рµ РЅР°Р»РѕРіРё РїРѕ РґР°С‚Р°Рј СЃ РІС‹РґРµР»РµРЅРёРµРј РёСЃРїСЂР°РІР»РµРЅРЅС‹С… СЃСѓРјРј
+ -- удержанные налоги по датам с выделением исправленных сумм
  cursor C1 is
          Select * from (   
                              Select ds.DATA_OP, 
                                     ds.SHIFR_SCHET,
                                     ds.SUMMA 
                                  from DV_SR_LSPV ds
-                                 where  ds.DATA_OP>=to_date( '01.01.2016','dd.mm.yyyy' )    -- СЃ РЅР°С‡Р°Р»Р° РіРѕРґР°
-                                    and ds.DATA_OP <to_date( '01.10.2016','dd.mm.yyyy' )    -- РґРѕ РєРѕРЅС†Р° РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°  
-                                    and ds.SHIFR_SCHET in (85,86)                           -- РЅР°Р»РѕРіРё РЅР° РґРѕС…РѕРґС‹ РїРµРЅСЃРёРё Рё РІС‹РєСѓРїРЅС‹Рµ         
-                                    and  ds.SERVICE_DOC=0                                   -- Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№, РёР·РЅР°С‡Р°Р»СЊРЅРѕ РїСЂР°РІРёР»СЊРЅРѕ
+                                 where  ds.DATA_OP>=to_date( '01.01.2016','dd.mm.yyyy' )    -- с начала года
+                                    and ds.DATA_OP <to_date( '01.10.2016','dd.mm.yyyy' )    -- до конца отчетного периода  
+                                    and ds.SHIFR_SCHET in (85,86)                           -- налоги на доходы пенсии и выкупные         
+                                    and  ds.SERVICE_DOC=0                                   -- без исправлений, изначально правильно
                        )  
          pivot(  sum(SUMMA) as UDNAL for SHIFR_SCHET in ( 85 UCH, 86 POS ) )
          order by DATA_OP;
          
-  -- СѓРґРµСЂР¶Р°РЅРЅС‹Рµ СЃСѓРјРјС‹ РЅР°Р»РѕРіРѕРІ, РєРѕС‚РѕСЂС‹Рµ РїРѕС€Р»Рё РЅР° РёСЃРїСЂР°РІР»РµРЅРёСЏ РІ РїСЂРµРґС‹РґСѓС‰РёР№ РіРѕРґ       
+  -- удержанные суммы налогов, которые пошли на исправления в предыдущий год       
   cursor C2 is       
     with ispr as (   
                 Select q.*,
-                       sum(SUMMA)   over(partition by NOM_VKL, NOM_IPS) CHK_SUM,   -- РїСЂРѕРІРµСЂРёС‚СЊ РЅР° СЃС‚РѕСЂРЅРѕ
-                       min(DATA_OP) over(partition by NOM_VKL, NOM_IPS) MIN_DAT,   -- РґР°С‚Р° РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅРѕРіРѕ СѓРґРµСЂР¶Р°РЅРёСЏ
-                       count(*)     over(partition by NOM_VKL, NOM_IPS) CHK_CNT,   -- С‡РёСЃР»Рѕ Р·Р°РїРёСЃРµР№: РїРµСЂРІРёС‡РЅРѕР№ Рё РёСЃРїСЂР°РІР»РµРЅРёР№
+                       sum(SUMMA)   over(partition by NOM_VKL, NOM_IPS) CHK_SUM,   -- проверить на сторно
+                       min(DATA_OP) over(partition by NOM_VKL, NOM_IPS) MIN_DAT,   -- дата первоначального удержания
+                       count(*)     over(partition by NOM_VKL, NOM_IPS) CHK_CNT,   -- число записей: первичной и исправлений
                        count(*)     over(partition by NOM_VKL, NOM_IPS order by DATA_OP rows unbounded preceding) CHK_ORD
                 from(
                      Select ds.* from DV_SR_LSPV ds
-                        start with ds.SHIFR_SCHET in (85,86)      -- СѓРґРµСЂР¶Р°РЅРёРµ РЅР°Р»РѕРіРѕРІ
-                                and ds.SERVICE_DOC= -1            -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј СЃ -1)
-                                and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')  -- РїРѕСЃР»РµРґРЅСЏСЏ РєРѕСЂСЂРµРєС†РёСЏ РІРЅСѓС‚СЂРё 
-                                and ds.DATA_OP <to_date('01.10.2016','dd.mm.yyyy')  -- РѕС‚С‡РµС‚РЅРѕРіРѕ РїРµСЂРёРѕРґР°
+                        start with ds.SHIFR_SCHET in (85,86)      -- удержание налогов
+                                and ds.SERVICE_DOC= -1            -- коррекция (начинаем с -1)
+                                and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')  -- последняя коррекция внутри 
+                                and ds.DATA_OP <to_date('01.10.2016','dd.mm.yyyy')  -- отчетного периода
                         connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
                                and PRIOR ds.NOM_IPS=ds.NOM_IPS
                                and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
@@ -5781,8 +5781,8 @@ with  q13 as (
             and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy');        
   
 
-  -- РїСЂРѕРІРµСЂРєР°
-  -- РЈР“Рњ Р·Р°Р±С‹Р» РїРѕСЃС‚Р°РІРёС‚СЊ -1 РІ СЃРµСЂРІРёСЃ-РґРѕРє     
+  -- проверка
+  -- УГМ забыл поставить -1 в сервис-док     
   cursor C3 is           
     Select * from DV_SR_LSPV
     where DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')
@@ -5801,9 +5801,9 @@ with  q13 as (
 
 
 /*
--- Р·Р°РіРѕС‚РѕРІРєР° РґР»СЏ РєРѕРїРёСЂРѕРІР°РЅРёСЏ СЃРїСЂР°РІРєРё 
---   РёР· РёСЃС…РѕРґРЅРѕР№
---   РІ  РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰СѓСЋ
+-- заготовка для копирования справки 
+--   из исходной
+--   в  корректирующую
 
 Select rowid, t.*  from f2NDFL_ARH_SPRAVKI t where R_XMLID=160;
 -- ARH_ADR
@@ -5823,13 +5823,13 @@ from f2NDFL_ARH_ADR arh
  
 Select rowid, arh.* from  f2NDFL_ARH_ADR arh where R_SPRID in (Select ID from f2NDFL_ARH_SPRAVKI t where R_XMLID=160); 
 
--- РїСѓСЃС‚Рѕ
+-- пусто
 Select arh.*
 from f2NDFL_ARH_UVED arh
  inner join f2NDFL_ARH_SPRAVKI src on src.ID=arh.R_SPRID 
  inner join f2NDFL_ARH_SPRAVKI trg on trg.NOM_SPR=src.NOM_SPR and trg.R_XMLID=160; 
  
--- РїСѓСЃС‚Рѕ 
+-- пусто 
 Select arh.*
 from f2NDFL_ARH_VYCH arh
  inner join f2NDFL_ARH_SPRAVKI src on src.ID=arh.R_SPRID 
@@ -5861,9 +5861,9 @@ Select arh.* from  f2NDFL_ARH_MES arh where R_SPRID in (Select ID from f2NDFL_AR
 
 */
 
- -- Р·Р°РіСЂСѓР·РёС‚СЊ СЃРїРёСЃРѕРє РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ
- -- РґРѕС…РѕРґ   РїРµРЅСЃРёСЏ 
- -- СЃС‚РѕСЂРЅРѕ  РЅРµС‚
+ -- загрузить список налогоплательщиков
+ -- доход   пенсия 
+ -- сторно  нет
 procedure Load_Pensionery_bez_Storno as
 
 dTermBeg date;
@@ -5880,12 +5880,12 @@ cursor cPBS is
             from DV_SR_LSPV ds                                   
             where  ds.DATA_OP >= dTermBeg
                and ds.DATA_OP <  dTermEnd
-               and ds.SHIFR_SCHET=60  -- РїРµРЅСЃРёРё
-               and ds.NOM_VKL < 991   -- РєСЂРѕРјРµ РїРµРЅСЃРёР№ РёР· Р»РёС‡РЅС‹С… СЃСЂРµРґСЃС‚РІ
+               and ds.SHIFR_SCHET=60  -- пенсии
+               and ds.NOM_VKL < 991   -- кроме пенсий из личных средств
                and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
             group by ds.NOM_VKL, ds.NOM_IPS   
-            having min(ds.SERVICE_DOC)=0 and max(ds.SERVICE_DOC)=0 ); -- Р±РµР· РєРѕСЂСЂРµРєС†РёР№
+            having min(ds.SERVICE_DOC)=0 and max(ds.SERVICE_DOC)=0 ); -- без коррекций
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -5895,7 +5895,7 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 1; -- РїРµРЅСЃРёРё
+    gl_TIPDOX := 1; -- пенсии
     
     Open cPBS;
     Loop
@@ -5914,8 +5914,8 @@ begin
                 gl_NOMKOR,
                 gl_DATDOK,--Null     /* DATA_DOK */,
                 gl_NOMSPR, --Null     /* NOM_SPR */,
-                4        /* KVARTAL */,  -- РґР»СЏ 2-РќР”Р¤Р› РІСЃРµРіРґР° Р·Р° РіРѕРґ
-                1        /* PRIZNAK */,  -- РїСЂРёР·РЅР°Рє 2 РІСЃРµРіРґР° РІСЂСѓС‡РЅСѓСЋ
+                4        /* KVARTAL */,  -- для 2-НДФЛ всегда за год
+                1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
                 Null     /* INN_INO */,
                 aPBS(i).NAL_REZIDENT,
@@ -5936,9 +5936,9 @@ begin
 end Load_Pensionery_bez_Storno;
 
 
- -- Р·Р°РіСЂСѓР·РёС‚СЊ СЃРїРёСЃРѕРє РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ
- -- РґРѕС…РѕРґ   РїРµРЅСЃРёСЏ 
- -- СЃС‚РѕСЂРЅРѕ  РµСЃС‚СЊ
+ -- загрузить список налогоплательщиков
+ -- доход   пенсия 
+ -- сторно  есть
 procedure Load_Pensionery_so_Storno as
 
 dTermBeg date;
@@ -5953,20 +5953,20 @@ cursor cPBS is
                     inner join DV_SR_LSPV ds on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                     left join SP_INN_FIZ_LITS ifl on ifl.SSYLKA=sfl.SSYLKA                                    
                 where  ds.SERVICE_DOC<>0
-                start with   ds.SHIFR_SCHET= 60      -- РїРµРЅСЃРёСЏ
-                         and ds.NOM_VKL<991          -- Рё РїРµРЅСЃРёСЏ РЅРµ СЃРІРѕСЏ
+                start with   ds.SHIFR_SCHET= 60      -- пенсия
+                         and ds.NOM_VKL<991          -- и пенсия не своя
                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                         and ds.SERVICE_DOC = -1       -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                         and ds.DATA_OP >= dTermBeg    -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РІ РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+                         and ds.SERVICE_DOC = -1       -- коррекция (начинаем поиск с -1)
+                         and ds.DATA_OP >= dTermBeg    -- исправление сделано в отчетном периоде
                          and ds.DATA_OP <  dTermEnd    --
-                connect by   PRIOR ds.NOM_VKL = ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                         and PRIOR ds.NOM_IPS = ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                connect by   PRIOR ds.NOM_VKL = ds.NOM_VKL   -- поиск по цепочке исправлений до
+                         and PRIOR ds.NOM_IPS = ds.NOM_IPS    -- неправильного начисления
                          and PRIOR ds.SHIFR_SCHET = ds.SHIFR_SCHET
                          and PRIOR ds.SUB_SHIFR_SCHET = ds.SUB_SHIFR_SCHET
                          and PRIOR ds.SSYLKA_DOC = ds.SERVICE_DOC                    
  group by sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, sfl.DATA_ROGD, sfl.DOC_TIP, sfl.DOC_SER1||' '||sfl.DOC_SER2||' '||sfl.DOC_NOM
- having  min(ds.DATA_OP) > dTermBeg ; -- РёСЃРїСЂР°РІР»РµРЅР° РІС‹РїР»Р°С‚Р°, РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅРѕ СЃРґРµР»Р°РЅРЅР°СЏ РІ РѕС‚С‡РµС‚РЅРѕРј РїРµСЂРёРѕРґРµ
+ having  min(ds.DATA_OP) > dTermBeg ; -- исправлена выплата, первоначально сделанная в отчетном периоде
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -5976,7 +5976,7 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 1; -- РїРµРЅСЃРёРё
+    gl_TIPDOX := 1; -- пенсии
     
     Open cPBS;
     Loop
@@ -6017,9 +6017,9 @@ begin
 end Load_Pensionery_so_Storno;
 
 
- -- Р·Р°РіСЂСѓР·РёС‚СЊ СЃРїРёСЃРѕРє РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ
- -- РґРѕС…РѕРґ   РІС‹РєСѓРїРЅС‹Рµ
- -- РїСЂР°РІРєРё  РЅРµС‚
+ -- загрузить список налогоплательщиков
+ -- доход   выкупные
+ -- правки  нет
 procedure Load_Vykupnye_bez_Pravok as
 
 dTermBeg date;
@@ -6047,12 +6047,12 @@ cursor cPBS is
             from   dv_sr_lspv ds
             where  ds.data_op >= dtermbeg
             and    ds.data_op < dtermend
-            and    ds.shifr_schet = 55 -- РІС‹РєСѓРїРЅС‹Рµ
+            and    ds.shifr_schet = 55 -- выкупные
             and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
             and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
             group  by ds.nom_vkl,
                       ds.nom_ips
-            having min(ds.service_doc) = 0 and max(ds.service_doc) = 0); -- Р±РµР· РєРѕСЂСЂРµРєС†РёР№
+            having min(ds.service_doc) = 0 and max(ds.service_doc) = 0); -- без коррекций
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -6062,7 +6062,7 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 3; -- РІС‹РєСѓРїРЅС‹Рµ
+    gl_TIPDOX := 3; -- выкупные
     
     Open cPBS;
     Loop
@@ -6081,8 +6081,8 @@ begin
                 gl_NOMKOR,
                 gl_DATDOK,--Null     /* DATA_DOK */,
                 gl_NOMSPR, --Null     /* NOM_SPR */,
-                4        /* KVARTAL */,  -- РґР»СЏ 2-РќР”Р¤Р› РІСЃРµРіРґР° Р·Р° РіРѕРґ
-                1        /* PRIZNAK */,  -- РїСЂРёР·РЅР°Рє 2 РІСЃРµРіРґР° РІСЂСѓС‡РЅСѓСЋ
+                4        /* KVARTAL */,  -- для 2-НДФЛ всегда за год
+                1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
                 Null     /* INN_INO */,
                 aPBS(i).NAL_REZIDENT,
@@ -6102,36 +6102,57 @@ begin
     
 end Load_Vykupnye_bez_Pravok;
 
- -- Р·Р°РіСЂСѓР·РёС‚СЊ СЃРїРёСЃРѕРє РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ
- -- РґРѕС…РѕРґ   РІС‹РєСѓРїРЅС‹Рµ
- -- РїСЂР°РІРєРё  РµСЃС‚СЊ
+ -- загрузить список налогоплательщиков
+ -- доход   выкупные
+ -- правки  есть
 procedure Load_Vykupnye_s_Ipravlen as
 
 dTermBeg date;
 dTermEnd date;
 
 cursor cPBS is 
-    Select sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, 
-           sfl.DATA_ROGD, sfl.DOC_TIP, trim(sfl.DOC_SER1||' '||sfl.DOC_SER2||' '||sfl.DOC_NOM) SER_NOM_DOC,
-           sum(ds.SUMMA) STORNO_DOXPRAV       
-    from SP_FIZ_LITS sfl
-                    inner join SP_LSPV lspv on lspv.SSYLKA_FL=sfl.SSYLKA
-                    inner join DV_SR_LSPV ds on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
-                    left join SP_INN_FIZ_LITS ifl on ifl.SSYLKA=sfl.SSYLKA                                    
-                where  ds.SERVICE_DOC<>0
-                start with   ds.SHIFR_SCHET= 55      -- РїРµРЅСЃРёСЏ
-                         and ds.SERVICE_DOC=-1       -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                         and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
-                         and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-                         and ds.DATA_OP >= dTermBeg  -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РІ СЌС‚РѕРј РіРѕРґСѓ
-                         --and ds.DATA_OP <  dTermEnd -- RFC_3779, СѓР±СЂР°Р» СѓСЃР»РѕРІРёРµ, С‡С‚РѕР±С‹ РїРѕРґС‚СЏРіРёРІР°С‚СЊ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєРё РїРѕСЃР»РµРґСѓСЋС‰РёС… РїРµСЂРёРѕРґРѕРІ
-                connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                         and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
-                         and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
-                         and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
-                         and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC                    
- group by sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, sfl.DATA_ROGD, sfl.DOC_TIP, sfl.DOC_SER1||' '||sfl.DOC_SER2||' '||sfl.DOC_NOM
- having  min(ds.DATA_OP) between dTermBeg and (dTermEnd - .00001); -- РёСЃРїСЂР°РІР»РµРЅР° РІС‹РїР»Р°С‚Р°, РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅРѕ СЃРґРµР»Р°РЅРЅР°СЏ РІ СЌС‚РѕРј РіРѕРґСѓ
+ select sfl.ssylka,
+        ifl.inn,
+        sfl.nal_rezident,
+        sfl.grazhdan,
+        sfl.familiya,
+        sfl.imya,
+        sfl.otchestvo,
+        sfl.data_rogd,
+        sfl.doc_tip,
+        trim(sfl.doc_ser1 || ' ' || sfl.doc_ser2 || ' ' || sfl.doc_nom) ser_nom_doc,
+        sum(ds.summa) storno_doxprav
+ from   sp_fiz_lits sfl
+   inner  join sp_lspv lspv
+     on     lspv.ssylka_fl = sfl.ssylka
+   inner  join dv_sr_lspv ds
+     on     lspv.nom_vkl = ds.nom_vkl
+     and    lspv.nom_ips = ds.nom_ips
+   left   join sp_inn_fiz_lits ifl
+     on     ifl.ssylka = sfl.ssylka
+ where  ds.service_doc <> 0
+ start  with ds.shifr_schet = 55 -- пенсия
+      and    ds.service_doc = -1 -- коррекция (начинаем поиск с -1)
+      and    ds.nom_vkl = nvl(gl_nomvkl, ds.nom_vkl)
+      and    ds.nom_ips = nvl(gl_nomips, ds.nom_ips)
+      and    ds.data_op >= dtermbeg -- исправление сделано в этом году
+ --and ds.DATA_OP <  dTermEnd -- RFC_3779, убрал условие, чтобы подтягивать корректировки последующих периодов
+ connect by prior ds.nom_vkl = ds.nom_vkl -- поиск по цепочке исправлений до
+     and    prior ds.nom_ips = ds.nom_ips -- неправильного начисления
+     and    prior ds.shifr_schet = ds.shifr_schet
+     and    prior ds.sub_shifr_schet = ds.sub_shifr_schet
+     and    prior ds.ssylka_doc = ds.service_doc
+ group  by sfl.ssylka,
+           ifl.inn,
+           sfl.nal_rezident,
+           sfl.grazhdan,
+           sfl.familiya,
+           sfl.imya,
+           sfl.otchestvo,
+           sfl.data_rogd,
+           sfl.doc_tip,
+           sfl.doc_ser1 || ' ' || sfl.doc_ser2 || ' ' || sfl.doc_nom
+ having min(ds.data_op) between dtermbeg and (dtermend - .00001); -- исправлена выплата, первоначально сделанная в этом году
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -6141,7 +6162,7 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 3; -- РІС‹РєСѓРїРЅС‹Рµ
+    gl_TIPDOX := 3; -- выкупные
     
     Open cPBS;
     Loop
@@ -6181,9 +6202,9 @@ begin
     
 end Load_Vykupnye_s_Ipravlen; 
 
- -- Р·Р°РіСЂСѓР·РёС‚СЊ СЃРїРёСЃРѕРє РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ
- -- РґРѕС…РѕРґ   РїРѕСЃРѕР±РёСЏ
- -- РїСЂР°РІРєРё  РЅРµС‚
+ -- загрузить список налогоплательщиков
+ -- доход   пособия
+ -- правки  нет
 procedure Load_Posobiya_bez_Pravok as
 
 dTermBeg date;
@@ -6225,14 +6246,14 @@ cursor cPBS is
                   and  vrp.ssylka_doc = ds.ssylka_doc
                 where  ds.data_op >= dtermbeg
                 and    ds.data_op < dtermend
-                and    ds.shifr_schet = 62 -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ СЃСѓРјРјС‹  
+                and    ds.shifr_schet = 62 -- ритуалки и наследуемые суммы  
                 and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                 and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                 group  by vrp.ssylka,
                           vrp.ssylka_poluch,
                           vrp.gf_person,
                           vrp.nal_rezident
-                having min(ds.service_doc) = 0 and max(ds.service_doc) = 0 -- Р±РµР· РєРѕСЂСЂРµРєС†РёР№                            
+                having min(ds.service_doc) = 0 and max(ds.service_doc) = 0 -- без коррекций                            
                 ) psb
         left   join gazfond.people pe
         on     pe.fk_contragent = psb.gf_person
@@ -6253,7 +6274,7 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 2; -- РїРѕСЃРѕР±РёСЏ
+    gl_TIPDOX := 2; -- пособия
     
     Open cPBS;
     Loop
@@ -6272,8 +6293,8 @@ begin
                 gl_NOMKOR,
                 gl_DATDOK,--Null     /* DATA_DOK */,
                 gl_NOMSPR, --Null     /* NOM_SPR */,
-                4        /* KVARTAL */,  -- РґР»СЏ 2-РќР”Р¤Р› РІСЃРµРіРґР° Р·Р° РіРѕРґ
-                1        /* PRIZNAK */,  -- РїСЂРёР·РЅР°Рє 2 РІСЃРµРіРґР° РІСЂСѓС‡РЅСѓСЋ
+                4        /* KVARTAL */,  -- для 2-НДФЛ всегда за год
+                1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
                 Null     /* INN_INO */,
                 aPBS(i).NAL_REZIDENT,
@@ -6294,9 +6315,9 @@ begin
   end Load_Posobiya_bez_Pravok; 
 
 
- -- Р·Р°РіСЂСѓР·РёС‚СЊ СЃРїРёСЃРѕРє РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєРѕРІ
- -- РґРѕС…РѕРґ   РїРѕСЃРѕР±РёСЏ
- -- РїСЂР°РІРєРё  РµСЃС‚СЊ
+ -- загрузить список налогоплательщиков
+ -- доход   пособия
+ -- правки  есть
 procedure Load_Posobiya_s_Ipravlen as
 
 dTermBeg date;
@@ -6320,7 +6341,7 @@ cursor cPBS is
                                    ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC   
                     where  ds.DATA_OP >= dTermBeg
                        and ds.DATA_OP <  dTermEnd
-                       and ds.SHIFR_SCHET = 62  -- СЂРёС‚СѓР°Р»РєРё Рё РЅР°СЃР»РµРґСѓРµРјС‹Рµ СЃСѓРјРјС‹  
+                       and ds.SHIFR_SCHET = 62  -- ритуалки и наследуемые суммы  
                        and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                        and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                     group by vrp.SSYLKA, vrp.SSYLKA_POLUCH, vrp.GF_PERSON, vrp.NAL_REZIDENT  
@@ -6340,7 +6361,7 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 2; -- РїРѕСЃРѕР±РёСЏ
+    gl_TIPDOX := 2; -- пособия
     
     Open cPBS;
     Loop
@@ -6359,8 +6380,8 @@ begin
                 gl_NOMKOR,
                 gl_DATDOK,--Null     /* DATA_DOK */,
                 gl_NOMSPR, --Null     /* NOM_SPR */,
-                4        /* KVARTAL */,  -- РґР»СЏ 2-РќР”Р¤Р› РІСЃРµРіРґР° Р·Р° РіРѕРґ
-                1        /* PRIZNAK */,  -- РїСЂРёР·РЅР°Рє 2 РІСЃРµРіРґР° РІСЂСѓС‡РЅСѓСЋ
+                4        /* KVARTAL */,  -- для 2-НДФЛ всегда за год
+                1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
                 Null     /* INN_INO */,
                 aPBS(i).NAL_REZIDENT,
@@ -6380,8 +6401,8 @@ begin
     
   end Load_Posobiya_s_Ipravlen; 
   
--- Р·Р°РіСЂСѓР·РєР° РґРѕС…РѕРґРѕРІ РїРѕ РјРµСЃСЏС†Р°Рј
--- РїРµРЅСЃРёРё Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+-- загрузка доходов по месяцам
+-- пенсии без исправлений
 procedure Load_MesDoh_Pensia_bezIspr as
 dTermBeg date;
 dTermEnd date;
@@ -6403,6 +6424,8 @@ cursor cPBS( pNPStatus in number ) is
         and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         and    ls.storno_flag = 0
         and    ls.status_np = pnpstatus
+        and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+        and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
         and    ds.data_op >= dtermbeg
         and    ds.data_op < dtermend
         and    ds.shifr_schet = 60
@@ -6419,9 +6442,9 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 1; -- РїРµРЅСЃРёСЏ
+    gl_TIPDOX := 1; -- пенсия
     
-    Open cPBS( 1 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6445,7 +6468,7 @@ begin
         end loop;
     Close cPBS;
     
-    Open cPBS( 2 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6473,8 +6496,8 @@ begin
 
 end Load_MesDoh_Pensia_bezIspr;
 
--- Р·Р°РіСЂСѓР·РєР° РґРѕС…РѕРґРѕРІ РїРѕ РјРµСЃСЏС†Р°Рј
--- РїРµРЅСЃРёРё СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
+-- загрузка доходов по месяцам
+-- пенсии с исправлениями
 procedure Load_MesDoh_Pensia_sIspravl as
 dTermBeg date;
 dTermEnd date;
@@ -6484,11 +6507,11 @@ cursor cPBS( pNPStatus in number ) is
                extract(month from ds.data_op) mes,
                sum(ds.summa) doh_sum
         from   dv_sr_lspv ds
-        inner  join sp_lspv lspv
-        on     lspv.nom_vkl = ds.nom_vkl
-        and    lspv.nom_ips = ds.nom_ips
-        inner  join f2ndfl_load_spravki ls
-        on     lspv.ssylka_fl = ls.ssylka
+          inner  join sp_lspv lspv
+            on     lspv.nom_vkl = ds.nom_vkl
+            and    lspv.nom_ips = ds.nom_ips
+          inner  join f2ndfl_load_spravki ls
+            on     lspv.ssylka_fl = ls.ssylka
         where  ls.kod_na = gl_kodna
         and    ls.god = gl_god
         and    ls.tip_dox = gl_tipdox
@@ -6496,6 +6519,8 @@ cursor cPBS( pNPStatus in number ) is
         and    ls.storno_flag <> 0
         and    ls.status_np = pnpstatus
         and    nvl(ls.r_sprid, -1) = nvl(gl_sprid, nvl(ls.r_sprid, -1))
+        and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+        and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
         and    ds.data_op >= dtermbeg
         and    ds.data_op < dtermend
         and    ds.shifr_schet = 60
@@ -6515,21 +6540,21 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 1; -- РїРµРЅСЃРёСЏ
+    gl_TIPDOX := 1; -- пенсия
     
-    -- РїСЂРѕРІРµСЂРєР° РЅР° РЅСѓР»РµРІРѕР№ РёС‚РѕРі Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРЅС‹С… РѕРїРµСЂР°С†РёР№ СЃС‚РѕСЂРЅРѕ
+    -- проверка на нулевой итог зарегистрированных операций сторно
     Select count(*) into nNonZeroSTORNO
     from(
          Select dvsr.SSYLKA_FL
             from( Select lspv.SSYLKA_FL, ds.*
                     from DV_SR_LSPV ds 
                     inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
-                        start with   ds.SHIFR_SCHET= 60      -- РїРµРЅСЃРёСЏ
-                                 and ds.SERVICE_DOC=-1       -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                 and ds.DATA_OP >= dTermBeg  -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РІ СЌС‚РѕРј РіРѕРґСѓ
+                        start with   ds.SHIFR_SCHET= 60      -- пенсия
+                                 and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
+                                 and ds.DATA_OP >= dTermBeg  -- исправление сделано в этом году
                                  and ds.DATA_OP <  dTermEnd
-                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                        connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                 and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                  and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                  and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC
@@ -6544,11 +6569,11 @@ begin
     if nNonZeroSTORNO<>0 then
        Raise_Application_Error( 
              -200001,
-            'РћРЁРР‘РљРђ: РџСЂРё Р·Р°РіСЂСѓР·РєРµ РґРѕС…РѕРґРѕРІ РїРµРЅСЃРёРѕРЅРµСЂРѕРІ РїРѕ РјРµСЃСЏС†Р°Рј РѕР±РЅР°СЂСѓР¶РµРЅРѕ '||to_char(nNonZeroSTORNO)||
-            ' РЅРµРЅСѓР»РµРІС‹С… СЃСѓРјРј РїРѕ РѕРїРµСЂР°С†РёСЏРј СЃС‚РѕСЂРЅРѕ.' );
+            'ОШИБКА: При загрузке доходов пенсионеров по месяцам обнаружено '||to_char(nNonZeroSTORNO)||
+            ' ненулевых сумм по операциям сторно.' );
        end if;      
     
-    Open cPBS( 1 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6572,7 +6597,7 @@ begin
         end loop;
     Close cPBS;
     
-    Open cPBS( 2 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6600,8 +6625,8 @@ begin
 
 end Load_MesDoh_Pensia_sIspravl;
 
--- Р·Р°РіСЂСѓР·РєР° РґРѕС…РѕРґРѕРІ РїРѕ РјРµСЃСЏС†Р°Рј
--- РїРѕСЃРѕР±РёСЏ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+-- загрузка доходов по месяцам
+-- пособия без исправлений
 procedure Load_MesDoh_Posob_bezIspr as
 dTermBeg date;
 dTermEnd date;
@@ -6624,6 +6649,8 @@ cursor cPBS( pNPStatus in number ) is
         and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         and    ls.storno_flag = 0
         and    ls.status_np = pnpstatus
+        and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+        and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
         and    ds.data_op >= dtermbeg
         and    ds.data_op < dtermend
         and    ds.shifr_schet = 62
@@ -6642,9 +6669,9 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 2; -- РїРѕСЃРѕР±РёСЏ
+    gl_TIPDOX := 2; -- пособия
     
-    Open cPBS( 1 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6668,7 +6695,7 @@ begin
         end loop;
     Close cPBS;
     
-    Open cPBS( 2 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6697,8 +6724,8 @@ begin
 end Load_MesDoh_Posob_bezIspr;
 
 
--- Р·Р°РіСЂСѓР·РєР° РґРѕС…РѕРґРѕРІ РїРѕ РјРµСЃСЏС†Р°Рј
--- РїРѕСЃРѕР±РёСЏ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+-- загрузка доходов по месяцам
+-- пособия без исправлений
 procedure Load_MesDoh_Posob_sIspravl as
 dTermBeg date;
 dTermEnd date;
@@ -6708,26 +6735,28 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 2; -- РїРѕСЃРѕР±РёСЏ
+    gl_TIPDOX := 2; -- пособия
     
-    -- РїСЂРѕРІРµСЂРєР°, Р±С‹Р»Рё Р»Рё РїСЂРёР·РЅР°РєРё РёСЃРїСЂР°РІР»РµРЅРёСЏ РІ РІС‹РїР»Р°С‚Р°С… РїРѕСЃРѕР±РёР№
+    -- проверка, были ли признаки исправления в выплатах пособий
     Select count(*) into nCorrQnt
         from DV_SR_LSPV ds   
         where ds.SHIFR_SCHET=62 and ds.DATA_OP>=dTermBeg and ds.DATA_OP<dTermEnd 
-          and ( ds.SUMMA<0 or ds.SERVICE_DOC<>0 );
+          and ( ds.SUMMA<0 or ds.SERVICE_DOC<>0 )
+        and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+        and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl);
 
     if nCorrQnt>0 then
         Raise_Application_Error( 
              -200001,
-            'РћРЁРР‘РљРђ: Р—Р°РіСЂСѓР·РєР° РґРѕС…РѕРґРѕРІ РѕС‚ РёСЃРїСЂР°РІР»РµРЅРЅС‹С… РІС‹РїР»Р°С‚ РїРѕСЃРѕР±РёР№ РµС‰Рµ РЅРµ СЂРµР°Р»РёР·РѕРІРЅР°. '||chr(10)||chr(13)||
-            'Р’ РґРІРёР¶РµРЅРёРё СЃСЂРµРґСЃС‚РІ РЅР°Р№РґРµРЅРѕ Р·Р°РїРёСЃРµР№ '||to_char(nCorrQnt)||' СЃ РїСЂРёР·РЅР°РєР°РјРё РёСЃРїСЂР°РІР»РµРЅРёСЏ.' );    
+            'ОШИБКА: Загрузка доходов от исправленных выплат пособий еще не реализовна. '||chr(10)||chr(13)||
+            'В движении средств найдено записей '||to_char(nCorrQnt)||' с признаками исправления.' );    
         end if;
 
 end Load_MesDoh_Posob_sIspravl;
 
 
--- Р·Р°РіСЂСѓР·РєР° РґРѕС…РѕРґРѕРІ РїРѕ РјРµСЃСЏС†Р°Рј
--- РІС‹РєСѓРїРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+-- загрузка доходов по месяцам
+-- выкупные без исправлений
 procedure Load_MesDoh_Vykup_bezIspr as
 dTermBeg date;
 dTermEnd date;
@@ -6750,6 +6779,8 @@ cursor cPBS( pNPStatus in number ) is
         and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         and    ls.storno_flag = 0
         and    ls.status_np = pnpstatus
+        and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+        and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
         and    ds.data_op >= dtermbeg
         and    ds.data_op < dtermend
         and    ds.shifr_schet = 55
@@ -6768,9 +6799,9 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 3; -- РІС‹РєСѓРїРЅС‹Рµ
+    gl_TIPDOX := 3; -- выкупные
     
-    Open cPBS( 1 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6798,7 +6829,7 @@ begin
         end loop;
     Close cPBS;
     
-    Open cPBS( 2 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6830,39 +6861,43 @@ begin
 
 end Load_MesDoh_Vykup_bezIspr;
 
--- РІС‹РєСѓРїРЅС‹Рµ СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
+-- выкупные с исправлениями
 procedure Load_MesDoh_Vykup_sIspravl as
 dTermBeg date;
 dTermEnd date;
 
 cursor cPBS( pNPStatus in number ) is 
         Select * 
-        from(   -- С‡Р°СЃС‚СЊ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+        from(   -- часть без исправлений
                 Select ls.SSYLKA, extract(MONTH from ds.DATA_OP) MES, ds.SUB_SHIFR_SCHET, sum(ds.SUMMA) DOH_SUM
                     from DV_SR_LSPV ds 
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                          inner join F2NDFL_LOAD_SPRAVKI ls on lspv.SSYLKA_FL=ls.SSYLKA 
                     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus    
                         and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-                        and ds.SHIFR_SCHET= 55      -- РІС‹РєСѓРїРЅР°СЏ
+                        and ds.SHIFR_SCHET= 55      -- выкупная
                         and ds.DATA_OP >= dTermBeg  
                         and ds.DATA_OP <  dTermEnd
-                        and ds.SERVICE_DOC=0        -- Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№
+                        and ds.SERVICE_DOC=0        -- без исправлений
+                        and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+                        and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                 group by ls.SSYLKA, extract(MONTH from ds.DATA_OP), ds.SUB_SHIFR_SCHET        
             UNION
-                -- С‡Р°СЃС‚СЊ РёСЃРїСЂР°РІР»РµРЅРЅР°СЏ
+                -- часть исправленная
                 Select dvsr.*
                 from( Select SSYLKA_FL SSYLKA, extract(MONTH from PERVDATA) MES, SUB_SHIFR_SCHET, sum(NOVSUM) DOH_SUM 
                       from( 
                             Select lspv.SSYLKA_FL, ds.SUB_SHIFR_SCHET, sum(SUMMA) NOVSUM, min(ds.DATA_OP) PERVDATA
                                 from DV_SR_LSPV ds 
                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
-                                    start with   ds.SHIFR_SCHET= 55      -- РІС‹РєСѓРїРЅР°СЏ
-                                             and ds.SERVICE_DOC=-1       -- РєРѕСЂСЂРµРєС†РёСЏ (РЅР°С‡РёРЅР°РµРј РїРѕРёСЃРє СЃ -1)
-                                             and ds.DATA_OP >= dTermBeg  -- РёСЃРїСЂР°РІР»РµРЅРёРµ СЃРґРµР»Р°РЅРѕ РІ СЌС‚РѕРј РіРѕРґСѓ
-                                             --and ds.DATA_OP <  dTermEnd --RFC_3779, РґР»СЏ РїРѕРґС…Р°РІР°С‚Р° РІРѕР·РІСЂР°С‚Р° РІ РїРѕСЃР»РµРґСѓСЋС‰РёС… РїРµСЂРёРѕРґР°С…
-                                    connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                                             and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                                    start with   ds.SHIFR_SCHET= 55      -- выкупная
+                                             and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
+                                             and ds.DATA_OP >= dTermBeg  -- исправление сделано в этом году
+                                             and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+                                             and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+                                             --and ds.DATA_OP <  dTermEnd --RFC_3779, для подхавата возврата в последующих периодах
+                                    connect by   PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                                             and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                              and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                              and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                              and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC
@@ -6884,9 +6919,9 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 3; -- РІС‹РєСѓРїРЅС‹Рµ
+    gl_TIPDOX := 3; -- выкупные
     
-    Open cPBS( 1 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6914,7 +6949,7 @@ begin
         end loop;
     Close cPBS;
     
-    Open cPBS( 2 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -6947,7 +6982,7 @@ begin
 end Load_MesDoh_Vykup_sIspravl;
   
 
--- Р·Р°РіСЂСѓР·РєР° РІС‹С‡РµС‚РѕРІ РґР»СЏ РїРµРЅСЃРёРѕРЅРµСЂРѕРІ Рё СѓС‡Р°СЃС‚РЅРёРєРѕРІ - СЂРµР·РёРґРµРЅС‚РѕРІ
+-- загрузка вычетов для пенсионеров и участников - резидентов
 procedure Load_Vychety as
 
 dTermBeg date;
@@ -6958,7 +6993,7 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS ;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 1; -- РїРµРЅСЃРёРё
+    gl_TIPDOX := 1; -- пенсии
 
     Insert into F2NDFL_LOAD_VYCH 
           ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
@@ -6972,13 +7007,13 @@ begin
          left join  taxdeductions_v td on td.nom_vkl = ds.NOM_VKL and td.nom_ips = ds.NOM_IPS and td.shifr_schet = ds.shifr_schet
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR
       and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-      and ls.STATUS_NP=1          -- СЂРµР·РёРґРµРЅС‚С‹
-      and ds.SHIFR_SCHET>1000     -- РІС‹С‡РµС‚С‹
-      and ds.DATA_OP >= dTermBeg  -- Р·Р° РіРѕРґ
+      and ls.STATUS_NP=1          -- резиденты
+      and ds.SHIFR_SCHET>1000     -- вычеты
+      and ds.DATA_OP >= dTermBeg  -- за год
       and ds.DATA_OP <  dTermEnd
     group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code;
     
-    gl_TIPDOX := 3; -- РІС‹РєСѓРїРЅС‹Рµ
+    gl_TIPDOX := 3; -- выкупные
 
     Insert into F2NDFL_LOAD_VYCH 
           ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
@@ -6992,9 +7027,11 @@ begin
          left join  taxdeductions_v td on td.nom_vkl = ds.NOM_VKL and td.nom_ips = ds.NOM_IPS and td.shifr_schet = ds.shifr_schet
     where ls.KOD_NA = gl_KODNA and ls.GOD = gl_GOD and ls.TIP_DOX = gl_TIPDOX and ls.NOM_KORR = gl_NOMKOR
       and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-      and ls.STATUS_NP = 1          -- СЂРµР·РёРґРµРЅС‚С‹
-      and ds.SHIFR_SCHET > 1000     -- РІС‹С‡РµС‚С‹
-      and ds.DATA_OP >= dTermBeg  -- Р·Р° РіРѕРґ
+      and ls.STATUS_NP = 1          -- резиденты
+      and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+      and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+      and ds.SHIFR_SCHET > 1000     -- вычеты
+      and ds.DATA_OP >= dTermBeg  -- за год
       and ds.DATA_OP <  dTermEnd
     group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code;    
     
@@ -7003,20 +7040,26 @@ begin
 end Load_Vychety;
 
 
--- Р·Р°РіСЂСѓР·РєР° РёС‚РѕРіРѕРІ РїРѕ РїРµРЅСЃРёСЏРј
--- СЃС‚Р°РІРєРё 13 Рё 30%
--- РЅР°Р»РѕРіРё РІСЃРµ: Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№ Рё СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
+-- загрузка итогов по пенсиям
+-- ставки 13 и 30%
+-- налоги все: без исправлений и с исправлениями
 procedure Load_Itogi_Pensia as
 
 dTermBeg date;
 dTermEnd date;
 
 cursor cPBS( pNPStatus in number, pKodStavki in number ) is 
-    Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(nal.SGD_SUM,0) SGD_NAL, 
-           nvl(doh.SGD_SUM30,0) SGD_NI30, 
-           nvl(doh.SGD_SUM,0) - LEAST(nvl(doh.SGD_SUM,0),nvl(vyc.SGD_SUM,0)) SGD_OB13,
-           round( 0.13*(nvl(doh.SGD_SUM,0) - LEAST(nvl(doh.SGD_SUM,0),nvl(vyc.SGD_SUM,0))), 0 ) SGD_NI13
-    from f2NDFL_LOAD_SPRAVKI ls
+    select ls.ssylka,
+           nvl(doh.sgd_sum, 0) sgd_doh,
+           nvl(vyc.sgd_sum, 0) sgd_vych,
+           nvl(nal.sgd_sum, 0) sgd_nal,
+           nvl(doh.sgd_sum30, 0) sgd_ni30,
+           nvl(doh.sgd_sum, 0) -
+           least(nvl(doh.sgd_sum, 0), nvl(vyc.sgd_sum, 0)) sgd_ob13,
+           round(0.13 * (nvl(doh.sgd_sum, 0) -
+                 least(nvl(doh.sgd_sum, 0), nvl(vyc.sgd_sum, 0))),
+                 0) sgd_ni13
+    from   f2ndfl_load_spravki ls
         left join( 
             Select SSYLKA, sum(DOH_SUM) SGD_SUM, sum(round(0.3*DOH_SUM,0)) SGD_SUM30
                 from f2NDFL_LOAD_MES 
@@ -7035,12 +7078,12 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.DATA_OP >= dTermBeg 
-                          and ds.DATA_OP <  dTermEnd 
+                          and ds.DATA_OP <  dTermEnd
                           and ds.SHIFR_SCHET = 85 
-                          and ds.SUB_SHIFR_SCHET = (pNPStatus-1) -- РґР»СЏ РїРµРЅСЃРёР№: 0-СЂРµР·РёРґРµРЅС‚С‹, 1-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                          and ds.SERVICE_DOC = 0                 -- РµСЃР»Рё <>0, С‚Рѕ СЌС‚Рѕ РґРѕР»Р¶РЅР° РїРѕР»СѓС‡РёС‚СЊСЃСЏ РЅСѓР»РµРІР°СЏ СЃСѓРјРјР° РґР»СЏ СЃС‚РѕСЂРЅРѕ
+                          and ds.SUB_SHIFR_SCHET = (pNPStatus-1) -- для пенсий: 0-резиденты, 1-нерезиденты 
+                          and ds.SERVICE_DOC = 0                 -- если <>0, то это должна получиться нулевая сумма для сторно
                         group by sp.SSYLKA_FL
-                union all  -- РёСЃРїСЂР°РІР»РµРЅРёСЏ РѕС€РёР±РѕРє СЂР°СЃС‡РµС‚Р° РЅР°Р»РѕРіР° РїСЂРµРґС‹РґСѓС‰РёС… РїРµСЂРёРѕРґРѕРІ  
+                union all  -- исправления ошибок расчета налога предыдущих периодов  
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED 
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
@@ -7049,11 +7092,11 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                           and ds.SHIFR_SCHET=83 
                           and ds.SERVICE_DOC=0       
                         group by sp.SSYLKA_FL 
-                union all  -- РёСЃРїСЂР°РІР»РµРЅРёРµ РѕС€РёР±РѕРє, СЃРґРµР»Р°РЅРЅС‹С… РІ 2016 РіРѕРґСѓ, Р·Р° СЃС‡РµС‚ СѓРґРµСЂР¶Р°РЅРёР№ РІ 2017   
+                union all  -- исправление ошибок, сделанных в 2016 году, за счет удержаний в 2017   
                     Select sp.SSYLKA_FL, -sum(SUMMA) SGD_SUMPRED 
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
-                        where 1 = 1--RFC_3779 gl_GOD=2016 -- РєРѕСЂСЂРµРєС†РёСЏ С‚РѕР»СЊРєРѕ РґР»СЏ 2016 РіРѕРґР°
+                        where 1 = 1--RFC_3779 gl_GOD=2016 -- коррекция только для 2016 года
                           and ds.DATA_OP >= dTermEnd  --RFC_3779 = to_date('01.01.2017', 'dd.mm.yyyy') 
                           and ds.SHIFR_SCHET=83 
                         group by sp.SSYLKA_FL 
@@ -7070,13 +7113,13 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 1; -- РїРµРЅСЃРёРё
+    gl_TIPDOX := 1; -- пенсии
     
-    -- РёСЃРїСЂР°РІР»РµРЅРёР№ СЃ РїРµСЂРµС…РѕРґРѕРј РІ РїСЂРµРґС‹РґСѓС‰РёР№ РїРµСЂРёРѕРґ Р±С‹С‚СЊ РЅРµ РјРѕР¶РµС‚
-    -- РїРѕСЌС‚РѕРјСѓ РѕРґРЅРёРј Р·Р°РїСЂРѕСЃРѕРј Р±РµР· Рё СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
-    -- РЅРѕ РґР»СЏ СѓРїСЂРѕС‰РµРЅРёСЏ СЂР°Р·РЅС‹РјРё Р·Р°РїСЂРѕСЃР°РјРё РїРѕ СЃС‚Р°РІРєР°Рј РґР»СЏ СЂРµР·РёРґРµРЅС‚РѕРІ Рё РЅРµСЂРµР·РёРґРµРЅС‚РѕРІ
+    -- исправлений с переходом в предыдущий период быть не может
+    -- поэтому одним запросом без и с исправлениями
+    -- но для упрощения разными запросами по ставкам для резидентов и нерезидентов
     
-    Open cPBS( 1, 13 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1, 13 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -7104,7 +7147,7 @@ begin
     Close cPBS;  
     
     
-    Open cPBS( 2, 30 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2, 30 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -7136,14 +7179,14 @@ begin
 end Load_Itogi_Pensia;  
 
 
--- Р·Р°РіСЂСѓР·РєР° РёС‚РѕРіРѕРІ РїРѕ РїРѕСЃРѕР±РёСЏРј РїРѕ СЃС‚Р°РІРєРµ 13% Рё 30%
--- Р‘Р•Р— РРЎРџР РђР’Р›Р•РќРР™
+-- загрузка итогов по пособиям по ставке 13% и 30%
+-- БЕЗ ИСПРАВЛЕНИЙ
 procedure Load_Itogi_Posob_bezIspr as
 
 dTermBeg date;
 dTermEnd date;
 
--- РІС‹РєСѓРїРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№ Р·Р°РґРЅРёРј С‡РёСЃР»РѕРј
+-- выкупные без исправлений задним числом
 cursor cPBS( pNPStatus in number, pKodStavki in number ) is 
     Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(nal.SGD_SUM,0) SGD_NAL, 
            nvl(doh.SGD_SUM30,0) SGD_NI30, 
@@ -7169,8 +7212,8 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                 where ds.DATA_OP >= dTermBeg 
                   and ds.DATA_OP <  dTermEnd 
                   and ds.SHIFR_SCHET = 86 
-                  and ds.SUB_SHIFR_SCHET = (pNPStatus - 1) -- РґР»СЏ РїРѕСЃРѕР±РёР№: 0-СЂРµР·РёРґРµРЅС‚С‹, 1-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                  and ds.SERVICE_DOC = 0                   -- СЌС‚Рѕ РґР°РЅРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№ STORNO_FLAG=0
+                  and ds.SUB_SHIFR_SCHET = (pNPStatus - 1) -- для пособий: 0-резиденты, 1-нерезиденты 
+                  and ds.SERVICE_DOC = 0                   -- это данные без исправлений STORNO_FLAG=0
                 group by sp.SSYLKA_FL             
             ) nal on ls.SSYLKA=nal.SSYLKA_FL    
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=0 and ls.STATUS_NP=pNPStatus
@@ -7184,13 +7227,13 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 2; -- РїРѕСЃРѕР±РёСЏ
+    gl_TIPDOX := 2; -- пособия
     
-    -- РёСЃРїСЂР°РІР»РµРЅРёР№ СЃ РїРµСЂРµС…РѕРґРѕРј РІ РїСЂРµРґС‹РґСѓС‰РёР№ РїРµСЂРёРѕРґ Р±С‹С‚СЊ РЅРµ РјРѕР¶РµС‚
-    -- РїРѕСЌС‚РѕРјСѓ РѕРґРЅРёРј Р·Р°РїСЂРѕСЃРѕРј Р±РµР· Рё СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
-    -- РЅРѕ РґР»СЏ СѓРїСЂРѕС‰РµРЅРёСЏ СЂР°Р·РЅС‹РјРё Р·Р°РїСЂРѕСЃР°РјРё РїРѕ СЃС‚Р°РІРєР°Рј РґР»СЏ СЂРµР·РёРґРµРЅС‚РѕРІ Рё РЅРµСЂРµР·РёРґРµРЅС‚РѕРІ
+    -- исправлений с переходом в предыдущий период быть не может
+    -- поэтому одним запросом без и с исправлениями
+    -- но для упрощения разными запросами по ставкам для резидентов и нерезидентов
     
-    Open cPBS( 1, 13 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1, 13 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -7218,7 +7261,7 @@ begin
     Close cPBS;  
     
     
-    Open cPBS( 2, 30 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2, 30 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -7250,14 +7293,14 @@ begin
 end Load_Itogi_Posob_bezIspr; 
 
 
--- Р·Р°РіСЂСѓР·РєР° РёС‚РѕРіРѕРІ РїРѕ РІС‹РєСѓРїРЅС‹Рј РїРѕ СЃС‚Р°РІРєРµ 13% Рё 30%
--- Р‘Р•Р— РРЎРџР РђР’Р›Р•РќРР™
+-- загрузка итогов по выкупным по ставке 13% и 30%
+-- БЕЗ ИСПРАВЛЕНИЙ
 procedure Load_Itogi_Vykup_bezIspr as
 
 dTermBeg date;
 dTermEnd date;
 
--- РІС‹РєСѓРїРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№ Р·Р°РґРЅРёРј С‡РёСЃР»РѕРј
+-- выкупные без исправлений задним числом
 cursor cPBS( pNPStatus in number, pKodStavki in number ) is 
   select ls.ssylka,
          nvl(doh.sgd_sum, 0) sgd_doh,
@@ -7302,8 +7345,8 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                        where  ds.data_op >= dtermbeg
                        and    ds.data_op < dtermend
                        and    ds.shifr_schet = 85
-                       and    ds.sub_shifr_schet = (pnpstatus + 1) -- РґР»СЏ РІС‹РєСѓРїРЅС‹С…: 2-СЂРµР·РёРґРµРЅС‚С‹, 3-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                       and    ds.service_doc = 0 -- СЌС‚Рѕ СЃРїСЂР°РІРєРё Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№ STORNO_FLAG=0
+                       and    ds.sub_shifr_schet = (pnpstatus + 1) -- для выкупных: 2-резиденты, 3-нерезиденты 
+                       and    ds.service_doc = 0 -- это справки без исправлений STORNO_FLAG=0
                        group  by sp.ssylka_fl)
                group  by ssylka_fl) nal
     on   ls.ssylka = nal.ssylka_fl
@@ -7324,13 +7367,13 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 3; -- РІС‹РєСѓРїРЅС‹Рµ
+    gl_TIPDOX := 3; -- выкупные
     
-    -- РёСЃРїСЂР°РІР»РµРЅРёР№ СЃ РїРµСЂРµС…РѕРґРѕРј РІ РїСЂРµРґС‹РґСѓС‰РёР№ РїРµСЂРёРѕРґ Р±С‹С‚СЊ РЅРµ РјРѕР¶РµС‚
-    -- РїРѕСЌС‚РѕРјСѓ РѕРґРЅРёРј Р·Р°РїСЂРѕСЃРѕРј Р±РµР· Рё СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
-    -- РЅРѕ РґР»СЏ СѓРїСЂРѕС‰РµРЅРёСЏ СЂР°Р·РЅС‹РјРё Р·Р°РїСЂРѕСЃР°РјРё РїРѕ СЃС‚Р°РІРєР°Рј РґР»СЏ СЂРµР·РёРґРµРЅС‚РѕРІ Рё РЅРµСЂРµР·РёРґРµРЅС‚РѕРІ
+    -- исправлений с переходом в предыдущий период быть не может
+    -- поэтому одним запросом без и с исправлениями
+    -- но для упрощения разными запросами по ставкам для резидентов и нерезидентов
     
-    Open cPBS( 1, 13 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1, 13 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -7358,7 +7401,7 @@ begin
     Close cPBS;  
     
     
-    Open cPBS( 2, 30 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2, 30 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -7389,14 +7432,14 @@ begin
     
 end Load_Itogi_Vykup_bezIspr;   
 
--- Р·Р°РіСЂСѓР·РєР° РёС‚РѕРіРѕРІ РїРѕ РІС‹РєСѓРїРЅС‹Рј РїРѕ СЃС‚Р°РІРєРµ 13% Рё 30%
--- РЎ РРЎРџР РђР’Р›Р•РќРРЇРњР
+-- загрузка итогов по выкупным по ставке 13% и 30%
+-- С ИСПРАВЛЕНИЯМИ
 procedure Load_Itogi_Vykup_sIspravl as
 
 dTermBeg date;
 dTermEnd date;
 
--- РІС‹РєСѓРїРЅС‹Рµ СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё Р·Р°РґРЅРёРј С‡РёСЃР»РѕРј
+-- выкупные с исправлениями задним числом
 cursor cPBS( pNPStatus in number, pKodStavki in number ) is 
 Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(nal.SGD_SUM,0) SGD_NAL, 
            nvl(doh.SGD_SUM30,0) SGD_NI30, 
@@ -7417,28 +7460,28 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
             ) vyc on  ls.SSYLKA=vyc.SSYLKA 
         left join( 
             Select SSYLKA_FL, sum(SGD_SUMPRED) SGD_SUM from (
-                    -- РЅРµРёСЃРїСЂР°РІР»РµРЅРЅР°СЏ С‡Р°СЃС‚СЊ
+                    -- неисправленная часть
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.DATA_OP >= dTermBeg 
                           and ds.DATA_OP <  dTermEnd 
                           and ds.SHIFR_SCHET=85 
-                          and ds.SUB_SHIFR_SCHET=(pNPStatus+1) -- РґР»СЏ РІС‹РєСѓРїРЅС‹С…: 2-СЂРµР·РёРґРµРЅС‚С‹, 3-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                          and ds.SERVICE_DOC=0                 -- СЌС‚Рѕ РґР°РЅРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№ 
+                          and ds.SUB_SHIFR_SCHET=(pNPStatus+1) -- для выкупных: 2-резиденты, 3-нерезиденты 
+                          and ds.SERVICE_DOC=0                 -- это данные без исправлений 
                         group by sp.SSYLKA_FL
-                    -- РёСЃРїСЂР°РІР»РµРЅРёСЏ
+                    -- исправления
                     union all
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.SHIFR_SCHET=85 
-                          and ds.SUB_SHIFR_SCHET=(pNPStatus+1) -- РґР»СЏ РІС‹РєСѓРїРЅС‹С…: 2-СЂРµР·РёРґРµРЅС‚С‹, 3-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                          and ds.SERVICE_DOC<>0                -- СЌС‚Рѕ РґР°РЅРЅС‹Рµ СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё STORNO_FLAG=1
+                          and ds.SUB_SHIFR_SCHET=(pNPStatus+1) -- для выкупных: 2-резиденты, 3-нерезиденты 
+                          and ds.SERVICE_DOC<>0                -- это данные с исправлениями STORNO_FLAG=1
                         start with ds.SERVICE_DOC=-1
                           and ds.DATA_OP >= dTermBeg 
-                        connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                               and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                        connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                               and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC                         
@@ -7458,13 +7501,13 @@ begin
     CheckGlobals;
     dTermBeg  := gl_DATAS;
     dTermEnd  := gl_DATADO;
-    gl_TIPDOX := 3; -- РІС‹РєСѓРїРЅС‹Рµ
+    gl_TIPDOX := 3; -- выкупные
     
-    -- РёСЃРїСЂР°РІР»РµРЅРёР№ СЃ РїРµСЂРµС…РѕРґРѕРј РІ РїСЂРµРґС‹РґСѓС‰РёР№ РїРµСЂРёРѕРґ Р±С‹С‚СЊ РЅРµ РјРѕР¶РµС‚
-    -- РїРѕСЌС‚РѕРјСѓ РѕРґРЅРёРј Р·Р°РїСЂРѕСЃРѕРј Р±РµР· Рё СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё
-    -- РЅРѕ РґР»СЏ СѓРїСЂРѕС‰РµРЅРёСЏ СЂР°Р·РЅС‹РјРё Р·Р°РїСЂРѕСЃР°РјРё РїРѕ СЃС‚Р°РІРєР°Рј РґР»СЏ СЂРµР·РёРґРµРЅС‚РѕРІ Рё РЅРµСЂРµР·РёРґРµРЅС‚РѕРІ
+    -- исправлений с переходом в предыдущий период быть не может
+    -- поэтому одним запросом без и с исправлениями
+    -- но для упрощения разными запросами по ставкам для резидентов и нерезидентов
     
-    Open cPBS( 1, 13 );  -- СЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 1, 13 );  -- резиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -7492,7 +7535,7 @@ begin
     Close cPBS;  
     
     
-    Open cPBS( 2, 30 );  -- РЅРµСЂРµР·РёРґРµРЅС‚С‹
+    Open cPBS( 2, 30 );  -- нерезиденты
     Loop
         Fetch cPBS bulk collect into aPBS limit 1000;
         Exit when aPBS.COUNT=0;
@@ -7523,7 +7566,7 @@ begin
     
 end Load_Itogi_Vykup_sIspravl;  
 
--- РїРµСЂРµСЃС‡РµС‚ РёС‚РѕРіРѕРІ
+-- пересчет итогов
 procedure Load_Itogi_Obnovit( pKODNA in number, pGOD in number, pSSYLKA in number, pTIPDOX in number, pNOMKOR in number ) as
 nStatusNP number;
 nKodStavki number;
@@ -7545,7 +7588,7 @@ begin
     Case nStatusNP
       when 1 then  nKodStavki:=13;
       when 2 then  nKodStavki:=30;
-      else Raise_Application_Error( -20001, 'РЎС‚Р°С‚СѓСЃ РќР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєР° РЅРµ РѕРїСЂРµРґРµР»РµРЅ.');
+      else Raise_Application_Error( -20001, 'Статус Налогоплательщика не определен.');
     end case;  
 
     Select sum(DOH_SUM), sum(round(0.3*DOH_SUM,0)) into fGodDoh, fGodIschNal30
@@ -7553,14 +7596,14 @@ begin
         where KOD_NA=pKODNA and GOD=pGOD and SSYLKA=pSSYLKA and TIP_DOX=pTIPDOX and NOM_KORR=pNOMKOR and KOD_STAVKI=nKodStavki;
         
     if fGodDoh is Null then    
-       Raise_Application_Error( -20001, 'РќРµ РЅР°Р№РґРµРЅС‹ РґР°РЅРЅС‹Рµ РїРѕ РјРµСЃСЏС†Р°Рј РіРѕРґР° Рѕ РґРѕС…РѕРґРµ РќР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєР°.'); 
+       Raise_Application_Error( -20001, 'Не найдены данные по месяцам года о доходе Налогоплательщика.'); 
        end if;    
     
     Select sum(VYCH_SUM) into fGodVych
         from f2NDFL_LOAD_VYCH
         where KOD_NA=pKODNA and GOD=pGOD and SSYLKA=pSSYLKA and TIP_DOX=pTIPDOX and NOM_KORR=pNOMKOR and KOD_STAVKI=nKodStavki;  
         
-    -- РЈРґРµСЂР¶Р°РЅРЅС‹Р№ РЅР°Р»РѕРі
+    -- Удержанный налог
     dTermBeg := to_date( '01.01.'||trim(to_char(pGOD  ,'0000')), 'dd.mm.yyyy');
     dTermEnd := to_date( '01.01.'||trim(to_char(pGOD+1,'0000')), 'dd.mm.yyyy');
     
@@ -7575,10 +7618,10 @@ begin
                           and ds.DATA_OP >= dTermBeg 
                           and ds.DATA_OP <  dTermEnd 
                           and ds.SHIFR_SCHET=85 
-                          and ds.SUB_SHIFR_SCHET=(nStatusNP-1) -- РґР»СЏ РїРµРЅСЃРёР№: 0-СЂРµР·РёРґРµРЅС‚С‹, 1-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                          and ds.SERVICE_DOC=0                 -- РµСЃР»Рё <>0, С‚Рѕ СЌС‚Рѕ РґРѕР»Р¶РЅР° РїРѕР»СѓС‡РёС‚СЊСЃСЏ РЅСѓР»РµРІР°СЏ СЃСѓРјРјР° РґР»СЏ СЃС‚РѕСЂРЅРѕ
+                          and ds.SUB_SHIFR_SCHET=(nStatusNP-1) -- для пенсий: 0-резиденты, 1-нерезиденты 
+                          and ds.SERVICE_DOC=0                 -- если <>0, то это должна получиться нулевая сумма для сторно
                         group by sp.SSYLKA_FL
-                union all  -- РёСЃРїСЂР°РІР»РµРЅРёСЏ РѕС€РёР±РѕРє СЂР°СЃС‡РµС‚Р° РЅР°Р»РѕРіР° РїСЂРµРґС‹РґСѓС‰РёС… РїРµСЂРёРѕРґРѕРІ  
+                union all  -- исправления ошибок расчета налога предыдущих периодов  
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED 
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
@@ -7588,11 +7631,11 @@ begin
                           and ds.SHIFR_SCHET=83 
                           and ds.SERVICE_DOC=0       
                         group by sp.SSYLKA_FL 
-                union all  -- РёСЃРїСЂР°РІР»РµРЅРёРµ РѕС€РёР±РѕРє, СЃРґРµР»Р°РЅРЅС‹С… РІ 2016 РіРѕРґСѓ, Р·Р° СЃС‡РµС‚ СѓРґРµСЂР¶Р°РЅРёР№ РІ 2017   
+                union all  -- исправление ошибок, сделанных в 2016 году, за счет удержаний в 2017   
                     Select sp.SSYLKA_FL, -sum(SUMMA) SGD_SUMPRED 
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
-                        where pGOD=2016 -- РєРѕСЂСЂРµРєС†РёСЏ С‚РѕР»СЊРєРѕ РґР»СЏ 2016 РіРѕРґР°
+                        where pGOD=2016 -- коррекция только для 2016 года
                           and sp.SSYLKA_FL=pSSYLKA
                           and ds.DATA_OP = to_date('01.01.2017', 'dd.mm.yyyy') 
                           and ds.SHIFR_SCHET=83 
@@ -7606,8 +7649,8 @@ begin
                   and ds.DATA_OP >= dTermBeg 
                   and ds.DATA_OP <  dTermEnd 
                   and ds.SHIFR_SCHET=86 
-                  and ds.SUB_SHIFR_SCHET=(nStatusNP-1) -- РґР»СЏ РїРѕСЃРѕР±РёР№: 0-СЂРµР·РёРґРµРЅС‚С‹, 1-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                  and ds.SERVICE_DOC=0;                -- СЌС‚Рѕ РґР°РЅРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№ STORNO_FLAG=0        
+                  and ds.SUB_SHIFR_SCHET=(nStatusNP-1) -- для пособий: 0-резиденты, 1-нерезиденты 
+                  and ds.SERVICE_DOC=0;                -- это данные без исправлений STORNO_FLAG=0        
         when 3 then
             Select sum(SGD_SUMPRED) into fGodUdNal
             from(        
@@ -7618,29 +7661,29 @@ begin
                           and ds.DATA_OP >= dTermBeg 
                           and ds.DATA_OP <  dTermEnd 
                           and ds.SHIFR_SCHET=85 
-                          and ds.SUB_SHIFR_SCHET=(nStatusNP+1) -- РґР»СЏ РІС‹РєСѓРїРЅС‹С…: 2-СЂРµР·РёРґРµРЅС‚С‹, 3-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                          and ds.SERVICE_DOC=0                 -- СЌС‚Рѕ РґР°РЅРЅС‹Рµ Р±РµР· РёСЃРїСЂР°РІР»РµРЅРёР№ 
+                          and ds.SUB_SHIFR_SCHET=(nStatusNP+1) -- для выкупных: 2-резиденты, 3-нерезиденты 
+                          and ds.SERVICE_DOC=0                 -- это данные без исправлений 
                         group by sp.SSYLKA_FL
-                    -- РёСЃРїСЂР°РІР»РµРЅРёСЏ
+                    -- исправления
                     union all
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
                         from DV_SR_LSPV ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where sp.SSYLKA_FL=pSSYLKA
                           and ds.SHIFR_SCHET=85 
-                          and ds.SUB_SHIFR_SCHET=(nStatusNP+1) -- РґР»СЏ РІС‹РєСѓРїРЅС‹С…: 2-СЂРµР·РёРґРµРЅС‚С‹, 3-РЅРµСЂРµР·РёРґРµРЅС‚С‹ 
-                          and ds.SERVICE_DOC<>0                -- СЌС‚Рѕ РґР°РЅРЅС‹Рµ СЃ РёСЃРїСЂР°РІР»РµРЅРёСЏРјРё STORNO_FLAG=1
+                          and ds.SUB_SHIFR_SCHET=(nStatusNP+1) -- для выкупных: 2-резиденты, 3-нерезиденты 
+                          and ds.SERVICE_DOC<>0                -- это данные с исправлениями STORNO_FLAG=1
                         start with ds.SERVICE_DOC=-1
                           and ds.DATA_OP >= dTermBeg 
-                        connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- РїРѕРёСЃРє РїРѕ С†РµРїРѕС‡РєРµ РёСЃРїСЂР°РІР»РµРЅРёР№ РґРѕ
-                               and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ РЅР°С‡РёСЃР»РµРЅРёСЏ
+                        connect by PRIOR ds.NOM_VKL=ds.NOM_VKL   -- поиск по цепочке исправлений до
+                               and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
                                and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
                                and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
                                and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC                         
                         group by sp.SSYLKA_FL
                         having min(ds.DATA_OP) >= dTermBeg    
                 );           
-        else Raise_Application_Error( -20001, 'РЈРєР°Р·Р°РЅРЅС‹Р№ С‚РёРї РґРѕС…РѕРґР° РЅРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РІС‹РїР»Р°С‚Р°Рј РїРѕ РїРµРЅСЃРёРѕРЅРЅСѓРјСѓ РґРѕРіРѕРІРѕСЂСѓ.');
+        else Raise_Application_Error( -20001, 'Указанный тип дохода не соответствует выплатам по пенсионнуму договору.');
     end case;    
 
         
@@ -7670,9 +7713,9 @@ begin
 
 end Load_Itogi_Obnovit;
 
--- РўРћР›Р¬РљРћ РџРћР›РЎР• РќРЈРњР•Р РђР¦РР Р—РђР“Р РЈР–РђР•Рњ РђР”Р Р•РЎРђ
--- РЅРѕРјРµСЂР° СЃРїСЂР°РІРѕРє РЅСѓР¶РЅРѕ РїСЂРµРґРІР°СЂРёС‚РµР»СЊРЅРѕ СЃРєРѕРїРёСЂРѕРІР°С‚СЊ РІ С‚Р°Р±Р»РёС†Сѓ СЂР°Р·Р±РѕСЂР° Р°РґСЂРµСЃРѕРІ
--- (РЅСѓР¶РЅР° РїСЂРµРґРІР°СЂРёС‚РµР»СЊРЅР°СЏ СѓСЃС‚Р°РЅРѕРІРєР° РїР°СЂР°РјРµС‚СЂРѕРІ InitGlobals)
+-- ТОЛЬКО ПОЛСЕ НУМЕРАЦИИ ЗАГРУЖАЕМ АДРЕСА
+-- номера справок нужно предварительно скопировать в таблицу разбора адресов
+-- (нужна предварительная установка параметров InitGlobals)
 procedure Load_Adresa_INO as
 begin
 
@@ -7897,15 +7940,15 @@ procedure Parse_xml_izBuh(
            t.nom_korr,
            t.po_mestu,
            t.doc_body
-    from   xmltable('/Р¤Р°Р№Р»/Р”РѕРєСѓРјРµРЅС‚' passing(p_xml)
+    from   xmltable('/Файл/Документ' passing(p_xml)
              columns
-               doc_num  varchar2(20) path '@РљРќР”',
-               doc_date varchar2(20) path '@Р”Р°С‚Р°Р”РѕРє',
-               period   number       path '@РџРµСЂРёРѕРґ',
-               god      number       path '@РћС‚С‡РµС‚Р“РѕРґ',
-               code_gni varchar2(20) path '@РљРѕРґРќРћ',
-               nom_korr number       path '@РќРѕРјРљРѕСЂСЂ',
-               po_mestu number       path '@РџРѕРњРµСЃС‚Сѓ',
+               doc_num  varchar2(20) path '@КНД',
+               doc_date varchar2(20) path '@ДатаДок',
+               period   number       path '@Период',
+               god      number       path '@ОтчетГод',
+               code_gni varchar2(20) path '@КодНО',
+               nom_korr number       path '@НомКорр',
+               po_mestu number       path '@ПоМесту',
                doc_body xmltype      path '/'
            ) t;
   --
@@ -7952,7 +7995,7 @@ procedure Parse_xml_izBuh(
     --
   exception
     when no_data_found then
-      fix_exception('РћС€РёР±РєР°: РќРµ РЅР°Р№РґРµРЅР° СЃРїСЂР°РІРєР°. SPR_ID = ' || p_spr_id);
+      fix_exception('Ошибка: Не найдена справка. SPR_ID = ' || p_spr_id);
       raise;
     when others then
       fix_exception('Crash init_spravka, spr_id = ' || p_spr_id);
@@ -8140,15 +8183,15 @@ procedure Parse_xml_izBuh(
              nvl(t.ischisl_nal,     0) ischisl_nal,
              nvl(t.ischisl_nal_div, 0) ischisl_nal_div,
              nvl(t.avans_plat,      0) avans_plat
-      from   xmltable('/РћР±РѕР±С‰РџРѕРєР°Р·/РЎСѓРјРЎС‚Р°РІРєР°' passing(p_xml)
+      from   xmltable('/ОбобщПоказ/СумСтавка' passing(p_xml)
              columns
-               kod_stavki      number path '@РЎС‚Р°РІРєР°',
-               nachisl_doh     number path '@РќР°С‡РёСЃР»Р”РѕС…',
-               nach_doh_div    number path '@РќР°С‡РёСЃР»Р”РѕС…Р”РёРІ',
-               vychet_ispolz   number path '@Р’С‹С‡РµС‚РќР°Р»',
-               ischisl_nal     number path '@РСЃС‡РёСЃР»РќР°Р»',
-               ischisl_nal_div number path '@РСЃС‡РёСЃР»РќР°Р»Р”РёРІ',
-               avans_plat      number path '@РђРІР°РЅСЃРџР»Р°С‚'
+               kod_stavki      number path '@Ставка',
+               nachisl_doh     number path '@НачислДох',
+               nach_doh_div    number path '@НачислДохДив',
+               vychet_ispolz   number path '@ВычетНал',
+               ischisl_nal     number path '@ИсчислНал',
+               ischisl_nal_div number path '@ИсчислНалДив',
+               avans_plat      number path '@АвансПлат'
              ) t;
     --
   begin
@@ -8201,13 +8244,13 @@ procedure Parse_xml_izBuh(
              to_date(t.srok_perech_nal, 'dd.mm.yyyy') srok_perech_nal,
              t.sum_fact_doh     ,
              t.sum_uderzh_nal
-      from   xmltable('/Р”РѕС…РќР°Р»/РЎСѓРјР”Р°С‚Р°' passing(p_xml)
+      from   xmltable('/ДохНал/СумДата' passing(p_xml)
                columns
-                 data_fact_doh   varchar2(10) path '@Р”Р°С‚Р°Р¤Р°РєС‚Р”РѕС…',
-                 data_uderzh_nal varchar2(10) path '@Р”Р°С‚Р°РЈРґРµСЂР¶РќР°Р»',
-                 srok_perech_nal varchar2(10) path '@РЎСЂРѕРєРџСЂС‡СЃР»РќР°Р»',
-                 sum_fact_doh    number path '@Р¤Р°РєС‚Р”РѕС…РѕРґ',
-                 sum_uderzh_nal  number path '@РЈРґРµСЂР¶РќР°Р»'
+                 data_fact_doh   varchar2(10) path '@ДатаФактДох',
+                 data_uderzh_nal varchar2(10) path '@ДатаУдержНал',
+                 srok_perech_nal varchar2(10) path '@СрокПрчслНал',
+                 sum_fact_doh    number path '@ФактДоход',
+                 sum_uderzh_nal  number path '@УдержНал'
              ) t;
     --
   begin
@@ -8258,14 +8301,14 @@ procedure Parse_xml_izBuh(
              t.vozvrat_nal  ,
              t.po_stavke_xml,
              t.sved_xml
-      from   xmltable('/Р”РѕРєСѓРјРµРЅС‚/РќР”Р¤Р›6' passing(p_xml)
+      from   xmltable('/Документ/НДФЛ6' passing(p_xml)
                columns
-                 kol_fl_dohod  number path 'РћР±РѕР±С‰РџРѕРєР°Р·/@РљРѕР»Р¤Р›Р”РѕС…РѕРґ',
-                 uderzh_nal    number path 'РћР±РѕР±С‰РџРѕРєР°Р·/@РЈРґРµСЂР¶РќР°Р»РС‚',
-                 ne_uderzh_nal number path 'РћР±РѕР±С‰РџРѕРєР°Р·/@РќРµРЈРґРµСЂР¶РќР°Р»РС‚',
-                 vozvrat_nal   number path 'РћР±РѕР±С‰РџРѕРєР°Р·/@Р’РѕР·РІСЂРќР°Р»РС‚',
-                 po_stavke_xml xmltype path 'РћР±РѕР±С‰РџРѕРєР°Р·',
-                 sved_xml      xmltype path 'Р”РѕС…РќР°Р»'
+                 kol_fl_dohod  number path 'ОбобщПоказ/@КолФЛДоход',
+                 uderzh_nal    number path 'ОбобщПоказ/@УдержНалИт',
+                 ne_uderzh_nal number path 'ОбобщПоказ/@НеУдержНалИт',
+                 vozvrat_nal   number path 'ОбобщПоказ/@ВозврНалИт',
+                 po_stavke_xml xmltype path 'ОбобщПоказ',
+                 sved_xml      xmltype path 'ДохНал'
              ) t;
   begin
     l_sumgod_row.nom_korr := p_spr_row.nom_korr;
@@ -8287,7 +8330,7 @@ procedure Parse_xml_izBuh(
       --
       parse_sved(p_spr_row, b.sved_xml);
       --
-      exit; --РћР±СЂР°Р±Р°С‚С‹РІР°РµРј С‚РѕР»СЊРєРѕ РїРµСЂРІС‹Р№ РґРѕРєСѓРјРµРЅС‚!
+      exit; --Обрабатываем только первый документ!
       --
     end loop;
     --
@@ -8310,7 +8353,7 @@ begin
     --
     if s.god <> l_spr_row.god or s.period <> l_spr_row.period then
       fix_exception(
-        'Р”Р°РЅРЅС‹Рµ XML (' || s.god || ', ' || s.period || ') РЅРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‚ РґР°РЅРЅС‹Рј СЃРїСЂР°РІРєРё ID ' || p_spr_id || ' (' || l_spr_row.god || ', ' || l_spr_row.period || ')'
+        'Данные XML (' || s.god || ', ' || s.period || ') не соответствуют данным справки ID ' || p_spr_id || ' (' || l_spr_row.god || ', ' || l_spr_row.period || ')'
       );
       --
       raise no_data_found;
@@ -8329,7 +8372,7 @@ exception
 end Parse_xml_izBuh;
 
 --
--- 03.11.2017 RFC_3779 - РІС‹РґРµР»РёР» РєРѕРїРёСЂРѕРІР°РЅРёРµ СЃРїСЂР°РІРєРё Рё Р°РґСЂРµСЃР° РІ РѕС‚РґРµР»СЊРЅСѓСЋ С„СѓРЅРєС†РёСЋ
+-- 03.11.2017 RFC_3779 - выделил копирование справки и адреса в отдельную функцию
 --
   function copy_ref_2ndfl(
     p_ref_row in out nocopy f2ndfl_arh_spravki%rowtype
@@ -8375,7 +8418,7 @@ end Parse_xml_izBuh;
        p_ref_row.ser_nom_doc)
     returning id into l_result;
     --
-    -- РљРѕРїРёСЂСѓРµРј Р°РґСЂРµСЃ
+    -- Копируем адрес
     --
     insert into fnd.f2ndfl_arh_adr
       (r_sprid,
@@ -8409,7 +8452,7 @@ end Parse_xml_izBuh;
     --
   end copy_ref_2ndfl;
   
--- Р”РѕР±Р°РІРёС‚СЊ РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰СѓСЋ СЃРїСЂР°РІРєСѓ РЅР° РѕСЃРЅРѕРІРµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ РїРѕ РіРѕРґСѓ Рё СЃСЃС‹Р»РєРµ Р¤Р›    
+-- Добавить корректирующую справку на основе существующей по году и ссылке ФЛ    
   procedure Kopir_SprF2_dlya_KORR( pNOMSPRAV in varchar2, pGod in number) is 
     iCount number(3) := 0;
     sr f2NDFL_ARH_SPRAVKI%rowtype;
@@ -8433,7 +8476,7 @@ end Parse_xml_izBuh;
       sr.data_dok := trunc(sysdate);
       s_id_new := copy_ref_2ndfl(p_ref_row => sr);
 
-      -- Р”РѕР±Р°РІРёС‚СЊ Р·Р°РїРёСЃРё РёР· РїСЂРµРґС‹РґСѓС‰РµР№ РІРµСЂСЃРёРё СЃРїСЂР°РІРєРё РёР»Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєРё РІ РёС‚РѕРіРѕРІСѓСЋ С‚Р°Р±Р»РёС†Сѓ
+      -- Добавить записи из предыдущей версии справки или корректировки в итоговую таблицу
         insert into fnd.f2ndfl_arh_itogi(
                 r_sprid,kod_stavki,sgd_sum,sum_obl,sum_obl_ni,
                 sum_fiz_avans,sum_obl_nu,sum_nal_per,dolg_na,vzysk_ifns)
@@ -8442,21 +8485,21 @@ end Parse_xml_izBuh;
             from fnd.f2ndfl_arh_itogi i 
             where i.r_sprid = sr.id;
       
-      -- Р”РѕР±Р°РІРёС‚СЊ Р·Р°РїРёСЃРё РёР· sr.DATA_DOK СЃРїСЂР°РІРєРё РёР»Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєРё РІ СЃСѓРјРјР°С… РїРѕ РјРµСЃСЏС†Р°Рј 
+      -- Добавить записи из sr.DATA_DOK справки или корректировки в суммах по месяцам 
         insert into fnd.f2ndfl_arh_mes(
                 r_sprid,kod_stavki,mes,doh_kod_gni,doh_sum,vych_kod_gni,vych_sum)
         select  s_id_new, m.kod_stavki, m.mes, m.doh_kod_gni, m.doh_sum, m.vych_kod_gni, m.vych_sum 
             from fnd.f2ndfl_arh_mes m 
             where m.r_sprid = sr.id;
       
-      -- Р”РѕР±Р°РІРёС‚СЊ Р·Р°РїРёСЃРё РёР· sr.DATA_DOK СЃРїСЂР°РІРєРё РёР»Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєРё РІ СѓРІРµРґРѕРјР»РµРЅРёСЏ 
+      -- Добавить записи из sr.DATA_DOK справки или корректировки в уведомления 
         insert into fnd.f2ndfl_arh_uved(
                 r_sprid,kod_stavki,schet_kratn,nomer_uved,data_uved,ifns_kod,uved_tip_vych)
         select  s_id_new, u.kod_stavki, u.schet_kratn, u.nomer_uved, u.data_uved, u.ifns_kod, u.uved_tip_vych 
             from fnd.f2ndfl_arh_uved u 
             where u.r_sprid = sr.id;
 
-      -- Р”РѕР±Р°РІРёС‚СЊ Р·Р°РїРёСЃРё РёР· sr.DATA_DOK СЃРїСЂР°РІРєРё РёР»Рё РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєРё РІ РІС‹С‡РµС‚С‹ f2ndfl_arh_vych 
+      -- Добавить записи из sr.DATA_DOK справки или корректировки в вычеты f2ndfl_arh_vych 
         insert into fnd.f2ndfl_arh_vych(
                 r_sprid,kod_stavki,vych_kod_gni,vych_sum_predost,vych_sum_ispolz)
         select  s_id_new, v.kod_stavki, v.vych_kod_gni, v.vych_sum_predost, v.vych_sum_ispolz 
@@ -8469,7 +8512,7 @@ end Parse_xml_izBuh;
 
 
 --
--- RFC_3779: СЂР°СЃСЃС‡РёС‚С‹РІР°РµС‚ Рё РѕР±РЅРѕРІР»СЏРµС‚ СЃСѓРјРјСѓ РёСЃРїРѕР»СЊР·РѕРІР°РЅРЅС‹С… РІС‹С‡РµС‚РѕРІ РІ С‚Р°Р±Р»РёС†Рµ F2NDFL_ARH_VYCH
+-- RFC_3779: рассчитывает и обновляет сумму использованных вычетов в таблице F2NDFL_ARH_VYCH
 --
   procedure calc_benefit_usage(
     p_spr_id f2ndfl_arh_spravki.id%type
@@ -8521,7 +8564,7 @@ end Parse_xml_izBuh;
   end calc_benefit_usage;
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° copy_load_employees СЃРѕР·РґР°РµС‚ РєРѕРїРёСЋ РІСЃРµС… Р°РґСЂРµСЃРѕРІ F2NDFL_LOAD_ADR, РїСЂРёРІСЏР·Р°РЅРЅС‹С… Рє Р·Р°РґР°РЅРЅРѕР№ СЃРїСЂР°РІРєРµ 
+   * Процедура copy_load_employees создает копию всех адресов F2NDFL_LOAD_ADR, привязанных к заданной справке 
    */
   procedure copy_load_address(
     p_src_ref_id  f2ndfl_load_spravki.r_sprid%type,
@@ -8615,6 +8658,7 @@ end Parse_xml_izBuh;
       from   f2ndfl_load_spravki s,
              f2ndfl_load_adr     a
       where  1=1
+      and    a.tip_dox = s.tip_dox
       and    a.nom_korr = s.nom_korr
       and    a.ssylka = s.ssylka
       and    a.god = s.god
@@ -8624,9 +8668,9 @@ end Parse_xml_izBuh;
   end copy_load_address;
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° copy_load_employees СЃРѕР·РґР°РµС‚ РєРѕРїРёСЋ СЃРїСЂР°РІРѕРє РїРѕ РґРѕС…РѕРґР°Рј СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ С„РѕРЅРґР°
-   *   Р’С‹Р·С‹РІР°РµС‚СЃСЏ РѕРґРёРЅ СЂР°Р·, РґР»СЏ СЃРѕС‚СЂСѓРґРЅРёРєР° С„РѕРЅРґР°!
-   *  РљРѕРїРёРё СЃРѕР·РґР°СЋС‚СЃСЏ РІ С‚Р°Р±Р»РёС†Р°С… f2ndfl_load_spravki, f2ndfl_load_mes, f2ndfl_load_itogi, f2ndfl_load_vych
+   * Процедура copy_load_employees создает копию справок по доходам сотрудников фонда
+   *   Вызывается один раз, для сотрудника фонда!
+   *  Копии создаются в таблицах f2ndfl_load_spravki, f2ndfl_load_mes, f2ndfl_load_itogi, f2ndfl_load_vych
    */
   procedure copy_load_employees(
     p_src_ref_id   f2ndfl_load_spravki.r_sprid%type,

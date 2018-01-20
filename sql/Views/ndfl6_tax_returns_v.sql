@@ -4,11 +4,12 @@ create or replace view ndfl6_tax_returns_v as
          d.det_charge_type,
          d.pen_scheme_code,
          case when d.year_op = d.year_doc then 'Y' else 'N' end current_year,
-         sum(d.tax) tax_returned
+         sum(d.tax_return) tax_returned
   from   dv_sr_lspv_docs_v d
   where  1=1
   and    d.is_tax_return = 'Y'
   and    d.type_op = -1
+  and    d.year_op <= dv_sr_lspv_docs_api.get_year
   group by d.det_charge_type,
            d.pen_scheme_code, 
            case when d.year_op = d.year_doc then 'Y' else 'N' end

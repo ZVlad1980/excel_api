@@ -58,25 +58,28 @@ create or replace package body gateway_user_pkg is
    * @param x_result      - курсор с данными
    * @param x_err_msg     - сообщение об ошибке
    * @param p_report_code - код отчета
-   * @param p_from_date   - дата начала выборки в формате YYYYMMDD
-   * @param p_end_date    - дата окончани€ выборки в формате YYYYMMDD
+   * @param p_year        - год формировани€ отчета
+   * @param p_month       - мес€ц формировани€ отчета
+   * @param p_report_date - дата, на которую формируетс€ отчет
    *
    */
   procedure get_report(
     x_result      out sys_refcursor, 
     x_err_msg     out varchar2,
     p_report_code     varchar2,
-    p_from_date       varchar2,
-    p_end_date        varchar2
+    p_year            number,
+    p_month           number,
+    p_report_date     varchar2
   ) is
   begin
     --
     gateway_pkg.get_report(
-      x_result      => x_result     ,
-      x_err_msg     => x_err_msg    ,
-      p_report_code => p_report_code,
-      p_from_date   => p_from_date  ,
-      p_end_date    => p_end_date   
+      x_result      => x_result      ,
+      x_err_msg     => x_err_msg     ,
+      p_report_code => p_report_code ,
+      p_year        => p_year        ,
+      p_month       => p_month       ,
+      p_report_date => p_report_date
     );
     --
   end get_report;

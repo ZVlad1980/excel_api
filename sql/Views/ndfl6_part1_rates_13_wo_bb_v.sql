@@ -2,17 +2,16 @@ create or replace view ndfl6_part1_rates_13_wo_bb_v as
   with t as (
     select d.det_charge_type,
            d.pen_scheme_code,
-           sum(case when not(d.type_op = -1 and nvl(d.is_tax_return, 'N') = 'Y') then d.revenue end)                 revenue,
-           sum(case when d.type_op = -1 and nvl(d.is_tax_return, 'N') = 'N' then d.revenue end)                      storno_total,
-           sum(case when d.quarter_op = 1 and d.type_op = -1 and nvl(d.is_tax_return, 'N') = 'N' then d.revenue end) storno_q1,
-           sum(case when d.quarter_op = 2 and d.type_op = -1 and nvl(d.is_tax_return, 'N') = 'N' then d.revenue end) storno_q2,
-           sum(case when d.quarter_op = 3 and d.type_op = -1 and nvl(d.is_tax_return, 'N') = 'N' then d.revenue end) storno_q3,
-           sum(case when d.quarter_op = 4 and d.type_op = -1 and nvl(d.is_tax_return, 'N') = 'N' then d.revenue end) storno_q4
+           sum(case when not(d.type_op = -1 and d.is_tax_return = 'Y') then d.revenue end)                 revenue,
+           sum(case when d.type_op = -1     and d.is_tax_return = 'N'  then d.revenue end)                 storno_total,
+           sum(case when d.quarter_op = 1   and d.type_op = -1 and d.is_tax_return = 'N' then d.revenue_curr_year end) storno_q1,
+           sum(case when d.quarter_op = 2   and d.type_op = -1 and d.is_tax_return = 'N' then d.revenue_curr_year end) storno_q2,
+           sum(case when d.quarter_op = 3   and d.type_op = -1 and d.is_tax_return = 'N' then d.revenue_curr_year end) storno_q3,
+           sum(case when d.quarter_op = 4   and d.type_op = -1 and d.is_tax_return = 'N' then d.revenue_curr_year end) storno_q4
     from   dv_sr_lspv_docs_v d
     where  1=1
     and    d.det_charge_type in ('PENSION', 'RITUAL')
     and    d.tax_rate = 13
-    and    d.year_doc = d.year_op
     group by d.det_charge_type, d.pen_scheme_code
   )
   select dc.short_describe det_charge_describe,
@@ -31,4 +30,5 @@ create or replace view ndfl6_part1_rates_13_wo_bb_v as
   where  1 = 1
   and    dc.det_charge_type(+) = t.det_charge_type
   and    ps.code(+) = t.pen_scheme_code
+  and    t.revenue is not null
 /

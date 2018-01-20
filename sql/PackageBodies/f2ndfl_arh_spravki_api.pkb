@@ -18,7 +18,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   --
   
   /**
-   * РћР±РІРµСЂС‚РєРё РѕР±СЂР°Р±РѕС‚РєРё РѕС€РёР±РѕРє
+   * Обвертки обработки ошибок
    */
   procedure fix_exception(p_line number, p_msg varchar2 default null) is
   begin
@@ -32,7 +32,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   procedure init_exceptions is begin utl_error_api.init_exceptions; end init_exceptions;
 
   /**
-   * РџСЂРѕС†РµРґСЂСѓСЂР° plog - РѕР±РІРµСЂС‚РєР° dbms_output
+   * Процедрура plog - обвертка dbms_output
    */
   procedure plog(p_msg varchar2, p_eof boolean default true) is
   begin
@@ -44,8 +44,8 @@ create or replace package body f2ndfl_arh_spravki_api is
   end plog;
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° set_globals_util_pkg РІС‹Р·С‹РІР°РµС‚ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЋ РіР»РѕР±Р°Р»СЊРЅС‹С… РїРµСЂРµРјРµРЅРЅС‹С… РїР°РєРµС‚Р° FXNDFL_UTIL
-   *   РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РЅРµРѕР±С…РѕРґРёРјР° РїРµСЂРµРґ РІС‹Р·РѕРІРѕРј Р»СЋР±РѕРіРѕ РјРµС‚РѕРґР° РїР°РєРµС‚Р° FXNDFL_UTIL
+   * Процедура set_globals_util_pkg вызывает инициализацию глобальных переменных пакета FXNDFL_UTIL
+   *   Инициализация необходима перед вызовом любого метода пакета FXNDFL_UTIL
    */
   procedure set_globals_util_pkg(
     p_globals g_util_par_type
@@ -72,7 +72,7 @@ create or replace package body f2ndfl_arh_spravki_api is
       raise;
   end set_globals_util_pkg;
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° create_load_refs С„РѕСЂРјРёСЂСѓРµС‚ СЃРїСЂР°РІРєРё РІ С‚Р°Р±Р»РёС†Р°С… F2NDFL_LOAD: SPRAVKI, MES
+   * Процедура create_load_refs формирует справки в таблицах F2NDFL_LOAD: SPRAVKI, MES
    *
    * @param  -
    *
@@ -107,8 +107,8 @@ create or replace package body f2ndfl_arh_spravki_api is
           p_nom_corr    => p_globals.NOMKOR
         );
       else
-        plog('РќРµРѕР±СЂР°Р±Р°С‚С‹РІР°РµРјС‹Р№ С‚РёРї РґРѕС…РѕРґР°: ' || p_rev_type);
-        --РѕС€РёР±РєРё РЅРµС‚ - РїСЂРѕСЃС‚Рѕ РёРіРЅРѕСЂРёРј
+        plog('Необрабатываемый тип дохода: ' || p_rev_type);
+        --ошибки нет - просто игнорим
     end case;
     --
   exception
@@ -118,7 +118,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   end create_load_refs;
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° create_load_total СЂР°СЃС‡РµС‚ РёС‚РѕРіРѕРІ F2NDFL_ITOG
+   * Процедура create_load_total расчет итогов F2NDFL_ITOG
    *
    * @param  -
    *
@@ -148,9 +148,9 @@ create or replace package body f2ndfl_arh_spravki_api is
   end create_load_total;
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° calc_total_ref С„РѕСЂРјРёСЂСѓРµС‚ F2NDFL_ARH СЃ РёС‚РѕРіР°РјРё РїРѕ СЃРїСЂР°РІРєРµ
+   * Процедура calc_total_ref формирует F2NDFL_ARH с итогами по справке
    *
-   * @param p_ref_id    - ID СЃРѕР·РґР°РІР°РµРјРѕР№ СЃРїСЂР°РІРєРё f2ndfl_arh_spravki.id%type
+   * @param p_ref_id    - ID создаваемой справки f2ndfl_arh_spravki.id%type
    *
    */
   procedure create_arh_total(
@@ -171,15 +171,17 @@ create or replace package body f2ndfl_arh_spravki_api is
   end create_arh_total; 
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° calc_reference СЂР°СЃС‡РµС‚ РЅРѕРІРѕР№ СЃРїСЂР°РІРєРё
+   * Процедура calc_reference расчет новой справки
    *
-   * @param p_ref_row    - СЃРїСЂР°РІРєР° f2ndfl_arh_spravki%rowtype
-   * @param p_src_ref_id - ID РїСЂРµРґС‹РґСѓС‰РµР№ СЃРїСЂР°РІРєРё
+   * @param p_ref_row    - справка f2ndfl_arh_spravki%rowtype
+   * @param p_src_ref_id - ID предыдущей справки
+   * @param p_wo_arh     - без пересчета итогов в ARH (def: FALSE)
    *
    */
   procedure calc_reference(
     p_ref_row     in out nocopy f2ndfl_arh_spravki%rowtype,
-    p_src_ref_id  in f2ndfl_arh_spravki.id%type
+    p_src_ref_id  in f2ndfl_arh_spravki.id%type,
+    p_wo_arh      in boolean default false
   ) is
   cursor l_revenue_types_cur is
       select an.tip_dox       rev_type      ,
@@ -223,9 +225,16 @@ create or replace package body f2ndfl_arh_spravki_api is
       --
     end loop;
     --
+    l_globals.TIPDOX := null;
+    l_globals.NOMVKL := null;
+    l_globals.NOMIPS := null;
+    l_globals.CAID   := null;
+    --
     create_load_total(l_globals);
     --
-    create_arh_total(l_globals);
+    if not p_wo_arh then
+      create_arh_total(l_globals);
+    end if;
     --
   exception
     when others then
@@ -234,7 +243,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   end calc_reference;  
 
   /**
-   * Р¤СѓРЅРєС†РёСЏ get_reference_row РІРѕР·РІСЂР°С‰Р°РµС‚ СЃС‚СЂРѕРєСѓ F2NDFL_ARH_SPRAVKI РїРѕ ID
+   * Функция get_reference_row возвращает строку F2NDFL_ARH_SPRAVKI по ID
    *
    * @return - 2ndfl_arh_spravka%rowtype
    *
@@ -259,11 +268,11 @@ create or replace package body f2ndfl_arh_spravki_api is
   end get_reference_row;
 
   /**
-   * Р¤СѓРЅРєС†РёСЏ get_reference_last РІРѕР·РІСЂР°С‰Р°РµС‚ РЅРѕРјРµСЂ 2РќР”Р¤Р› СЃРїСЂР°РІРєРё РїРѕ РіРѕРґСѓ Рё РєРѕРЅС‚СЂР°РіРµРЅС‚Сѓ
+   * Функция get_reference_last возвращает номер 2НДФЛ справки по году и контрагенту
    *
-   * @param p_kod_na        - РєРѕРґ РќРђ
-   * @param p_year          - РіРѕРґ
-   * @param p_contragent_id - ID РєРѕРЅС‚СЂР°РіРµРЅС‚Р°
+   * @param p_kod_na        - код НА
+   * @param p_year          - год
+   * @param p_contragent_id - ID контрагента
    *
    * @return - f2ndfl_arh_nomspr.nom_spr%type
    *
@@ -291,7 +300,7 @@ create or replace package body f2ndfl_arh_spravki_api is
     when no_data_found then
       fix_exception(
         $$PLSQL_LINE,
-        'РќРµ РЅР°Р№РґРµРЅР° СЃРїСЂР°РІРєР° Р·Р° ' || p_year || ' РіРѕРґ РґР»СЏ РєРѕРЅС‚СЂР°РіРµРЅС‚Р° ' || p_contragent_id || ' (РќРђ: ' || p_code_na || ')'
+        'Не найдена справка за ' || p_year || ' год для контрагента ' || p_contragent_id || ' (НА: ' || p_code_na || ')'
       );
       raise;
     when others then
@@ -303,12 +312,12 @@ create or replace package body f2ndfl_arh_spravki_api is
   end get_reference_num;
   
   /**
-   * Р¤СѓРЅРєС†РёСЏ get_reference_last_id РІРѕР·РІСЂР°С‰Р°РµС‚ ID СЃРїСЂР°РІРєРё РїРѕ РіРѕРґСѓ Рё РЅРѕРјРµСЂСѓ
-   *  Р•СЃР»Рё СЃРїСЂР°РІРѕРє РЅРµСЃРєРѕР»СЊРєРѕ - РІРѕР·РІСЂР°С‰Р°РµС‚ ID РїРѕСЃР»РµРґРЅРµР№ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєРё
+   * Функция get_reference_last_id возвращает ID справки по году и номеру
+   *  Если справок несколько - возвращает ID последней корректировки
    *
-   * @param p_code_na - РєРѕРґ РќРђ
-   * @param p_year    - РіРѕРґ
-   * @param p_ref_num - РЅРѕРјРµСЂ СЃРїСЂР°РІРєРё 2РќР”Р¤Р›
+   * @param p_code_na - код НА
+   * @param p_year    - год
+   * @param p_ref_num - номер справки 2НДФЛ
    *
    * @return - f2ndfl_arh_spravki.id%type
    *
@@ -326,8 +335,8 @@ create or replace package body f2ndfl_arh_spravki_api is
     into   l_result
     from   f2ndfl_arh_spravki sp
     where  1=1
-         -- РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ РїСЂРѕРІРµСЂСЏРµРј РЅР°Р»РёС‡РёРµ СЃРїСЂР°РІРѕРє РїРѕ С‚РёРїР°Рј РґРѕС…РѕРґРѕРІ,
-         -- С‚.Рє. СЃРїСЂР°РІРєР° ARH РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРѕР·РґР°РЅР° Рё Р±РµР· СЂР°СЃС‡РµС‚Р° РїРѕ РґРѕС…РѕРґР°Рј
+         -- обязательно проверяем наличие справок по типам доходов,
+         -- т.к. справка ARH может быть создана и без расчета по доходам
     and    case 
              when p_load_exists = 'Y' and 
                   not exists(select 1 from f2ndfl_load_spravki ls where ls.r_sprid = sp.id) then
@@ -355,11 +364,11 @@ create or replace package body f2ndfl_arh_spravki_api is
   end get_reference_last_id;
 
   /**
-   * Р¤СѓРЅРєС†РёСЏ get_reference_last - РІРѕР·РІСЂР°С‰Р°РµС‚ РїРѕСЃР»РµРґРЅСЋСЋ СЃРїСЂР°РІРєСѓ 2РќР”Р¤Р› Р·Р° РіРѕРґ РїРѕ РєРѕРЅС‚СЂР°РіРµРЅС‚Сѓ
+   * Функция get_reference_last - возвращает последнюю справку 2НДФЛ за год по контрагенту
    *
-   * @param p_kod_na        - РєРѕРґ РќРђ
-   * @param p_year          - РіРѕРґ
-   * @param p_contragent_id - ID РєРѕРЅС‚СЂР°РіРµРЅС‚Р°
+   * @param p_kod_na        - код НА
+   * @param p_year          - год
+   * @param p_contragent_id - ID контрагента
    *
    * @return - 2ndfl_arh_spravka%rowtype
    *
@@ -391,11 +400,11 @@ create or replace package body f2ndfl_arh_spravki_api is
   end get_reference_last;
   
   /**
-   * Р¤СѓРЅРєС†РёСЏ copy_reference СЃРѕР·РґР°РµС‚ РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰СѓСЋ СЃРїСЂР°РІРєСѓ
+   * Функция copy_reference создает корректирующую справку
    *
-   * @param p_ref_src - СЃС‚СЂРѕРєР° СЃ РёСЃС…РѕРґРЅРѕР№ СЃРїСЂР°РІРєРѕР№ 
+   * @param p_ref_src - строка с исходной справкой 
    *
-   * @return - f2ndfl_arh_spravki%rowtype СЃРѕР·РґР°РЅРЅРѕР№ СЃРїСЂР°РІРєРё
+   * @return - f2ndfl_arh_spravki%rowtype созданной справки
    *
    */
   function copy_reference(
@@ -423,15 +432,15 @@ create or replace package body f2ndfl_arh_spravki_api is
   end copy_reference;
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° check_synchr_load РїСЂРѕРІРµСЂСЏРµС‚ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ РґР°РЅРЅС‹С… РІ С‚Р°Р±Р»РёС†Р°С… F2NDFL_LOAD Рё F2NDFL_ARH
-   *  Р•СЃР»Рё РґР°РЅРЅС‹Рµ РЅРµ СЃРёРЅС…СЂРѕРЅРЅС‹ - РІС‹Р±СЂР°СЃС‹РІР°РµС‚ РёСЃРєР»СЋС‡РµРЅРёРµ
+   * Процедура check_synchr_load проверяет синхронизацию данных в таблицах F2NDFL_LOAD и F2NDFL_ARH
+   *  Если данные не синхронны - выбрасывает исключение
    */
   procedure check_synch_load(
     p_ref_arh in out nocopy f2ndfl_arh_spravki%rowtype
   ) is
     l_num_corr_load f2ndfl_load_spravki.nom_korr%type;
   begin
-    --РџРѕРєР° С‚РѕР»СЊРєРѕ РЅР°Р»РёС‡РёРµ СЃРїСЂР°РІРєРё
+    --Пока только наличие справки
     begin
       select max(s.nom_korr)
       into   l_num_corr_load
@@ -442,12 +451,12 @@ create or replace package body f2ndfl_arh_spravki_api is
       and    s.kod_na = p_ref_arh.kod_na;
     exception
       when no_data_found then
-        fix_exception($$PLSQL_LINE, 'Р”Р»СЏ СЃРїСЂР°РІРєРё ' || p_ref_arh.nom_spr || '/' || p_ref_arh.nom_korr || ' ('||p_ref_arh.id||') РЅРµС‚ РґР°РЅРЅС‹С… РІ С‚Р°Р±Р»РёС†Рµ F2NDFL_LOAD_SPRAVKI');
+        fix_exception($$PLSQL_LINE, 'Для справки ' || p_ref_arh.nom_spr || '/' || p_ref_arh.nom_korr || ' ('||p_ref_arh.id||') нет данных в таблице F2NDFL_LOAD_SPRAVKI');
         raise;
     end;
     --
     if l_num_corr_load <> p_ref_arh.nom_korr then
-      fix_exception($$PLSQL_LINE, 'Р”Р»СЏ СЃРїСЂР°РІРєРё ' || p_ref_arh.nom_spr || '/' || p_ref_arh.nom_korr || ' ('||p_ref_arh.id||') РЅРѕРјРµСЂ РїРѕСЃР»РµРґРЅРµР№ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєРё РЅРµ СЃРѕРІРїР°РґР°РµС‚ СЃ F2NDFL_LOAD_SPRAVKI: ' || l_num_corr_load);
+      fix_exception($$PLSQL_LINE, 'Для справки ' || p_ref_arh.nom_spr || '/' || p_ref_arh.nom_korr || ' ('||p_ref_arh.id||') номер последней корректировки не совпадает с F2NDFL_LOAD_SPRAVKI: ' || l_num_corr_load);
       raise no_data_found;
     end if;
     --
@@ -456,12 +465,13 @@ create or replace package body f2ndfl_arh_spravki_api is
       fix_exception($$PLSQL_LINE);
       raise;
   end check_synch_load;
+  
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° create_reference_corr СЃРѕР·РґР°РЅРёСЏ РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰РµР№ СЃРїСЂР°РІРєРё 2РќР”Р¤Р›
+   * Процедура create_reference_corr создания корректирующей справки 2НДФЛ
    *
-   * @param p_code_na       - РєРѕРґ РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєР° (РќРџР¤=1)
-   * @param p_year          - РіРѕРґ, Р·Р° РєРѕС‚РѕСЂС‹Р№ РЅР°РґРѕ СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєСѓ
-   * @param p_contragent_id - ID РєРѕРЅС‚СЂР°РіРµРЅС‚Р°, РїРѕ РєРѕС‚РѕСЂРѕРјСѓ С„РѕСЂРјРёСЂСѓРµС‚СЃСЏ СЃРїСЂР°РІРєР° (CDM.CONTRAGENTS.ID)
+   * @param p_code_na       - код налогоплательщика (НПФ=1)
+   * @param p_year          - год, за который надо сформировать корректировку
+   * @param p_contragent_id - ID контрагента, по которому формируется справка (CDM.CONTRAGENTS.ID)
    *
    */
   procedure create_reference_corr(
@@ -477,12 +487,12 @@ create or replace package body f2ndfl_arh_spravki_api is
     init_exceptions;
     --
     if p_year < 2015 or p_year > (extract(year from sysdate) - 1) then
-      fix_exception($$PLSQL_LINE, 'РќРµРІРѕР·РјРѕР¶РЅРѕ СЃРѕР·РґР°С‚СЊ РєРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰СѓСЋ СЃРїСЂР°РІРєСѓ Р·Р° ' || p_year || '. РљРѕСЂСЂРµРєС‚РёСЂСѓСЋС‰РёРµ СЃРїСЂР°РІРєРё 2РќР”Р¤Р› СЃРѕР·РґР°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РЅР°С‡РёРЅР°СЏ СЃ 2015 РіРѕРґР°.');
+      fix_exception($$PLSQL_LINE, 'Невозможно создать корректирующую справку за ' || p_year || '. Корректирующие справки 2НДФЛ создаются только начиная с 2015 года.');
       raise e_int;
     end if;
     --
     if p_code_na <> 1 then
-      fix_exception($$PLSQL_LINE, 'РќРµРёР·РІРµСЃС‚РЅС‹Р№ РєРѕРґ РЅР°Р»РѕРіРѕРІРѕРіРѕ Р°РіРµРЅС‚Р°: ' || p_code_na);
+      fix_exception($$PLSQL_LINE, 'Неизвестный код налогового агента: ' || p_code_na);
       raise e_int;
     end if;
     --
@@ -514,10 +524,10 @@ create or replace package body f2ndfl_arh_spravki_api is
   end create_reference_corr;
 
   /**
-   * Р¤СѓРЅРєС†РёСЏ is_employee_ref РїСЂРѕРІРµСЂСЏС‚ РїСЂРёРЅР°РґР»РµР¶РЅРѕСЃС‚СЊ СЃРїСЂР°РІРєРё СЃРѕС‚СЂСѓРґРЅРёРєСѓ С„РѕРЅРґР°, 
-   *   РЅРµ СЏРІР»СЏСЋС‰РµРјСѓСЃСЏ РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРј С„РѕРЅРґР°
+   * Функция is_employee_ref проверят принадлежность справки сотруднику фонда, 
+   *   не являющемуся контрагентом фонда
    *
-   * @param p_ref_id - ID СЃРїСЂР°РІРєРё
+   * @param p_ref_id - ID справки
    *
    * @return - boolean
    *
@@ -554,9 +564,9 @@ create or replace package body f2ndfl_arh_spravki_api is
   end is_employee_ref;
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° purge_load_tbl СѓРґР°Р»СЏРµС‚ Р·Р°РїРёСЃРё Рѕ Р·Р°РґР°РЅРЅРѕР№ СЃРїСЂР°РІРєРµ 2РќР”Р¤Р› РёР· С‚Р°Р±Р»РёС† F2NDFL_LOAD_
+   * Процедура purge_load_tbl удаляет записи о заданной справке 2НДФЛ из таблиц F2NDFL_LOAD_
    *
-   * @param p_ref_row - СЃС‚СЂРѕРєР° С‚Р°Р±Р»РёС†С‹ F2NDFL_ARH_SPRAVKI
+   * @param p_ref_row - строка таблицы F2NDFL_ARH_SPRAVKI
    *
    */
   procedure purge_load_tbl(
@@ -653,9 +663,9 @@ create or replace package body f2ndfl_arh_spravki_api is
   end purge_load_tbl;
   
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° purge_arh_tbl СѓРґР°Р»СЏРµС‚ Р·Р°РїРёСЃРё Рѕ Р·Р°РґР°РЅРЅРѕР№ СЃРїСЂР°РІРєРµ 2РќР”Р¤Р› РёР· С‚Р°Р±Р»РёС† F2NDFL_ARH (РєСЂРѕРјРµ F2NDFL_ARH_NOMSPR)
+   * Процедура purge_arh_tbl удаляет записи о заданной справке 2НДФЛ из таблиц F2NDFL_ARH (кроме F2NDFL_ARH_NOMSPR)
    *
-   * @param p_ref_id - ID СѓРґР°Р»СЏРµРјРѕР№ СЃРїСЂР°РІРєРё
+   * @param p_ref_id - ID удаляемой справки
    *
    */
   procedure purge_arh_tbl(
@@ -700,14 +710,14 @@ create or replace package body f2ndfl_arh_spravki_api is
   end purge_arh_tbl;
 
   /**
-   * РџСЂРѕС†РµРґСѓСЂР° delete_reference СѓРґР°Р»СЏРµС‚ РґР°РЅРЅС‹Рµ СЃРїСЂР°РІРєРё РёР· С‚Р°Р±Р»РёС† F2NDFL_, РєСЂРѕРјРµ F2NDFL_ARH_NOMSPR
-   *  Р•СЃР»Рё РґР°РЅРЅС‹Рµ СЃРїСЂР°РІРєРё РІРєР»СЋС‡РµРЅС‹ РІ XML РґР»СЏ Р“РќР - СѓРґР°Р»РµРЅРёРµ РѕС‚РјРµРЅСЏРµС‚СЃСЏ.
-   * Р’РЅРёРјР°РЅРёРµ: РґР»СЏ РёСЃС…РѕРґРЅС‹С… СЃРїСЂР°РІРѕРє (РєРѕСЂСЂ.РЅРѕРјРµСЂ=0) РґР°РЅРЅС‹Рµ РїРѕ СЃРѕС‚СЂСѓРґРЅРёРєР°Рј С„РѕРЅРґР° РЅРµ СѓРґР°Р»СЏСЋС‚СЃСЏ, С‚Р°РєР¶Рµ РЅРµ СѓРґР°Р»СЏСЋС‚СЃСЏ РґР°РЅРЅС‹Рµ РїРѕ 9 С‚РёРїСѓ РґРѕС…РѕРґР° (Р·Рї)
-   *   Рў.Рµ. РµСЃР»Рё СЃРїСЂР°РІРєР° РѕС‚РЅРѕСЃРёС‚СЃСЏ Рє СЃРѕС‚СЂСѓРґРЅРёРєСѓ С„РѕРЅРґР°, РЅРµ СЏРІР»СЏСЋС‰РµРјСѓСЃСЏ РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРј - РѕРЅР° РЅРµ Р±СѓРґРµС‚ СѓРґР°Р»РµРЅР°, 
-   *        РµСЃР»Рё СЃРѕС‚СЂСѓРґРЅРёРє СЏРІР»СЏРµС‚СЃСЏ РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРј - Р±СѓРґСѓС‚ СѓРґР°Р»РµРЅС‹ РґР°РЅРЅС‹Рµ РїРѕ РІСЃРµРј С‚РёРїР°Рј РґРѕС…РѕРґР°, РєСЂРѕРјРµ 9 (Р·Рї)
+   * Процедура delete_reference удаляет данные справки из таблиц F2NDFL_, кроме F2NDFL_ARH_NOMSPR
+   *  Если данные справки включены в XML для ГНИ - удаление отменяется.
+   * Внимание: для исходных справок (корр.номер=0) данные по сотрудникам фонда не удаляются, также не удаляются данные по 9 типу дохода (зп)
+   *   Т.е. если справка относится к сотруднику фонда, не являющемуся контрагентом - она не будет удалена, 
+   *        если сотрудник является контрагентом - будут удалены данные по всем типам дохода, кроме 9 (зп)
    *
-   * @param p_ref_id - ID СѓРґР°Р»СЏРµРјРѕР№ СЃРїСЂР°РІРєРё
-   * @param p_commit - С„Р»Р°Рі С„РёРєСЃР°С†РёРё С‚СЂР°РЅР·Р°РєС†РёРё
+   * @param p_ref_id     - ID удаляемой справки
+   * @param p_commit     - флаг фиксации транзакции
    *
    */
   procedure delete_reference(
@@ -720,19 +730,19 @@ create or replace package body f2ndfl_arh_spravki_api is
     init_exceptions;
     --
     if is_employee_ref(p_ref_id) then
-      fix_exception($$PLSQL_LINE, 'РЈРґР°Р»РµРЅРёРµ РѕС‚РєР»РѕРЅРµРЅРѕ. РЎРїСЂР°РІРєР° РїРѕ СЃРѕС‚СЂСѓРґРЅРёРєСѓ С„РѕРЅРґР°, РЅРµ СЏРІР»СЏСЋС‰РµРјСЃСЏ РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРј С„РѕРЅРґР°.');
+      fix_exception($$PLSQL_LINE, 'Удаление справки (' || p_ref_id || ') отклонено. Справка по сотруднику фонда, не являющемся контрагентом фонда.');
       raise utl_error_api.G_EXCEPTION;
     end if;
     --
     l_ref_row := get_reference_row(p_ref_id);
     --
     if l_ref_row.r_xmlid is not null then
-      fix_exception($$PLSQL_LINE, 'РЈРґР°Р»РµРЅРёРµ РѕС‚РєР»РѕРЅРµРЅРѕ. Р”Р°РЅРЅС‹Рµ СЃРїСЂР°РІРєРё РІРєР»СЋС‡РµРЅС‹ РІ С„Р°Р№Р» РґР»СЏ РїРµСЂРµРґР°С‡Рё РІ Р“РќР.');
+      fix_exception($$PLSQL_LINE, 'Удаление (' || p_ref_id || ') отклонено. Данные справки включены в файл для передачи в ГНИ.');
       raise utl_error_api.G_EXCEPTION;
     end if;
     --
     plog(
-      'РЈРґР°Р»РµРЅРёРµ СЃРїСЂР°РІРєРё в„–' || l_ref_row.nom_spr || ' (РєРѕСЂСЂ. ' || l_ref_row.nom_korr || ') Р·Р° ' || l_ref_row.god || ' РїРѕ ' || 
+      'Удаление справки №' || l_ref_row.nom_spr || ' (корр. ' || l_ref_row.nom_korr || ') за ' || l_ref_row.god || ' по ' || 
       l_ref_row.familiya || ' ' || l_ref_row.imya || ' ' || l_ref_row.otchestvo
     );
     --
@@ -743,10 +753,10 @@ create or replace package body f2ndfl_arh_spravki_api is
     if p_commit then 
       commit;
     else
-      plog('РўСЂР°РЅР·Р°РєС†РёСЏ РЅРµ Р·Р°С„РёРєСЃРёСЂРѕРІР°РЅР°');
+      plog('Транзакция не зафиксирована');
     end if;
     --
-    plog('РЈРґР°Р»РµРЅРёРµ Р·Р°РІРµСЂС€РµРЅРѕ');
+    plog('Удаление завершено');
   exception
     when others then
       fix_exception($$PLSQL_LINE);
@@ -755,5 +765,104 @@ create or replace package body f2ndfl_arh_spravki_api is
       raise;
   end delete_reference;
   
+  /*
+   * Синхронизация таблицы load по arh (за 16 год - рассинхронизированы!)
+   *  
+   * @param p_code_na       - код НА
+   * @param p_year          - год
+   * @param p_contragent_id - optional
+   *
+   */
+  procedure synhonize_load(
+    p_code_na        f2ndfl_arh_spravki.kod_na%type,
+    p_year           f2ndfl_arh_spravki.god%type,
+    p_ref_id         f2ndfl_arh_spravki.id%type default null
+  ) is
+    --
+    e_int      exception;
+    --
+    cursor l_refs_cur is
+      select ls.nom_spr, 
+             sa.id spr_id, 
+             sa2.id prev_sprid
+      from   (
+              select sa.kod_na,
+                     sa.god,
+                     sa.nom_spr,
+                     max(sa.nom_korr) nom_korr,
+                     max(sa.id) keep(dense_rank last order by sa.nom_korr) id
+              from   f2ndfl_arh_spravki sa
+              where  sa.id = nvl(p_ref_id, sa.id)
+              group by sa.kod_na,
+                       sa.god,
+                       sa.nom_spr
+             ) sa,
+             (
+              select ls.kod_na,
+                     ls.god,
+                     ls.nom_spr,
+                     max(ls.nom_korr) nom_korr
+              from   f2ndfl_load_spravki ls
+              where  ls.tip_dox <> 9
+              group by ls.kod_na,
+                       ls.god,
+                       ls.nom_spr
+             ) ls,
+             f2ndfl_arh_spravki sa2
+      where  1=1
+      --
+      and    sa2.nom_korr = sa.nom_korr - 1
+      and    sa2.nom_spr = sa.nom_spr
+      and    sa2.god = sa.god
+      and    sa2.kod_na = sa.kod_na
+      --
+      and    ls.nom_korr < sa.nom_korr
+      and    ls.nom_spr = sa.nom_spr
+      and    ls.god = sa.god
+      and    ls.kod_na = sa.kod_na
+      --
+      and    sa.god = p_year
+      and    sa.kod_na = p_code_na;
+    --
+    procedure create_reference_corr_(
+      p_ref_rec in out nocopy l_refs_cur%rowtype
+    ) is
+      l_ref_curr f2ndfl_arh_spravki%rowtype;
+    begin
+      l_ref_curr := get_reference_row(p_ref_rec.spr_id);
+      --
+      plog('Current source spr_id = ' || p_ref_rec.prev_sprid || ', spr_id = ' || l_ref_curr.id || ', nom_spr = ' || l_ref_curr.nom_spr || ', nom_korr = ' || l_ref_curr.nom_korr);
+      calc_reference(
+        p_ref_row    => l_ref_curr,
+        p_src_ref_id => p_ref_rec.prev_sprid, --(для копирования данных по сотруднику Фонда)
+        p_wo_arh     => true
+      );
+      --
+    end create_reference_corr_;
+    --
+  begin
+    --
+    init_exceptions;
+    --
+    if p_year < 2015 or p_year > (extract(year from sysdate) - 1) then
+      fix_exception($$PLSQL_LINE, 'Невозможно создать корректирующую справку за ' || p_year || '. Корректирующие справки 2НДФЛ создаются только начиная с 2015 года.');
+      raise e_int;
+    end if;
+    --
+    if p_code_na <> 1 then
+      fix_exception($$PLSQL_LINE, 'Неизвестный код налогового агента: ' || p_code_na);
+      raise e_int;
+    end if;
+    --
+    for r in l_refs_cur loop
+      create_reference_corr_(r);
+    end loop;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end synhonize_load;
+  --
 end f2ndfl_arh_spravki_api;
 /

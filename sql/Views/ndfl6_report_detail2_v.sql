@@ -17,7 +17,7 @@ create or replace view ndfl6_report_detail2_v as
     from (
     select d.*
     from   dv_sr_lspv_det_v d
-    where  d.type_op is null
+    where  d.type_op = 0
     ) d
     full outer join (
     select *
