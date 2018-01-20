@@ -1,3 +1,4 @@
+/*
 prompt install zaprvkl_create_tables.sql
 @@Tables\zaprvkl_create_tables.sql
 show error
@@ -25,7 +26,7 @@ show error
 prompt install dv_sr_gf_persons_t.sql
 @@Tables\dv_sr_gf_persons_t.sql
 show error
-
+*/
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
 show error
@@ -64,10 +65,6 @@ show error
 
 prompt install f2ndfl_arh_spravki_api.pks
 @@Packages\f2ndfl_arh_spravki_api.pks
-show error
-
-prompt install f2ndfl_arh_totals_v.pks
-@@Packages\f2ndfl_arh_totals_v.pks
 show error
 
 prompt install sp_quarters_v.sql
@@ -242,10 +239,6 @@ prompt install ndfl6_part1_rates_30_persns_v.sql
 @@Views\ndfl6_part1_rates_30_persns_v.sql
 show error
 
-prompt install dv_sr_lspv_corr_ops_v.sql
-@@Views\dv_sr_lspv_corr_ops_v.sql
-show error
-
 prompt install ndfl6_part2_v.sql
 @@Views\ndfl6_part2_v.sql
 show error
@@ -280,6 +273,10 @@ show error
 
 prompt install f2ndfl_load_spravki_v.sql
 @@Views\f2ndfl_load_spravki_v.sql
+show error
+
+prompt install f2ndfl_arh_totals_v.sql
+@@Views\f2ndfl_arh_totals_v.sql
 show error
 
 prompt install f2ndfl_load_totals_det_v.sql
@@ -333,7 +330,11 @@ show error
 prompt install gateway_user_pkg.pkb
 @@PackageBodies\gateway_user_pkg.pkb
 show error
-
+/*
+prompt install FXNDFL_UTIL.pkb
+@@PackageBodies\FXNDFL_UTIL.pkb
+show error
+*/
 prompt Install grants.sql
 @@grants.sql
 show error
