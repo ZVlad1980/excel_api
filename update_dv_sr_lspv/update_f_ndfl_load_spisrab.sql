@@ -1,4 +1,9 @@
 begin
+  dv_sr_lspv_docs_api.set_period(
+      p_end_date    => to_date(20161231, 'yyyymmdd'),
+      p_report_date => sysdate
+    );
+  --
   merge into f_ndfl_load_spisrab sr
   using (
           select ss.god, 
