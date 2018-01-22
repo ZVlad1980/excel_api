@@ -107,7 +107,7 @@ create or replace package body ndfl_report_api is
                  nvl(lt.benefit  , dp.benefit )            benefit ,
                  nvl(lt.tax_calc , dp.tax_calc)            tax_calc,
                  lt.tax_retained                           tax_retained_load,
-                 dp.tax_retained_83                        tax_retained_arh,
+                 dp.tax_retained_83                        tax_retained_docs,
                  coalesce(lt.tax_retained, 0) - 
                    coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
                  lt.is_employee                            is_employee,
@@ -131,8 +131,8 @@ create or replace package body ndfl_report_api is
                  nvl(ta.revenue  , dp.revenue )            revenue ,
                  nvl(ta.benefit  , dp.benefit )            benefit ,
                  nvl(ta.tax_calc , dp.tax_calc)            tax_calc,
-                 ta.tax_retained                           tax_retained_load,
-                 dp.tax_retained_83                        tax_retained_arh,
+                 ta.tax_retained                           tax_retained_arh,
+                 dp.tax_retained_83                        tax_retained_docs,
                  coalesce(ta.tax_retained, 0) - 
                    coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
                  ta.is_employee                            is_employee,
@@ -217,6 +217,90 @@ create or replace package body ndfl_report_api is
                          sum(lt.tax_calc),
                          sum(lt.tax_retained)       
                   from   f2ndfl_load_totals_v lt
+                  group by lt.tax_rate
+                 ) t
+          unpivot(
+            fact_val
+            for fact in (fact01, fact02, fact03, fact04)
+          ) up
+          pivot(
+          sum(fact_val)
+            for src in('NDFL2' as "NDFL2", 'NDFL6' as "NDFL6")
+          )
+          order by tax_rate, fact; --*/
+      when 'cmp_f2ndfl_f6_total_arh' then
+        dv_sr_lspv_docs_api.set_employees(p_flag => false);
+        dv_sr_lspv_docs_api.set_last_only(p_flag => true);
+        open l_result for
+          select "2NDFL" ndfl2, 
+                 "6NDFL" ndfl6, 
+                 "2NDFL" - "6NDFL" ndfl_diff
+          from   (
+                  select 'DUMMY' src,
+                         0 fact01,
+                         0 fact02,
+                         0 fact03
+                  from   dual
+                  union all
+                  select 'NDFL6' src,
+                         gp.total_persons,
+                         gp.tax_retained,
+                         gp.tax_return
+                  from   ndfl6_part1_general_v gp
+                  union all
+                  select 'NDFL2' src,
+                         count(distinct lt.nom_spr) ,
+                         sum(lt.tax_retained)       ,
+                         null                       
+                  from   f2ndfl_arh_totals_v lt
+                  group by lt.god
+                 ) t
+          unpivot(
+            fact_val
+            for fact in (fact01, fact02, fact03)
+          ) up
+          pivot(
+          sum(fact_val)
+            for src in('NDFL2' as "2NDFL", 'NDFL6' as "6NDFL")
+          )
+          order by fact; --*/
+      when 'cmp_f2ndfl_f6_rates_arh' then
+        dv_sr_lspv_docs_api.set_employees(p_flag => false);
+        dv_sr_lspv_docs_api.set_last_only(p_flag => true);
+        open l_result for
+          select "NDFL2" ndfl2, 
+                 "NDFL6" ndfl6, 
+                 round("NDFL2" - "NDFL6", 2) ndfl_diff
+          from   (
+                  select 'DUMMY' src,
+                         case level
+                           when 1 then 13
+                           when 2 then 30
+                           when 3 then 35
+                         end tax_rate,
+                         0 fact01,
+                         0 fact02,
+                         0 fact03,
+                         0 fact04
+                  from   dual
+                  connect by level < 3
+                  union all
+                  select 'NDFL6' src,
+                         d.tax_rate,
+                         sum(d.revenue) revenue,
+                         sum(d.benefit) benefit,
+                         sum(d.tax_calc) tax_calc,
+                         sum(d.tax_retained) tax_retained
+                  from   dv_sr_lspv_pers_v d
+                  group  by d.tax_rate
+                  union all
+                  select 'NDFL2' src,
+                         lt.tax_rate,
+                         sum(lt.revenue),
+                         sum(lt.benefit),
+                         sum(lt.tax_calc),
+                         sum(lt.tax_retained)       
+                  from   f2ndfl_arh_totals_v lt
                   group by lt.tax_rate
                  ) t
           unpivot(

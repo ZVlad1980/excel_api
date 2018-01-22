@@ -831,7 +831,7 @@ create or replace package body f2ndfl_arh_spravki_api is
     begin
       l_ref_curr := get_reference_row(p_ref_rec.spr_id);
       --
-      plog('Current source spr_id = ' || p_ref_rec.prev_sprid || ', spr_id = ' || l_ref_curr.id || ', nom_spr = ' || l_ref_curr.nom_spr || ', nom_korr = ' || l_ref_curr.nom_korr);
+      plog('Prev  spr_id = ' || p_ref_rec.prev_sprid || ', source spr_id = ' || l_ref_curr.id || ', nom_spr = ' || l_ref_curr.nom_spr || ', nom_korr = ' || l_ref_curr.nom_korr);
       calc_reference(
         p_ref_row    => l_ref_curr,
         p_src_ref_id => p_ref_rec.prev_sprid, --(для копирования данных по сотруднику Фонда)

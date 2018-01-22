@@ -6999,7 +6999,7 @@ begin
           ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
     Select ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, 
            extract(MONTH from ds.DATA_OP), 
-           td.benefit_code, --RFC_3814 
+           coalesce(td.benefit_code, to_char(-1 * ds.shifr_schet)), --RFC_3814 
            sum(ds.SUMMA), 13
     from F2NDFL_LOAD_SPRAVKI ls
          inner join SP_LSPV sp on sp.SSYLKA_FL=ls.SSYLKA
@@ -7011,7 +7011,7 @@ begin
       and ds.SHIFR_SCHET>1000     -- вычеты
       and ds.DATA_OP >= dTermBeg  -- за год
       and ds.DATA_OP <  dTermEnd
-    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code;
+    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code, ds.shifr_schet;
     
     gl_TIPDOX := 3; -- выкупные
 
@@ -7019,7 +7019,7 @@ begin
           ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
     Select ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, 
            extract(MONTH from ds.DATA_OP), 
-           td.benefit_code, --RFC_3814 
+           coalesce(td.benefit_code, to_char(-1 * ds.shifr_schet)), --RFC_3814 
            sum(ds.SUMMA), 13
     from F2NDFL_LOAD_SPRAVKI ls
          inner join SP_LSPV sp on sp.SSYLKA_FL=ls.SSYLKA
@@ -7033,7 +7033,7 @@ begin
       and ds.SHIFR_SCHET > 1000     -- вычеты
       and ds.DATA_OP >= dTermBeg  -- за год
       and ds.DATA_OP <  dTermEnd
-    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code;    
+    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code, ds.shifr_schet;    
     
     if gl_COMMIT then Commit; end if;
     
