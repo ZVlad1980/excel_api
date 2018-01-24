@@ -283,6 +283,262 @@ create or replace package body ndfl2_report_api is
           and    ls.nom_korr = 0
           order  by ecode,
                     familiya;
+  --!!!!!!!!!!!!
+      when 'f2_diff_pers_data' then
+        --èñòî÷íèê çàïğîñà: fxndfl_util.OshibDan_vSpravke
+        open l_result for
+          select t.fk_contragent,
+                 t.ssylka,
+                 t.tip_dox,
+                 t.inn_fl,
+                 t.grazhd,
+                 t.familiya,
+                 t.imya,
+                 t.otchestvo,
+                 t.data_rozhd,
+                 t.kod_ud_lichn,
+                 t.ser_nom_doc,
+                 t.status_np,
+                 t.einfo
+          from   (
+            select *
+            from   (select 'ÔÈÎ_Ô' einfo,
+                           count(*) over(partition by ns.fk_contragent, ls.familiya) cfld,
+                           ns.ccid,
+                           ns.fk_contragent,
+                           ls.*
+                    from   (select tt.kod_na,
+                                   tt.god,
+                                   tt.ssylka,
+                                   tt.tip_dox,
+                                   tt.flag_otmena,
+                                   tt.fk_contragent,
+                                   tt.ccid
+                            from   (select kod_na,
+                                           god,
+                                           ssylka,
+                                           tip_dox,
+                                           flag_otmena,
+                                           fk_contragent,
+                                           count(*) over(partition by fk_contragent) ccid
+                                    from   f2ndfl_arh_nomspr
+                                    where  kod_na = 1
+                                    and    god = p_year
+                                    and    tip_dox > 0
+                                    and    fk_contragent is not null) tt
+                            where  ccid > 1) ns
+                    inner  join f2ndfl_load_spravki ls
+                    on     ns.kod_na = ls.kod_na
+                    and    ns.god = ls.god
+                    and    ns.ssylka = ls.ssylka
+                    and    ns.tip_dox = ls.tip_dox
+                    and    ns.flag_otmena = 0
+                    and    ls.nom_korr = 0)
+            where  ccid <> cfld
+           union
+            select *
+            from   (select 'ÔÈÎ_È' erfld,
+                           count(*) over(partition by ns.fk_contragent, ls.imya) cfld,
+                           ns.ccid,
+                           ns.fk_contragent,
+                           ls.*
+                    from   (select *
+                            from   (select kod_na,
+                                           god,
+                                           ssylka,
+                                           tip_dox,
+                                           flag_otmena,
+                                           fk_contragent,
+                                           count(*) over(partition by fk_contragent) ccid
+                                    from   f2ndfl_arh_nomspr
+                                    where  kod_na = 1
+                                    and    god = p_year
+                                    and    tip_dox > 0
+                                    and    fk_contragent is not null)
+                            where  ccid > 1) ns
+                    inner  join f2ndfl_load_spravki ls
+                    on     ns.kod_na = ls.kod_na
+                    and    ns.god = ls.god
+                    and    ns.ssylka = ls.ssylka
+                    and    ns.tip_dox = ls.tip_dox
+                    and    ns.flag_otmena = 0
+                    and    ls.nom_korr = 0)
+            where  ccid <> cfld
+           union
+            select *
+            from   (select 'ÔÈÎ_Î' erfld,
+                           count(*) over(partition by ns.fk_contragent, ls.otchestvo) cfld,
+                           ns.ccid,
+                           ns.fk_contragent,
+                           ls.*
+                    from   (select *
+                            from   (select kod_na,
+                                           god,
+                                           ssylka,
+                                           tip_dox,
+                                           flag_otmena,
+                                           fk_contragent,
+                                           count(*) over(partition by fk_contragent) ccid
+                                    from   f2ndfl_arh_nomspr
+                                    where  kod_na = 1
+                                    and    god = p_year
+                                    and    tip_dox > 0
+                                    and    fk_contragent is not null)
+                            where  ccid > 1) ns
+                    inner  join f2ndfl_load_spravki ls
+                    on     ns.kod_na = ls.kod_na
+                    and    ns.god = ls.god
+                    and    ns.ssylka = ls.ssylka
+                    and    ns.tip_dox = ls.tip_dox
+                    and    ns.flag_otmena = 0
+                    and    ls.nom_korr = 0)
+            where  ccid <> cfld
+           union
+            select *
+            from   (select 'ÄĞ' erfld,
+                           count(*) over(partition by ns.fk_contragent, ls.data_rozhd) cfld,
+                           ns.ccid,
+                           ns.fk_contragent,
+                           ls.*
+                    from   (select *
+                            from   (select kod_na,
+                                           god,
+                                           ssylka,
+                                           tip_dox,
+                                           flag_otmena,
+                                           fk_contragent,
+                                           count(*) over(partition by fk_contragent) ccid
+                                    from   f2ndfl_arh_nomspr
+                                    where  kod_na = 1
+                                    and    god = p_year
+                                    and    tip_dox > 0
+                                    and    fk_contragent is not null)
+                            where  ccid > 1) ns
+                    inner  join f2ndfl_load_spravki ls
+                    on     ns.kod_na = ls.kod_na
+                    and    ns.god = ls.god
+                    and    ns.ssylka = ls.ssylka
+                    and    ns.tip_dox = ls.tip_dox
+                    and    ns.flag_otmena = 0
+                    and    ls.nom_korr = 0)
+            where  ccid <> cfld
+           union
+            select *
+            from   (select 'ÓÄËÈ×' erfld,
+                           count(*) over(partition by ns.fk_contragent, ls.ser_nom_doc) cfld,
+                           ns.ccid,
+                           ns.fk_contragent,
+                           ls.*
+                    from   (select *
+                            from   (select kod_na,
+                                           god,
+                                           ssylka,
+                                           tip_dox,
+                                           flag_otmena,
+                                           fk_contragent,
+                                           count(*) over(partition by fk_contragent) ccid
+                                    from   f2ndfl_arh_nomspr
+                                    where  kod_na = 1
+                                    and    god = p_year
+                                    and    tip_dox > 0
+                                    and    fk_contragent is not null)
+                            where  ccid > 1) ns
+                    inner  join f2ndfl_load_spravki ls
+                    on     ns.kod_na = ls.kod_na
+                    and    ns.god = ls.god
+                    and    ns.ssylka = ls.ssylka
+                    and    ns.tip_dox = ls.tip_dox
+                    and    ns.flag_otmena = 0
+                    and    ls.nom_korr = 0)
+            where  ccid <> cfld
+           union
+            select *
+            from   (select 'ÃĞÀÆÄ' erfld,
+                           count(*) over(partition by ns.fk_contragent, ls.grazhd) cfld,
+                           ns.ccid,
+                           ns.fk_contragent,
+                           ls.*
+                    from   (select *
+                            from   (select kod_na,
+                                           god,
+                                           ssylka,
+                                           tip_dox,
+                                           flag_otmena,
+                                           fk_contragent,
+                                           count(*) over(partition by fk_contragent) ccid
+                                    from   f2ndfl_arh_nomspr
+                                    where  kod_na = 1
+                                    and    god = p_year
+                                    and    tip_dox > 0
+                                    and    fk_contragent is not null)
+                            where  ccid > 1) ns
+                    inner  join f2ndfl_load_spravki ls
+                    on     ns.kod_na = ls.kod_na
+                    and    ns.god = ls.god
+                    and    ns.ssylka = ls.ssylka
+                    and    ns.tip_dox = ls.tip_dox
+                    and    ns.flag_otmena = 0
+                    and    ls.nom_korr = 0)
+            where  ccid <> cfld
+           union
+            select *
+            from   (select 'ÈÍÍ' erfld,
+                           count(*) over(partition by ns.fk_contragent, ls.inn_fl) cfld,
+                           ns.ccid,
+                           ns.fk_contragent,
+                           ls.*
+                    from   (select *
+                            from   (select kod_na,
+                                           god,
+                                           ssylka,
+                                           tip_dox,
+                                           flag_otmena,
+                                           fk_contragent,
+                                           count(*) over(partition by fk_contragent) ccid
+                                    from   f2ndfl_arh_nomspr
+                                    where  kod_na = 1
+                                    and    god = p_year
+                                    and    tip_dox > 0
+                                    and    fk_contragent is not null)
+                            where  ccid > 1) ns
+                    inner  join f2ndfl_load_spravki ls
+                    on     ns.kod_na = ls.kod_na
+                    and    ns.god = ls.god
+                    and    ns.ssylka = ls.ssylka
+                    and    ns.tip_dox = ls.tip_dox
+                    and    ns.flag_otmena = 0
+                    and    ls.nom_korr = 0)
+            where  ccid <> cfld
+           union
+            select *
+            from   (select 'ÑÒÀÒÓÑ' erfld,
+                           count(*) over(partition by ns.fk_contragent, ls.status_np) cfld,
+                           ns.ccid,
+                           ns.fk_contragent,
+                           ls.*
+                    from   (select *
+                            from   (select kod_na,
+                                           god,
+                                           ssylka,
+                                           tip_dox,
+                                           flag_otmena,
+                                           fk_contragent,
+                                           count(*) over(partition by fk_contragent) ccid
+                                    from   f2ndfl_arh_nomspr
+                                    where  kod_na = 1
+                                    and    god = p_year
+                                    and    tip_dox > 0
+                                    and    fk_contragent is not null)
+                            where  ccid > 1) ns
+                    inner  join f2ndfl_load_spravki ls
+                    on     ns.kod_na = ls.kod_na
+                    and    ns.god = ls.god
+                    and    ns.ssylka = ls.ssylka
+                    and    ns.tip_dox = ls.tip_dox
+                    and    ns.flag_otmena = 0
+                    and    ls.nom_korr = 0)
+            where  ccid <> cfld
+          ) t;
       else
         fix_exception('get_report('||l_report_code || '): Íåèçâåñòíûé êîä îò÷åòà');
         raise utl_error_api.G_EXCEPTION;
