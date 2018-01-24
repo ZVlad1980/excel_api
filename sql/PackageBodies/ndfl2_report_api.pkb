@@ -166,6 +166,123 @@ create or replace package body ndfl2_report_api is
                     ls.imya,
                     ls.otchestvo,
                     ls.data_rozhd;
+      when 'f2_error_report' then
+        --источник запроса: fxndfl_util.OshibDan_vSpravke
+        open l_result for
+          select ns.fk_contragent,
+                 ls.ssylka,
+                 ls.tip_dox,
+                 ls.inn_fl,
+                 ls.grazhd,
+                 ls.familiya,
+                 ls.imya,
+                 ls.otchestvo,
+                 ls.data_rozhd,
+                 ls.kod_ud_lichn,
+                 ls.ser_nom_doc,
+                 ls.status_np,
+                 ls.einfo
+          from   (select 1 ecode,
+                         'ГРАЖДАНСТВО не задано' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    grazhd is null
+                 union
+                  select 2 ecode,
+                         'ГРАЖДАНСТВО РФ не соответствует УЛ' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    grazhd = 643
+                  and    kod_ud_lichn in (10, 11, 12, 13, 15, 19)
+                 union
+                  select 3 ecode,
+                         'ГРАЖДАНСТВО неРФ не соответствует УЛ РФ' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    (grazhd <> 643)
+                  and    (kod_ud_lichn not in (10, 11, 12, 13, 15, 19, 23))
+                 union
+                  select 4 ecode,
+                         'Тип УЛ запрещенное значение' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    kod_ud_lichn not in (3, 7, 8, 10, 11, 12, 13, 14, 15, 19, 21, 23, 24, 91)
+                 union
+                  select 6 ecode,
+                         'Неправильный шаблон Паспорта РФ' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    kod_ud_lichn = 21
+                  and    not
+                         regexp_like(ser_nom_doc, '^\d{2}\s\d{2}\s\d{6}$')
+                 union
+                  select 7 ecode,
+                         'Неправильный шаблон Вида на жительство в РФ' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    kod_ud_lichn = 12
+                  and    not regexp_like(ser_nom_doc, '^\d{2}\s\d{7}$')
+                 union
+                  select 91 ecode,
+                         'Предупреждение: Налоговый резидент и ГРАЖДАНСТВО или УЛ не РФ' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    status_np = 1
+                  and    ((grazhd is null or grazhd <> 643)and
+                        kod_ud_lichn in (10, 11, 13, 15, 19))
+                 union
+                  select 92 ecode,
+                         'Предупреждение: Налоговый резидент и вид на жительство РФ' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    status_np = 1
+                  and    ((grazhd is null or grazhd <> 643) and
+                        kod_ud_lichn = 12)
+                 union
+                  select 93 ecode,
+                         'Предупреждение: Значения ГРАЖДАНСТВО и ШАБЛОН УДОСТОВЕРЕНИЯ соответствуют коду ПАСПОРТА РФ' einfo,
+                         x.*
+                  from   f2ndfl_load_spravki x
+                  where  kod_na = 1
+                  and    god = p_year
+                  and    tip_dox > 0
+                  and    kod_ud_lichn <> 21
+                  and    grazhd = 643
+                  and    regexp_like(ser_nom_doc, '^\d{2}\s\d{2}\s\d{6}$')
+                ) ls
+          inner  join f2ndfl_arh_nomspr ns
+          on     ns.kod_na = ls.kod_na
+          and    ns.god = ls.god
+          and    ns.ssylka = ls.ssylka
+          and    ns.tip_dox = ls.tip_dox
+          and    ns.flag_otmena = 0
+          and    ls.nom_korr = 0
+          order  by ecode,
+                    familiya;
       else
         fix_exception('get_report('||l_report_code || '): Неизвестный код отчета');
         raise utl_error_api.G_EXCEPTION;
