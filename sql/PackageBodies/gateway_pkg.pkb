@@ -170,11 +170,19 @@ create or replace package body gateway_pkg is
       to_char(get_date(p_year, p_month), 'dd.mm.yyyy') || ', ' || 
       to_char(to_date$(p_report_date), 'dd.mm.yyyy');
     return;--*/
-    x_result := ndfl_report_api.get_report(
-      p_report_code => p_report_code, 
-      p_end_date    => get_date(p_year, p_month),
-      p_report_date => to_date$(p_report_date)
-    );
+    if lower(substr(p_report_code, 1, 2)) = 'f2' then
+      x_result := ndfl2_report_api.get_report(
+        p_report_code => p_report_code, 
+        p_year        => p_year,
+        p_report_date => to_date$(p_report_date)
+      );
+    else
+      x_result := ndfl_report_api.get_report(
+        p_report_code => p_report_code, 
+        p_end_date    => get_date(p_year, p_month),
+        p_report_date => to_date$(p_report_date)
+      );
+    end if;
     --
   exception
     when others then

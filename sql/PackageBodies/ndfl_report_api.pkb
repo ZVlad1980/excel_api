@@ -688,7 +688,7 @@ create or replace package body ndfl_report_api is
           and    emp.god = extract(year from p_end_date)
           order  by emp.familiya, emp.imya, emp.otchestvo, emp.data_rozhd;
       else
-        fix_exception('get_report('||l_report_code || '): Неизвестный код отчета');
+        fix_exception('get_report('||l_report_code || '): 6 Неизвестный код отчета');
         raise utl_error_api.G_EXCEPTION;
     end case;
     --

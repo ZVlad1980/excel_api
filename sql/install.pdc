@@ -67,6 +67,10 @@ prompt install f2ndfl_arh_spravki_api.pks
 @@Packages\f2ndfl_arh_spravki_api.pks
 show error
 
+prompt install ndfl2_report_api.pks
+@@Packages\ndfl2_report_api.pks
+show error
+
 prompt install sp_quarters_v.sql
 @@Views\sp_quarters_v.sql
 show error
@@ -330,6 +334,11 @@ show error
 prompt install gateway_user_pkg.pkb
 @@PackageBodies\gateway_user_pkg.pkb
 show error
+
+prompt install ndfl2_report_api.pkb
+@@PackageBodies\ndfl2_report_api.pkb
+show error
+
 /*
 prompt install FXNDFL_UTIL.pkb
 @@PackageBodies\FXNDFL_UTIL.pkb
