@@ -27,8 +27,13 @@ prompt install dv_sr_gf_persons_t.sql
 @@Tables\dv_sr_gf_persons_t.sql
 show error
 */
+
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
+show error
+
+prompt install FXNDFL_UTIL.pks
+@@Packages\FXNDFL_UTIL.pks
 show error
 
 prompt install zaprvkl_api.pks
@@ -53,6 +58,10 @@ show error
 
 prompt install f_ndfl_load_spisrab_api.pks
 @@Packages\f_ndfl_load_spisrab_api.pks
+show error
+
+prompt install f_ndfl_load_nalplat_api.pks
+@@Packages\f_ndfl_load_nalplat_api.pks
 show error
 
 prompt install gateway_pkg.pks
@@ -315,6 +324,10 @@ prompt install f_ndfl_load_spisrab_api.pkb
 @@PackageBodies\f_ndfl_load_spisrab_api.pkb
 show error
 
+prompt install f_ndfl_load_nalplat_api.pkb
+@@PackageBodies\f_ndfl_load_nalplat_api.pkb
+show error
+
 prompt install f2ndfl_arh_spravki_api.pkb
 @@PackageBodies\f2ndfl_arh_spravki_api.pkb
 show error
@@ -339,11 +352,11 @@ prompt install ndfl2_report_api.pkb
 @@PackageBodies\ndfl2_report_api.pkb
 show error
 
-/*
+--/*
 prompt install FXNDFL_UTIL.pkb
 @@PackageBodies\FXNDFL_UTIL.pkb
 show error
-*/
+--*/
 prompt Install grants.sql
 @@grants.sql
 show error

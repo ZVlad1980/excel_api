@@ -283,7 +283,6 @@ create or replace package body ndfl2_report_api is
           and    ls.nom_korr = 0
           order  by ecode,
                     familiya;
-  --!!!!!!!!!!!!
       when 'f2_diff_pers_data' then
         --источник запроса: fxndfl_util.OshibDan_vSpravke
         open l_result for
@@ -539,6 +538,95 @@ create or replace package body ndfl2_report_api is
                     and    ls.nom_korr = 0)
             where  ccid <> cfld
           ) t;
+      when 'f2_ndfl_nalplat_pers' then
+        --источник запроса: fxndfl_util.SovpDan_Kontragentov
+        open l_result for
+          with nalplat as (
+            select n.nom_vkl,
+                   n.nom_ips,
+                   n.ssylka_sips,
+                   n.gf_person,
+                   case n.ssylka_tip
+                     when 0 then
+                       'PENSIONER'
+                     else 'SUCCESSOR'
+                   end person_type,
+                   case min(n.sgd_isprvnol)
+                     when 1 then
+                      'N'
+                     else
+                      'Y'
+                   end exists_revenue
+            from   f_ndfl_load_nalplat n
+            where  n.god = dv_sr_lspv_docs_api.get_year
+            and    n.kod_na = 1
+            group  by n.nom_vkl,
+                   n.nom_ips,
+                   n.ssylka_sips,
+                   n.ssylka_tip,
+                   n.gf_person
+          ),
+          lspv_s as (
+            select d.nom_vkl, 
+                   d.nom_ips,
+                   d.ssylka_fl,
+                   d.gf_person,
+                   case max(case d.det_charge_type  when 'RITUAL' then 1 else 0 end)
+                     when 0 then
+                       'PENSIONER'
+                     else 'SUCCESSOR'
+                   end person_type,
+                   case 
+                     when sum(d.revenue_curr_year) > 0 then
+                       'Y'
+                     else 'N'
+                   end exists_revenue
+            from   dv_sr_lspv_docs_v d
+            group by d.nom_vkl, 
+                   d.nom_ips,
+                   d.ssylka_fl,
+                   d.gf_person
+          ),
+          nalplat_pers_v as (
+            select n.nom_vkl        nom_vkl_np,
+                   n.nom_ips        nom_ips_np,
+                   n.gf_person      gf_person_np,
+                   n.ssylka_sips    ssylka_np,      
+                   n.person_type    person_type_np,
+                   n.exists_revenue exists_revenue_np,
+                   p.nom_vkl       ,
+                   p.nom_ips       ,
+                   p.gf_person     ,
+                   p.ssylka_fl     ssylka,
+                   p.person_type   ,
+                   p.exists_revenue
+            from   nalplat n
+            full   outer join lspv_s p
+            on     p.nom_vkl = n.nom_vkl 
+            and    p.nom_ips = n.nom_ips
+            and    p.person_type = n.person_type
+            where  coalesce(n.gf_person, -1) <> coalesce(p.gf_person, -2)
+          )
+          select p.nom_vkl_np,
+                 p.nom_ips_np,
+                 p.gf_person_np,
+                 p.ssylka_np,
+                 p.person_type_np,
+                 p.exists_revenue_np,
+                 pnp.fullname,
+                 p.nom_vkl,
+                 p.nom_ips,
+                 p.gf_person,
+                 p.ssylka,
+                 p.person_type,
+                 p.exists_revenue,
+                 pp.fullname
+          from   nalplat_pers_v p,
+                 gf_people_v    pnp,
+                 gf_people_v    pp
+          where  1 = 1
+          and    pp.fk_contragent(+) = p.gf_person
+          and    pnp.fk_contragent(+) = p.gf_person_np;
       else
         fix_exception('get_report('||l_report_code || '): Неизвестный код отчета');
         raise utl_error_api.G_EXCEPTION;

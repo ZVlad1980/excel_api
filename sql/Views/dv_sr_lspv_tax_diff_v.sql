@@ -14,6 +14,7 @@ select d.gf_person,
          sum(d.tax_return)                     tax_return,
          sum(d.tax_83)                         tax_83
   from   dv_sr_lspv_pers_v d
+  where  d.exists_revenue = 'Y'
   group by d.gf_person, d.tax_rate
   having coalesce(sum(d.tax_calc), 0) <> coalesce(sum(d.tax_retained), 0)
   --если разошлась сумма исчислено/удержано, проверяем с учетом возвратов

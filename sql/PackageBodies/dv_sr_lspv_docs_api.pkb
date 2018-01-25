@@ -645,7 +645,7 @@ create or replace package body dv_sr_lspv_docs_api is
                 from   contragent_merge_log_v m
                 where  1=1
                 and    m.fk_person_removed_root = gp.gf_person
-               ) fk_person_united,
+               ) gf_person_new,
                p_process_id
         from   sp_gf_persons_v        gp
         where  1=1
@@ -872,12 +872,47 @@ create or replace package body dv_sr_lspv_docs_api is
         raise;
     end update_arh_nomspr_t_;
     --
+    -- Обновление GF_PERSON в f_ndfl_load_nalplat
+    --
+    procedure update_ndfl_load_nalplat_ is
+    begin
+      merge into f_ndfl_load_nalplat ns
+      --KOD_NA, GOD, SSYLKA_TIP, NOM_VKL, NOM_IPS
+      using (select ns.kod_na,
+                    ns.god,
+                    ns.ssylka_tip,
+                    ns.nom_vkl,
+                    ns.nom_ips,
+                    gp.gf_person_new
+             from   dv_sr_gf_persons_t  gp,
+                    f_ndfl_load_nalplat ns
+             where  1 = 1
+             and    ns.gf_person  = gp.gf_person_old
+             and    gp.gf_person_old is not null
+             and    gp.process_id = p_process_id
+            ) u
+      on    (ns.kod_na      = u.kod_na      and
+             ns.god         = u.god         and
+             ns.ssylka_tip  = u.ssylka_tip      and
+             ns.nom_vkl     = u.nom_vkl     and
+             ns.nom_ips     = u.nom_ips
+            )
+      when matched then
+        update set
+        ns.gf_person = u.gf_person_new;
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_ndfl_load_nalplat_(' || p_process_id || ')');
+        raise;
+    end update_ndfl_load_nalplat_;
+    --
   begin
     --
     update_pensioners_;
     update_successors_;
     update_docs_t_;
     update_arh_nomspr_t_;
+    update_ndfl_load_nalplat_;
     --
   exception
     when others then

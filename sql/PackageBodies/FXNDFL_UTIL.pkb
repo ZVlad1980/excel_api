@@ -250,403 +250,146 @@ begin
     -- комит нельзя - сотрется буфер
     -- это должна сделать вызывающая процедура 
     
-end Zapoln_Buf_NalogIschisl;         
+end Zapoln_Buf_NalogIschisl; 
+          
+  /*
+   * Процедура fill_ndfl_load_nalplat формирует список налогоплатильщиков 
+   *  в таблице f_ndfl_load_nalplat
+   */
+  procedure spisok_nalplat_polspv
+  (
+    perrinfo out varchar2,
+    psprid   in number
+  ) as
+    dtermbeg  date;
+    dtermend  date;
+    dtermyear date;
+    nkodna    number;
+    ngod      number;
+    nperiod   number;
+    nkfluch   number;
+    nkflrab   number;
+    nkflobs   number;
+  begin
+    perrinfo := null;
 
+    -- выборка периода справки
+    select kod_na,
+           god,
+           period
+    into   nkodna,
+           ngod,
+           nperiod
+    from   f6ndfl_load_spravki
+    where  r_sprid = psprid;
 
-procedure Spisok_NalPlat_poLSPV( pErrInfo out varchar2, pSPRID in number ) as 
-  dTermBeg date;
-  dTermEnd date;
-  dTermYear date;
-  nKodNA    number;
-  nGod        number;
-  nPeriod    number;
-  nKFLUch number;
-  nKFLRab number;
-  nKFLObs number;
-begin
-         pErrInfo := Null;  
-         
-         -- выборка периода справки
-         Select KOD_NA,GOD, PERIOD into  nKodNA,nGod, nPeriod  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
-         
-         dTermBeg  :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
-         dTermYear := add_months(dTermBeg,12); 
-         
-         case nPeriod
-               when 21 then dTermEnd := add_months(dTermBeg,3);         
-               when 31 then dTermEnd := add_months(dTermBeg,6);        
-               when 33 then dTermEnd := add_months(dTermBeg,9);        
-               when 34 then dTermEnd := add_months(dTermBeg,12);      
-               else pErrInfo :='Ошибка: значение '||to_char(nPeriod)||' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).'; return;                
-         end case;
+    dtermbeg  := to_date('01.01.' || to_char(ngod), 'dd.mm.yyyy');
+    dtermyear := add_months(dtermbeg, 12);
+
+    case nperiod
+      when 21 then
+        dtermend := add_months(dtermbeg, 3);
+      when 31 then
+        dtermend := add_months(dtermbeg, 6);
+      when 33 then
+        dtermend := add_months(dtermbeg, 9);
+      when 34 then
+        dtermend := add_months(dtermbeg, 12);
+      else
+        perrinfo := 'Ошибка: значение ' || to_char(nperiod) ||
+                    ' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).';
+        return;
+    end case;
+
+    fill_ndfl_load_nalplat(p_code_na   => nkodna,
+                           p_year      => ngod,
+                           p_from_date => dtermbeg,
+                           p_end_date  => dtermend,
+                           p_term_year => dtermyear,
+                           p_period    => nperiod);
+    -- установить флажок нулевого дохода
+    spisok_nalplat_dohodnol(psprid);
+    --
+    update f6ndfl_load_spravki
+    set    kol_fl_dohod = 0
+    where  r_sprid = psprid;
+
+    if gl_commit then
+      commit;
+    end if;
+
+  exception
+    when others then
+      perrinfo := sqlerrm;
+      if gl_commit then
+        rollback;
+      end if;
     
-         -- все запросы должны быть на добавление
-         -- только тех участников, которые ещё не были внесены в список
-         
-         -- тип ссылки 
-         --   0 - пенсия или выкупная (ссылка самого получателя)
-         --   1 - позобие (ссылка умершего, а не получателя)
-         
-         -- 1.  Списки тех, у кого не было исправлений дохода  
-        
-         -- 1.1. получивших выкупную сумму
-         Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
-         Select distinct nKodNA, nGod, ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, 0, lspv.SSYLKA_FL, sfl.GF_PERSON, sfl.NAL_REZIDENT, nPeriod
-                from DV_SR_LSPV ds
-                        inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
-                        inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                        left join (Select NOM_VKL, NOM_IPS from F_NDFL_LOAD_NALPLAT 
-                                       where KOD_NA=nKodNA and GOD=nGod and SSYLKA_TIP=0  -- участники
-                                    ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                        
-                where ds.DATA_OP>=dTermBeg
-                   and ds.DATA_OP < dTermEnd
-                   and ds.SHIFR_SCHET=55  -- сначала выкупные
-                   and ds.SERVICE_DOC=0
-                   and np.NOM_VKL is Null;    -- новые, которых ещё не было
-                 
-         -- 1.2. получавших пенсии
-         Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
-         Select distinct nKodNA, nGod, ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, 0, lspv.SSYLKA_FL, sfl.GF_PERSON, sfl.NAL_REZIDENT, nPeriod
-                from DV_SR_LSPV ds
-                        inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
-                        inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                        left join (Select NOM_VKL, NOM_IPS from F_NDFL_LOAD_NALPLAT 
-                                       where KOD_NA=nKodNA and GOD=nGod and SSYLKA_TIP=0  -- участники
-                                    ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                        
-                where ds.DATA_OP>=dTermBeg
-                   and ds.DATA_OP < dTermEnd
-                   and ds.SHIFR_SCHET=60  -- потом пенсии отдельно
-                   and ds.NOM_VKL < 991     -- кроме пенсий из личных средств
-                   and ds.SERVICE_DOC=0
-                   and np.NOM_VKL is Null;                   
-                 
-         -- 1.3. получателей пособий добавляем третьей очередью   
-         Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
-         Select distinct nKodNA, nGod, ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, vrp.NOM_VIPL, vrp.SSYLKA_POLUCH, vrp.GF_PERSON, vrp.NAL_REZIDENT, nPeriod
-                from DV_SR_LSPV ds
-                        inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
-                        inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, NOM_VIPL, SSYLKA_POLUCH, GF_PERSON, NAL_REZIDENT   
-                                            from VYPLACH_POSOB 
-                                            where TIP_VYPL=1010
-                                               and DATA_VYPL>=dTermBeg 
-                                               and DATA_VYPL < dTermEnd
-                                        ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=ds.SSYLKA_DOC     
-                        left join (Select NOM_VKL, NOM_IPS, SSYLKA_TIP from F_NDFL_LOAD_NALPLAT 
-                                       where KOD_NA=nKodNA and GOD=nGod
-                                    ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS and vrp.NOM_VIPL=np.SSYLKA_TIP                       
-                where ds.DATA_OP>=dTermBeg
-                   and ds.DATA_OP < dTermEnd
-                   and ds.SHIFR_SCHET=62  -- ритуалки и наследуемые суммы
-                   and ds.SERVICE_DOC=0
-                   and np.NOM_VKL is Null;    
-                   
-                   
-         -- 2. Были исправление дохода, полученного в отчетном периоде
-         
-         -- 2.1. Пенсии и выкупные суммы (проверил 12.04.2017 Анкин)         
-         Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
-         Select nKodNA, nGod, NOM_VKL, NOM_IPS, SSYLKA_FL, 0, SSYLKA_FL, GF_PERSON, NAL_REZIDENT, nPeriod
-         from (Select distinct NOM_VKL, NOM_IPS, SSYLKA_FL, GF_PERSON, NAL_REZIDENT -- ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, sfl.GF_PERSON, sfl.NAL_REZIDENT 
-               from(Select ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, sfl.GF_PERSON, sfl.NAL_REZIDENT, CONNECT_BY_ISLEAF ISLEAF, ds.DATA_OP 
-                        from  DV_SR_LSPV ds            
-                                    inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
-                                    inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                    left join (Select NOM_VKL, NOM_IPS from F_NDFL_LOAD_NALPLAT 
-                                                   where KOD_NA=nKodNA 
-                                                      and GOD=nGod
-                                                      and SSYLKA_TIP=0
-                                                ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS
-                        where sfl.PEN_SXEM<>7                  -- не ОПС  
-                          and np.NOM_VKL is Null               -- добавление тех, кого ещё нет             
-                         start with ( ds.SHIFR_SCHET= 55       -- выкупные, исправление выкупных может быть после завершения года 
-                                      or ( ds.SHIFR_SCHET=60   -- пенсия
-                                           and ds.NOM_VKL<991  -- не из своих средств
-                                           and ds.DATA_OP < dTermYear -- исправление пенсий только до конца текущего года
-                                          ) 
-                                    ) 
-                                and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
-                                and ds.DATA_OP>=dTermBeg       -- исправление сделано не ранее начала текущего года                                                                
-                         connect by PRIOR ds.NOM_VKL=ds.NOM_VKL        -- поиск по цепочке исправлений до
-                                    and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- неправильного начисления
-                                    and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
-                                    and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
-                                    and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
-                    ) where ISLEAF=1           -- исправляемая запись (исправляющие записи игнорируем)
-                       and  DATA_OP >=dTermBeg -- исправляемая выплата должна быть 
-                       and  DATA_OP < dTermEnd -- в текущем отчетном периоде
-              );                                           
-                   
-         -- 2.2. Ритуальные пособия и наследуемые суммы
-         Insert into F_NDFL_LOAD_NALPLAT ( KOD_NA, GOD, NOM_VKL, NOM_IPS, SSYLKA_SIPS, SSYLKA_TIP, SSYLKA_REAL, GF_PERSON, NALRES_STATUS, KVARTAL_KOD ) 
-         Select nKodNA, nGod, NOM_VKL, NOM_IPS, SSYLKA_FL, 0, SSYLKA_FL, GF_PERSON, NAL_REZIDENT, nPeriod
-         from (Select lspv.NOM_VKL, lspv.NOM_IPS, lspv.SSYLKA_FL, vrp.GF_PERSON, vrp.NAL_REZIDENT
-                    from(
-                            Select  ds.NOM_VKL, ds.NOM_IPS, 
-                                       min( ds.SSYLKA_DOC ) SSDOC,       -- первый документ в цепочке, исправляемый 
-                                       min(ds.DATA_OP) DATA_OSH_DOH,  -- дата дохода по первому документу
-                                       sum(SUMMA) DOH_POLUCH
-                             from  DV_SR_LSPV ds       
-                                     left join (Select NOM_VKL, NOM_IPS from F_NDFL_LOAD_NALPLAT 
-                                                   where KOD_NA=nKodNA 
-                                                      and GOD=nGod
-                                                      and SSYLKA_TIP=1           -- ссылка умершего, а не получившего доход
-                                                 ) np on np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                                         
-                             where np.NOM_VKL is Null 
-                             start with ds.SHIFR_SCHET=62   -- ритуалки и наследуемые пенсии
-                                    and ds.SERVICE_DOC= -1  -- коррекция (начинаем с -1)
-                                    and ds.DATA_OP>=dTermBeg    -- исправление сделано
-                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                                    
-                                    and ds.DATA_OP < dTermEnd    -- в текущем отчетном периоде
-                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
-                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS
-                                        and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
-                                        and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
-                                        and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC                             
-                             group by ds.NOM_VKL, ds.NOM_IPS
-                             having min(ds.DATA_OP)>=dTermBeg   -- ошибочное начисление сделано
-                                 and min(ds.DATA_OP) < dTermEnd    -- в текущем отчетном периоде  
-                           ) dvs
-                     inner join SP_LSPV lspv on lspv.NOM_VKL=dvs.NOM_VKL and lspv.NOM_IPS=dvs.NOM_IPS 
-                     inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
-                                       from VYPLACH_POSOB 
-                                            where TIP_VYPL=1010
-                                               and DATA_VYPL>=dTermBeg
-                                               and DATA_VYPL < dTermEnd
-                                 ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=dvs.SSDOC and vrp.DATA_VYPL=dvs.DATA_OSH_DOH          
-                     group by  lspv.NOM_VKL, lspv.NOM_IPS, lspv.SSYLKA_FL, vrp.GF_PERSON, vrp.NAL_REZIDENT
-              ); 
-                                    
-        -- установить флажок нулевого дохода
-        Spisok_NalPlat_DohodNol( pSPRID );
-                
-                               
-         -- Идентификация участников
-         -- сначала для тех, кто менял пенсионную схему
-         Update f_NDFL_LOAD_NALPLAT np
-           set np.GF_PERSON= (Select tc.FK_CONTRAGENT from GAZFOND.TRANSFORM_CONTRAGENTS tc where tc.SSYLKA_TS=np.SSYLKA_REAL)
-           where np.GF_PERSON is Null and np.SSYLKA_TIP=0;
-         -- потом для всех  
-         Update f_NDFL_LOAD_NALPLAT np
-           set np.GF_PERSON= (Select tc.FK_CONTRAGENT from GAZFOND.TRANSFORM_CONTRAGENTS tc where tc.SSYLKA_FL=np.SSYLKA_REAL)
-           where np.GF_PERSON is Null and np.SSYLKA_TIP=0;  
-           
-         -- Идентификация получателей пособия, которые являются Участниками  
-         -- сначала для тех, кто менял пенсионную схему
-         Update f_NDFL_LOAD_NALPLAT np
-           set np.GF_PERSON= (Select tc.FK_CONTRAGENT from GAZFOND.TRANSFORM_CONTRAGENTS tc where tc.SSYLKA_TS=np.SSYLKA_REAL)
-           where np.GF_PERSON is Null and np.SSYLKA_TIP=1 and np.SSYLKA_REAL>0;
-         -- потом для всех  
-         Update f_NDFL_LOAD_NALPLAT np
-           set np.GF_PERSON= (Select tc.FK_CONTRAGENT from GAZFOND.TRANSFORM_CONTRAGENTS tc where tc.SSYLKA_FL=np.SSYLKA_REAL)
-           where np.GF_PERSON is Null and np.SSYLKA_TIP=1 and np.SSYLKA_REAL>0;   
-        
+  end spisok_nalplat_polspv;
 
-         -- перенос кода персоны правопреемника из списка ритуалок в списов выплаченных пособий
-         Update VYPLACH_POSOB vp  
-           set vp.GF_PERSON= (Select sr.FK_CONTRAGENT from SP_RITUAL_POS sr
-                              where sr.SSYLKA=vp.SSYLKA)
-           where  vp.GF_PERSON is Null
-              and vp.TIP_VYPL=1010
-              and vp.NOM_VIPL=1
-              and vp.DATA_VYPL>=dTermBeg 
-              and vp.DATA_VYPL < dTermEnd; 
-                          
-         -- Идентификация получателей пособия, которые НЕ являются Участниками Фонда
-         Update f_NDFL_LOAD_NALPLAT np
-           set np.GF_PERSON= (Select distinct sr.FK_CONTRAGENT 
-                                 from SP_RITUAL_POS sr
-                                    inner join VYPLACH_POSOB vp on vp.SSYLKA=sr.SSYLKA 
-                                 where vp.TIP_VYPL=1010
-                                   and vp.NOM_VIPL=1
-                                   and vp.DATA_VYPL>=dTermBeg
-                                   and vp.DATA_VYPL < dTermEnd
-                                   and vp.SSYLKA=np.SSYLKA_SIPS ) 
-           where np.GF_PERSON is Null and np.SSYLKA_TIP=1 and np.SSYLKA_REAL=0;         
+  -- эта процедура должна найти в списке НП,
+  -- у которых доход стал нулевым в результате исправлений
+  -- (напрмер: человек может умереть, и ему сторнировали доход)
+  -- таких НП не нужно включать в справку
+  -- они НЕ должны войти в число лиц, получивших доход
+  --
+  -- задача этой процедуры проставить флажок обнуленного дохода
+  --
+  -- комит должен быть внешний!
+  procedure spisok_nalplat_dohodnol(psprid in number) as
+    dtermbeg  date;
+    dtermend  date;
+    dtermyear date;
+    nkodna    number;
+    ngod      number;
+    nperiod   number;
+    nnomkor   number;
+    nrit      number;
+  begin
 
+    -- выборка периода справки
+    select kod_na,
+           god,
+           period,
+           nom_korr
+    into   nkodna,
+           ngod,
+           nperiod,
+           nnomkor
+    from   f6ndfl_load_spravki
+    where  r_sprid = psprid;
 
-         -- заполняем персоны в СФЛ              
-         Update SP_FIZ_LITS sfl
-            set sfl.GF_PERSON = (Select distinct np.GF_PERSON
-                                     from f_NDFL_LOAD_NALPLAT np
-                                     where np.SSYLKA_REAL=sfl.SSYLKA
-                                       and np.KOD_NA=nKodNA and np.GOD=nGod and np.SSYLKA_TIP=0
-                                       and np.GF_PERSON is not Null)
-            where sfl.GF_PERSON is Null
-              and sfl.SSYLKA 
-                  in (Select distinct SSYLKA_REAL
-                         from f_NDFL_LOAD_NALPLAT
-                         where KOD_NA=nKodNA and GOD=nGod and SSYLKA_TIP=0
-                           and SSYLKA_REAL>0
-                           and GF_PERSON is not Null);      
-                              
-         -- сброс подсчитанного числа Налогоплательщиков                
-         Update F6NDFL_LOAD_SPRAVKI
-           set KOL_FL_DOHOD= 0
-           where R_SPRID = pSPRID;                              
-                          
-         if gl_COMMIT then Commit; end if;
-                 
-exception
-   when OTHERS then
-         pErrInfo := SQLERRM;     
-         if gl_COMMIT then Rollback; end if;
-           
-end Spisok_NalPlat_poLSPV;      
+    dtermbeg  := to_date('01.01.' || to_char(ngod), 'dd.mm.yyyy');
+    dtermyear := add_months(dtermbeg, 12);
 
--- эта процедура должна найти в списке НП,
--- у которых доход стал нулевым в результате исправлений
--- (напрмер: человек может умереть, и ему сторнировали доход)
--- таких НП не нужно включать в справку
--- они НЕ должны войти в число лиц, получивших доход
---
--- задача этой процедуры проставить флажок обнуленного дохода
---
--- комит должен быть внешний!
-procedure Spisok_NalPlat_DohodNol( pSPRID in number ) as
-  dTermBeg  date;
-  dTermEnd  date;
-  dTermYear date; 
-  nKodNA    number;
-  nGod      number;
-  nPeriod   number;
-  nNomKor   number;
-  nRIT      number;
-begin
-     
-      -- выборка периода справки
-      Select KOD_NA,GOD, PERIOD, NOM_KORR into  nKodNA,nGod, nPeriod, nNomKor  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
-     
-      dTermBeg  := to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
-      dTermYear := add_months(dTermBeg,12);       
-     
-      case nPeriod
-           when 21 then dTermEnd := add_months(dTermBeg,3);         
-           when 31 then dTermEnd := add_months(dTermBeg,6);        
-           when 33 then dTermEnd := add_months(dTermBeg,9);        
-           when 34 then dTermEnd := add_months(dTermBeg,12);      
-           else Raise_Application_Error( -20001,'Ошибка: значение '||to_char(nPeriod)||' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).');                
-      end case; 
-      
-         -- обработка флажка нулевого годового дохода
-         -- флажок меняется всем за год
-         
-         -- сброс
-         Update F_NDFL_LOAD_NALPLAT np
-             set  np.SGD_ISPRVNOL=0
-             where np.KOD_NA=nKodNA and np.GOD=nGod
-                and np.SGD_ISPRVNOL<>0;
-                      
-         -- вычисление заново
-         -- для пенсий (ссылки участников)
-         Update F_NDFL_LOAD_NALPLAT np
-             set  np.SGD_ISPRVNOL=1
-             where np.KOD_NA=nKodNA and np.GOD=nGod         
-                and (np.NOM_VKL, np.NOM_IPS, np.SSYLKA_TIP ) 
-                    in (Select ds.NOM_VKL, ds.NOM_IPS, 0 SSTYP  
-                            from DV_SR_LSPV ds
-                                 inner join (Select distinct NOM_VKL, NOM_IPS
-                                                from DV_SR_LSPV
-                                                where NOM_VKL<991          -- не из своих средств    
-                                                  and SHIFR_SCHET=60       -- пенсия    
-                                                  and DATA_OP >= dTermBeg  -- за весь  
-                                                  and DATA_OP <  dTermYear -- год
-                                                  and SUMMA<=0
-                                            ) ns  -- искать ноль быстрее не у всех, а только среди тех, у кого есть отрицательные суммы 
-                                            on  ns.NOM_VKL=ds.NOM_VKL and ns.NOM_IPS=ds.NOM_IPS 
-                            where ds.NOM_VKL<991             -- не из своих средств    
-                              and ds.SHIFR_SCHET=60          -- пенсия    
-                              and ds.DATA_OP >= dTermBeg     -- за весь  
-                              and ds.DATA_OP <  dTermYear    -- год
-                            group by  ds.NOM_VKL, ds.NOM_IPS   
-                            having abs(sum(ds.SUMMA))<0.01   -- сумарный доход - ноль           
-                        );            
-         
-         -- для выкупных (ссылки участников)
-         Update F_NDFL_LOAD_NALPLAT np
-             set  np.SGD_ISPRVNOL=1
-             where np.KOD_NA=nKodNA and np.GOD=nGod         
-                and (np.NOM_VKL, np.NOM_IPS, np.SSYLKA_TIP ) 
-                       in ( Select ds.NOM_VKL, ds.NOM_IPS, 0 SSTYP   
-                                from DV_SR_LSPV ds
-                                where (ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET) 
-                                    in (Select NOM_VKL, NOM_IPS, SHIFR_SCHET
-                                        from(Select ds.*, CONNECT_BY_ISLEAF ISLEAF
-                                                from  DV_SR_LSPV ds            
-                                                 where   ds.NOM_VKL<>1001           -- не ОПС                  
-                                                 start with ds.SHIFR_SCHET= 55      -- выкупные
-                                                        and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
-                                                        and ds.DATA_OP >= dTermBeg  -- исправление сделано не ранее начала года                             
-                                                 connect by PRIOR ds.NOM_VKL=ds.NOM_VKL        -- поиск по цепочке исправлений до
-                                                            and PRIOR ds.NOM_IPS=ds.NOM_IPS    -- исправленной записи
-                                                            and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
-                                                            and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
-                                                            and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
-                                            ) where ISLEAF=1
-                                                and DATA_OP >= dTermBeg  -- дата исправляемой записи 
-                                                and DATA_OP <  dTermYear -- в пределах года
-                                        )  
-                                group by ds.NOM_VKL, ds.NOM_IPS  
-                                having abs(sum(ds.SUMMA))<0.01  
-                           );          
-                          
-         -- для ритуалок и наследства (ссылки умерших участников, а не получателей дохода)
-         Select count(*) into nRIT
-             from DV_SR_LSPV 
-                where SHIFR_SCHET=62 and (SERVICE_DOC<>0 or SUMMA<0) 
-                  and DATA_OP>=dTermBeg and DATA_OP<dTermYear;
-         
-    if nRIT>0 then
- 
-         Raise_Application_Error( -20001,'Процедура Spisok_NalPlat_DohodNol. Обнаружено исправление наследуемых сумм или ритуальных выплат. Нужно верифицировать запрос.');
+    case nperiod
+      when 21 then
+        dtermend := add_months(dtermbeg, 3);
+      when 31 then
+        dtermend := add_months(dtermbeg, 6);
+      when 33 then
+        dtermend := add_months(dtermbeg, 9);
+      when 34 then
+        dtermend := add_months(dtermbeg, 12);
+      else
+        raise_application_error(-20001,
+                                'Ошибка: значение ' || to_char(nperiod) ||
+                                ' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).');
+    end case;
 
-         Update F_NDFL_LOAD_NALPLAT np
-             set  np.SGD_ISPRVNOL=1
-             where np.KOD_NA=nKodNA and np.GOD=nGod         
-                and (np.NOM_VKL, np.NOM_IPS, np.SSYLKA_TIP ) 
-                       in ( Select dvs.NOM_VKL, dvs.NOM_IPS, 1 SSTYP   
-                                from ( Select  ds.NOM_VKL, ds.NOM_IPS,
-                                                      max(case when SERVICE_DOC=-1 then ds.SSYLKA_DOC else 0 end) SSDOC,
-                                                      min(ds.DATA_OP) DATA_OSH_DOH, 
-                                                      sum(SUMMA) DOH_POLUCH
-                                            from  DV_SR_LSPV ds      
-                                            where not exists( Select * from DV_SR_LSPV dsz
-                                                                         where dsz.DATA_OP>=dTermBeg  and dsz.DATA_OP <  dTermEnd 
-                                                                            and dsz.NOM_VKL=ds.NOM_VKL and dsz.NOM_IPS=ds.NOM_IPS 
-                                                                            and dsz.SHIFR_SCHET=62 and dsz.SERVICE_DOC=0)  -- нет неисправленных выплат за другие месяцы 
-                                            start with ds.SHIFR_SCHET=62  -- ритуалки и наследуемые пенсии
-                                                    and ds.SERVICE_DOC=-1  -- коррекция (начинаем с -1)
-                                                    and ds.DATA_OP>=dTermBeg    -- исправление сделано
-                                                    -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                                    
-                                                    and ds.DATA_OP < dTermEnd    -- в текущем отчетном периоде
-                                             connect by PRIOR ds.NOM_VKL=ds.NOM_VKL  
-                                                        and PRIOR ds.NOM_IPS=ds.NOM_IPS
-                                                        and PRIOR ds.SHIFR_SCHET=ds.SHIFR_SCHET
-                                                        and PRIOR ds.SUB_SHIFR_SCHET=ds.SUB_SHIFR_SCHET
-                                                        and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC              
-                                             group by ds.NOM_VKL, ds.NOM_IPS
-                                             having min(ds.DATA_OP)>=dTermBeg   -- ошибочное начисление сделано
-                                                 and min(ds.DATA_OP) < dTermEnd    -- в текущем отчетном периоде
-                                             ) dvs
-                                 inner join SP_LSPV lspv on lspv.NOM_VKL=dvs.NOM_VKL and lspv.NOM_IPS=dvs.NOM_IPS 
-                                 left join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON   
-                                                   from VYPLACH_POSOB 
-                                                        where TIP_VYPL=1010    
-                                                           and DATA_VYPL>=dTermBeg
-                                                           and DATA_VYPL < dTermEnd
-                                                           -- если наследников 2 и более, то не автоматизировано из-за модели данных УГМ
-                                                           and SSYLKA not in (Select distinct SSYLKA from VYPLACH_POSOB where NOM_VIPL>1)
-                                             ) vrp on vrp.SSYLKA=lspv.SSYLKA_FL and vrp.SSYLKA_DOC=dvs.SSDOC         
-                                 group by dvs.NOM_VKL, dvs.NOM_IPS
-                                 having sum( dvs.DOH_POLUCH)=0
-                          );     
-    end if;  -- конец ритуалки с исправлениями
-                               
-exception
-   when OTHERS then       
-         if gl_COMMIT then Rollback; end if;     
-         Raise;
-              
-end Spisok_NalPlat_DohodNol;                  
+    set_zero_nalplat(p_code_na   => nkodna,
+                     p_year      => ngod,
+                     p_from_date => dtermbeg,
+                     p_end_date  => dtermend,
+                     p_term_year => dtermyear);
+
+  exception
+    when others then
+      if gl_commit then
+        rollback;
+      end if;
+      raise;
+  end spisok_nalplat_dohodnol;
 
 -- определить число Налогоплательщиков, получивших ненулевой доход с начала года
 --        перед вызовом должны быть подготовлены списки Налогоплательщиков:
@@ -8851,6 +8594,643 @@ end Parse_xml_izBuh;
     copy_vych_;
     --
   end copy_load_employees;
+          
+  /*
+   * Процедура fill_ndfl_load_nalplat формирует список налогоплатильщиков 
+   *  в таблице f_ndfl_load_nalplat
+   */
+  procedure fill_ndfl_load_nalplat(
+    p_code_na   f_ndfl_load_nalplat.kod_na%type,
+    p_year      f_ndfl_load_nalplat.god%type,
+    p_from_date date,
+    p_end_date  date,
+    p_term_year date,
+    p_period    number
+  ) is
+  begin
+    -- все запросы должны быть на добавление
+    -- только тех участников, которые ещё не были внесены в список
+  
+    -- тип ссылки 
+    --   0 - пенсия или выкупная (ссылка самого получателя)
+    --   1 - позобие (ссылка умершего, а не получателя)
+  
+    -- 1.  Списки тех, у кого не было исправлений дохода  
+  
+    -- 1.1. получивших выкупную сумму
+    insert into f_ndfl_load_nalplat
+      (kod_na,
+       god,
+       nom_vkl,
+       nom_ips,
+       ssylka_sips,
+       ssylka_tip,
+       ssylka_real,
+       gf_person,
+       nalres_status,
+       kvartal_kod)
+      select distinct p_code_na,
+                      p_year,
+                      ds.nom_vkl,
+                      ds.nom_ips,
+                      lspv.ssylka_fl,
+                      0,
+                      lspv.ssylka_fl,
+                      sfl.gf_person,
+                      sfl.nal_rezident,
+                      p_period
+      from   dv_sr_lspv ds
+      inner  join sp_lspv lspv
+      on     lspv.nom_vkl = ds.nom_vkl
+      and    lspv.nom_ips = ds.nom_ips
+      inner  join sp_fiz_lits sfl
+      on     sfl.ssylka = lspv.ssylka_fl
+      left   join (select nom_vkl,
+                          nom_ips
+                   from   f_ndfl_load_nalplat
+                   where  kod_na = p_code_na
+                   and    god = p_year
+                   and    ssylka_tip = 0 -- участники
+                   ) np
+      on     np.nom_vkl = ds.nom_vkl
+      and    np.nom_ips = ds.nom_ips
+      where  ds.data_op >= p_from_date
+      and    ds.data_op < p_end_date
+      and    ds.shifr_schet = 55 -- сначала выкупные
+      and    ds.service_doc = 0
+      and    np.nom_vkl is null; -- новые, которых ещё не было
+  
+    -- 1.2. получавших пенсии
+    insert into f_ndfl_load_nalplat
+      (kod_na,
+       god,
+       nom_vkl,
+       nom_ips,
+       ssylka_sips,
+       ssylka_tip,
+       ssylka_real,
+       gf_person,
+       nalres_status,
+       kvartal_kod)
+      select distinct p_code_na,
+                      p_year,
+                      ds.nom_vkl,
+                      ds.nom_ips,
+                      lspv.ssylka_fl,
+                      0,
+                      lspv.ssylka_fl,
+                      sfl.gf_person,
+                      sfl.nal_rezident,
+                      p_period
+      from   dv_sr_lspv ds
+      inner  join sp_lspv lspv
+      on     lspv.nom_vkl = ds.nom_vkl
+      and    lspv.nom_ips = ds.nom_ips
+      inner  join sp_fiz_lits sfl
+      on     sfl.ssylka = lspv.ssylka_fl
+      left   join (select nom_vkl,
+                          nom_ips
+                   from   f_ndfl_load_nalplat
+                   where  kod_na = p_code_na
+                   and    god = p_year
+                   and    ssylka_tip = 0 -- участники
+                   ) np
+      on     np.nom_vkl = ds.nom_vkl
+      and    np.nom_ips = ds.nom_ips
+      where  ds.data_op >= p_from_date
+      and    ds.data_op < p_end_date
+      and    ds.shifr_schet = 60 -- потом пенсии отдельно
+      and    ds.nom_vkl < 991 -- кроме пенсий из личных средств
+      and    ds.service_doc = 0
+      and    np.nom_vkl is null;
+  
+    -- 1.3. получателей пособий добавляем третьей очередью   
+    insert into f_ndfl_load_nalplat
+      (kod_na,
+       god,
+       nom_vkl,
+       nom_ips,
+       ssylka_sips,
+       ssylka_tip,
+       ssylka_real,
+       gf_person,
+       nalres_status,
+       kvartal_kod)
+      select distinct p_code_na,
+                      p_year,
+                      ds.nom_vkl,
+                      ds.nom_ips,
+                      lspv.ssylka_fl,
+                      vrp.nom_vipl,
+                      vrp.ssylka_poluch,
+                      vrp.gf_person,
+                      vrp.nal_rezident,
+                      p_period
+      from   dv_sr_lspv ds
+      inner  join sp_lspv lspv
+      on     lspv.nom_vkl = ds.nom_vkl
+      and    lspv.nom_ips = ds.nom_ips
+      inner  join (select data_vypl,
+                          ssylka,
+                          ssylka_doc,
+                          nom_vipl,
+                          ssylka_poluch,
+                          gf_person,
+                          nal_rezident
+                   from   vyplach_posob
+                   where  tip_vypl = 1010
+                   and    data_vypl >= p_from_date
+                   and    data_vypl < p_end_date) vrp
+      on     vrp.ssylka = lspv.ssylka_fl
+      and    vrp.ssylka_doc = ds.ssylka_doc
+      left   join (select nom_vkl,
+                          nom_ips,
+                          ssylka_tip
+                   from   f_ndfl_load_nalplat
+                   where  kod_na = p_code_na
+                   and    god = p_year) np
+      on     np.nom_vkl = ds.nom_vkl
+      and    np.nom_ips = ds.nom_ips
+      and    vrp.nom_vipl = np.ssylka_tip
+      where  ds.data_op >= p_from_date
+      and    ds.data_op < p_end_date
+      and    ds.shifr_schet = 62 -- ритуалки и наследуемые суммы
+      and    ds.service_doc = 0
+      and    np.nom_vkl is null;
+  
+    -- 2. Были исправление дохода, полученного в отчетном периоде
+  
+    -- 2.1. Пенсии и выкупные суммы (проверил 12.04.2017 Анкин)         
+    insert into f_ndfl_load_nalplat
+      (kod_na,
+       god,
+       nom_vkl,
+       nom_ips,
+       ssylka_sips,
+       ssylka_tip,
+       ssylka_real,
+       gf_person,
+       nalres_status,
+       kvartal_kod)
+      select p_code_na,
+             p_year,
+             nom_vkl,
+             nom_ips,
+             ssylka_fl,
+             0,
+             ssylka_fl,
+             gf_person,
+             nal_rezident,
+             p_period
+      from   (select distinct nom_vkl,
+                              nom_ips,
+                              ssylka_fl,
+                              gf_person,
+                              nal_rezident -- ds.NOM_VKL, ds.NOM_IPS, lspv.SSYLKA_FL, sfl.GF_PERSON, sfl.NAL_REZIDENT 
+              from   (select ds.nom_vkl,
+                             ds.nom_ips,
+                             lspv.ssylka_fl,
+                             sfl.gf_person,
+                             sfl.nal_rezident,
+                             connect_by_isleaf isleaf,
+                             ds.data_op
+                      from   dv_sr_lspv ds
+                      inner  join sp_lspv lspv
+                      on     lspv.nom_vkl = ds.nom_vkl
+                      and    lspv.nom_ips = ds.nom_ips
+                      inner  join sp_fiz_lits sfl
+                      on     sfl.ssylka = lspv.ssylka_fl
+                      left   join (select nom_vkl,
+                                         nom_ips
+                                  from   f_ndfl_load_nalplat
+                                  where  kod_na = p_code_na
+                                  and    god = p_year
+                                  and    ssylka_tip = 0) np
+                      on     np.nom_vkl = ds.nom_vkl
+                      and    np.nom_ips = ds.nom_ips
+                      where  sfl.pen_sxem <> 7 -- не ОПС  
+                      and    np.nom_vkl is null -- добавление тех, кого ещё нет             
+                      start  with (ds.shifr_schet = 55 -- выкупные, исправление выкупных может быть после завершения года 
+                                  or (ds.shifr_schet = 60 -- пенсия
+                                  and ds.nom_vkl < 991 -- не из своих средств
+                                  and ds.data_op < p_term_year -- исправление пенсий только до конца текущего года
+                                  ))
+                           and    ds.service_doc = -1 -- коррекция (начинаем поиск с -1)
+                           and    ds.data_op >= p_from_date -- исправление сделано не ранее начала текущего года                                                                
+                      connect by prior ds.nom_vkl = ds.nom_vkl -- поиск по цепочке исправлений до
+                          and    prior ds.nom_ips = ds.nom_ips -- неправильного начисления
+                          and    prior ds.shifr_schet = ds.shifr_schet
+                          and    prior
+                                 ds.sub_shifr_schet = ds.sub_shifr_schet
+                          and    prior ds.ssylka_doc = ds.service_doc)
+              where  isleaf = 1 -- исправляемая запись (исправляющие записи игнорируем)
+              and    data_op >= p_from_date -- исправляемая выплата должна быть 
+              and    data_op < p_end_date -- в текущем отчетном периоде
+              );
+  
+    -- 2.2. Ритуальные пособия и наследуемые суммы
+    insert into f_ndfl_load_nalplat
+      (kod_na,
+       god,
+       nom_vkl,
+       nom_ips,
+       ssylka_sips,
+       ssylka_tip,
+       ssylka_real,
+       gf_person,
+       nalres_status,
+       kvartal_kod)
+      select p_code_na,
+             p_year,
+             nom_vkl,
+             nom_ips,
+             ssylka_fl,
+             0,
+             ssylka_fl,
+             gf_person,
+             nal_rezident,
+             p_period
+      from   (select lspv.nom_vkl,
+                     lspv.nom_ips,
+                     lspv.ssylka_fl,
+                     vrp.gf_person,
+                     vrp.nal_rezident
+              from   (select ds.nom_vkl,
+                             ds.nom_ips,
+                             min(ds.ssylka_doc) ssdoc, -- первый документ в цепочке, исправляемый 
+                             min(ds.data_op) data_osh_doh, -- дата дохода по первому документу
+                             sum(summa) doh_poluch
+                      from   dv_sr_lspv ds
+                      left   join (select nom_vkl,
+                                         nom_ips
+                                  from   f_ndfl_load_nalplat
+                                  where  kod_na = p_code_na
+                                  and    god = p_year
+                                  and    ssylka_tip = 1 -- ссылка умершего, а не получившего доход
+                                  ) np
+                      on     np.nom_vkl = ds.nom_vkl
+                      and    np.nom_ips = ds.nom_ips
+                      where  np.nom_vkl is null
+                      start  with ds.shifr_schet = 62 -- ритуалки и наследуемые пенсии
+                           and    ds.service_doc = -1 -- коррекция (начинаем с -1)
+                           and    ds.data_op >= p_from_date -- исправление сделано
+                                 -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                                    
+                           and    ds.data_op < p_end_date -- в текущем отчетном периоде
+                      connect by prior ds.nom_vkl = ds.nom_vkl
+                          and    prior ds.nom_ips = ds.nom_ips
+                          and    prior ds.shifr_schet = ds.shifr_schet
+                          and    prior
+                                 ds.sub_shifr_schet = ds.sub_shifr_schet
+                          and    prior ds.ssylka_doc = ds.service_doc
+                      group  by ds.nom_vkl,
+                                ds.nom_ips
+                      having min(ds.data_op) >= p_from_date -- ошибочное начисление сделано
+                      and min(ds.data_op) < p_end_date -- в текущем отчетном периоде  
+                      ) dvs
+              inner  join sp_lspv lspv
+              on     lspv.nom_vkl = dvs.nom_vkl
+              and    lspv.nom_ips = dvs.nom_ips
+              inner  join (select data_vypl,
+                                 ssylka,
+                                 ssylka_doc,
+                                 gf_person,
+                                 nal_rezident
+                          from   vyplach_posob
+                          where  tip_vypl = 1010
+                          and    data_vypl >= p_from_date
+                          and    data_vypl < p_end_date) vrp
+              on     vrp.ssylka = lspv.ssylka_fl
+              and    vrp.ssylka_doc = dvs.ssdoc
+              and    vrp.data_vypl = dvs.data_osh_doh
+              group  by lspv.nom_vkl,
+                        lspv.nom_ips,
+                        lspv.ssylka_fl,
+                        vrp.gf_person,
+                        vrp.nal_rezident);
+  
+    -- Идентификация участников
+    -- сначала для тех, кто менял пенсионную схему
+    update f_ndfl_load_nalplat np
+    set    np.gf_person =
+           (select tc.fk_contragent
+            from   gazfond.transform_contragents tc
+            where  tc.ssylka_ts = np.ssylka_real)
+    where  np.gf_person is null
+    and    np.ssylka_tip = 0;
+    -- потом для всех  
+    update f_ndfl_load_nalplat np
+    set    np.gf_person =
+           (select tc.fk_contragent
+            from   gazfond.transform_contragents tc
+            where  tc.ssylka_fl = np.ssylka_real)
+    where  np.gf_person is null
+    and    np.ssylka_tip = 0;
+  
+    -- Идентификация получателей пособия, которые являются Участниками  
+    -- сначала для тех, кто менял пенсионную схему
+    update f_ndfl_load_nalplat np
+    set    np.gf_person =
+           (select tc.fk_contragent
+            from   gazfond.transform_contragents tc
+            where  tc.ssylka_ts = np.ssylka_real)
+    where  np.gf_person is null
+    and    np.ssylka_tip = 1
+    and    np.ssylka_real > 0;
+    -- потом для всех  
+    update f_ndfl_load_nalplat np
+    set    np.gf_person =
+           (select tc.fk_contragent
+            from   gazfond.transform_contragents tc
+            where  tc.ssylka_fl = np.ssylka_real)
+    where  np.gf_person is null
+    and    np.ssylka_tip = 1
+    and    np.ssylka_real > 0;
+  
+    -- перенос кода персоны правопреемника из списка ритуалок в списов выплаченных пособий
+    update vyplach_posob vp
+    set    vp.gf_person =
+           (select sr.fk_contragent
+            from   sp_ritual_pos sr
+            where  sr.ssylka = vp.ssylka)
+    where  vp.gf_person is null
+    and    vp.tip_vypl = 1010
+    and    vp.nom_vipl = 1
+    and    vp.data_vypl >= p_from_date
+    and    vp.data_vypl < p_end_date;
+  
+    -- Идентификация получателей пособия, которые НЕ являются Участниками Фонда
+    update f_ndfl_load_nalplat np
+    set    np.gf_person =
+           (select distinct sr.fk_contragent
+            from   sp_ritual_pos sr
+            inner  join vyplach_posob vp
+            on     vp.ssylka = sr.ssylka
+            where  vp.tip_vypl = 1010
+            and    vp.nom_vipl = 1
+            and    vp.data_vypl >= p_from_date
+            and    vp.data_vypl < p_end_date
+            and    vp.ssylka = np.ssylka_sips)
+    where  np.gf_person is null
+    and    np.ssylka_tip = 1
+    and    np.ssylka_real = 0;
+  
+    -- заполняем персоны в СФЛ              
+    update sp_fiz_lits sfl
+    set    sfl.gf_person =
+           (select distinct np.gf_person
+            from   f_ndfl_load_nalplat np
+            where  np.ssylka_real = sfl.ssylka
+            and    np.kod_na = p_code_na
+            and    np.god = p_year
+            and    np.ssylka_tip = 0
+            and    np.gf_person is not null)
+    where  sfl.gf_person is null
+    and    sfl.ssylka in (select distinct ssylka_real
+                          from   f_ndfl_load_nalplat
+                          where  kod_na = p_code_na
+                          and    god = p_year
+                          and    ssylka_tip = 0
+                          and    ssylka_real > 0
+                          and    gf_person is not null);
+  end fill_ndfl_load_nalplat;
+  
+  /**
+   * эта процедура должна найти в списке НП,
+   * у которых доход стал нулевым в результате исправлений
+   * (напрмер: человек может умереть, и ему сторнировали доход)
+   * таких НП не нужно включать в справку
+   * они НЕ должны войти в число лиц, получивших доход
+   * 
+   *  задача этой процедуры проставить флажок обнуленного дохода
+   * 
+   * комит должен быть внешний!
+   */
+  procedure set_zero_nalplat(
+    p_code_na   f_ndfl_load_nalplat.kod_na%type,
+    p_year      f_ndfl_load_nalplat.god%type,
+    p_from_date date,
+    p_end_date  date,
+    p_term_year date
+  ) is
+    l_corr_rit int;
+  begin
+    -- обработка флажка нулевого годового дохода
+    -- флажок меняется всем за год
+  
+    -- сброс
+    update f_ndfl_load_nalplat np
+    set    np.sgd_isprvnol = 0
+    where  np.kod_na = p_code_na
+    and    np.god = p_year
+    and    np.sgd_isprvnol <> 0;
+  
+    -- вычисление заново
+    -- для пенсий (ссылки участников)
+    update f_ndfl_load_nalplat np
+    set    np.sgd_isprvnol = 1
+    where  np.kod_na = p_code_na
+    and    np.god = p_year
+    and    (np.nom_vkl, np.nom_ips, np.ssylka_tip) in
+           (select ds.nom_vkl,
+                    ds.nom_ips,
+                    0 sstyp
+             from   dv_sr_lspv ds
+             inner  join (select distinct nom_vkl,
+                                         nom_ips
+                         from   dv_sr_lspv
+                         where  nom_vkl < 991 -- не из своих средств    
+                         and    shifr_schet = 60 -- пенсия    
+                         and    data_op >= p_from_date -- за весь  
+                         and    data_op < p_term_year -- год
+                         and    summa <= 0) ns -- искать ноль быстрее не у всех, а только среди тех, у кого есть отрицательные суммы 
+             on     ns.nom_vkl = ds.nom_vkl
+             and    ns.nom_ips = ds.nom_ips
+             where  ds.nom_vkl < 991 -- не из своих средств    
+             and    ds.shifr_schet = 60 -- пенсия    
+             and    ds.data_op >= p_from_date -- за весь  
+             and    ds.data_op < p_term_year -- год
+             group  by ds.nom_vkl,
+                       ds.nom_ips
+             having abs(sum(ds.summa)) < 0.01 -- сумарный доход - ноль           
+             );
+  
+    -- для выкупных (ссылки участников)
+    update f_ndfl_load_nalplat np
+    set    np.sgd_isprvnol = 1
+    where  np.kod_na = p_code_na
+    and    np.god = p_year
+    and    (np.nom_vkl, np.nom_ips, np.ssylka_tip) in
+           (select ds.nom_vkl,
+                    ds.nom_ips,
+                    0 sstyp
+             from   dv_sr_lspv ds
+             where  (ds.nom_vkl, ds.nom_ips, ds.shifr_schet) in
+                    (select nom_vkl,
+                            nom_ips,
+                            shifr_schet
+                     from   (select ds.*,
+                                    connect_by_isleaf isleaf
+                             from   dv_sr_lspv ds
+                             where  ds.nom_vkl <> 1001 -- не ОПС                  
+                             start  with ds.shifr_schet = 55 -- выкупные
+                                  and    ds.service_doc = -1 -- коррекция (начинаем поиск с -1)
+                                  and    ds.data_op >= p_from_date -- исправление сделано не ранее начала года                             
+                             connect by prior ds.nom_vkl = ds.nom_vkl -- поиск по цепочке исправлений до
+                                 and    prior ds.nom_ips = ds.nom_ips -- исправленной записи
+                                 and    prior ds.shifr_schet = ds.shifr_schet
+                                 and    prior ds.sub_shifr_schet =
+                                        ds.sub_shifr_schet
+                                 and    prior ds.ssylka_doc = ds.service_doc)
+                     where  isleaf = 1
+                     and    data_op >= p_from_date -- дата исправляемой записи 
+                     and    data_op < p_term_year -- в пределах года
+                     )
+             group  by ds.nom_vkl,
+                       ds.nom_ips
+             having abs(sum(ds.summa)) < 0.01);
+  
+    -- для ритуалок и наследства (ссылки умерших участников, а не получателей дохода)
+    select count(*)
+    into   l_corr_rit
+    from   dv_sr_lspv
+    where  shifr_schet = 62
+    and    (service_doc <> 0 or summa < 0)
+    and    data_op >= p_from_date
+    and    data_op < p_term_year;
+  
+    if l_corr_rit > 0 then
+    
+      raise_application_error(-20001,
+                              'Процедура Spisok_NalPlat_DohodNol. Обнаружено исправление наследуемых сумм или ритуальных выплат. Нужно верифицировать запрос.');
+    
+      update f_ndfl_load_nalplat np
+      set    np.sgd_isprvnol = 1
+      where  np.kod_na = p_code_na
+      and    np.god = p_year
+      and    (np.nom_vkl, np.nom_ips, np.ssylka_tip) in
+             (select dvs.nom_vkl,
+                      dvs.nom_ips,
+                      1 sstyp
+               from   (select ds.nom_vkl,
+                              ds.nom_ips,
+                              max(case
+                                    when service_doc = -1 then
+                                     ds.ssylka_doc
+                                    else
+                                     0
+                                  end) ssdoc,
+                              min(ds.data_op) data_osh_doh,
+                              sum(summa) doh_poluch
+                       from   dv_sr_lspv ds
+                       where  not exists (select *
+                               from   dv_sr_lspv dsz
+                               where  dsz.data_op >= p_from_date
+                               and    dsz.data_op < p_end_date
+                               and    dsz.nom_vkl = ds.nom_vkl
+                               and    dsz.nom_ips = ds.nom_ips
+                               and    dsz.shifr_schet = 62
+                               and    dsz.service_doc = 0) -- нет неисправленных выплат за другие месяцы 
+                       start  with ds.shifr_schet = 62 -- ритуалки и наследуемые пенсии
+                            and    ds.service_doc = -1 -- коррекция (начинаем с -1)
+                            and    ds.data_op >= p_from_date -- исправление сделано
+                                  -- исправление может быть сделано и позже, пока непонятно, нужно ли ограничивать интервал сверху?                                    
+                            and    ds.data_op < p_end_date -- в текущем отчетном периоде
+                       connect by prior ds.nom_vkl = ds.nom_vkl
+                           and    prior ds.nom_ips = ds.nom_ips
+                           and    prior ds.shifr_schet = ds.shifr_schet
+                           and    prior
+                                  ds.sub_shifr_schet = ds.sub_shifr_schet
+                           and    prior ds.ssylka_doc = ds.service_doc
+                       group  by ds.nom_vkl,
+                                 ds.nom_ips
+                       having min(ds.data_op) >= p_from_date -- ошибочное начисление сделано
+                       and min(ds.data_op) < p_end_date -- в текущем отчетном периоде
+                       ) dvs
+               inner  join sp_lspv lspv
+               on     lspv.nom_vkl = dvs.nom_vkl
+               and    lspv.nom_ips = dvs.nom_ips
+               left   join (select data_vypl,
+                                  ssylka,
+                                  ssylka_doc,
+                                  gf_person
+                           from   vyplach_posob
+                           where  tip_vypl = 1010
+                           and    data_vypl >= p_from_date
+                           and    data_vypl < p_end_date
+                                 -- если наследников 2 и более, то не автоматизировано из-за модели данных УГМ
+                           and    ssylka not in
+                                  (select distinct ssylka
+                                    from   vyplach_posob
+                                    where  nom_vipl > 1)) vrp
+               on     vrp.ssylka = lspv.ssylka_fl
+               and    vrp.ssylka_doc = dvs.ssdoc
+               group  by dvs.nom_vkl,
+                         dvs.nom_ips
+               having sum(dvs.doh_poluch) = 0);
+    end if; -- конец ритуалки с исправлениями
+  end set_zero_nalplat;
+  
+  /**
+   * Процедура fill_ndfl_load_nalplat - заполнение таблицы
+   *  f_ndfl_load_nalplat, с отметкой НА с нулевым доходом
+   */
+  procedure fill_ndfl_load_nalplat(
+    p_code_na     int,
+    p_load_date   date
+  ) is
+    l_quarter_row sp_quarters_v%rowtype;
+    
+    l_year      int;
+    l_from_date date;
+    l_end_date  date;
+    l_term_year date;
+  begin
+    --
+    l_quarter_row := get_quarter_row(
+      p_date => p_load_date
+    );
+    l_year        := extract(year from p_load_date);
+    l_from_date   := trunc(p_load_date, 'Y');
+    l_end_date    := add_months(l_from_date, l_quarter_row.month_end); --т.к. в пакете используются условия строго меньше - дата следующая за конечной!
+    l_term_year   := add_months(l_from_date, 12);
+    --
+    fill_ndfl_load_nalplat(
+      p_code_na   => p_code_na,
+      p_year      => l_year,
+      p_from_date => l_from_date,
+      p_end_date  => l_end_date,
+      p_term_year => l_term_year,
+      p_period    => l_quarter_row.code
+    );
+    --
+    set_zero_nalplat(
+      p_code_na   => p_code_na,
+      p_year      => l_year,
+      p_from_date => l_from_date,
+      p_end_date  => l_end_date,
+      p_term_year => l_term_year
+    );
+    --
+  end fill_ndfl_load_nalplat;
+  
+  
+  /**
+   * Функция возвращает код квартала 6НДФЛ по дате
+   */
+  function get_quarter_row(
+    p_date date
+  ) return sp_quarters_v%rowtype is
+    l_result sp_quarters_v%rowtype;
+  begin
+    --
+    select *
+    into   l_result
+    from   sp_quarters_v q
+    where  extract(month from p_date) between q.month_start and q.month_end;
+    --
+    return l_result;
+    --
+  end get_quarter_row;
   
 END FXNDFL_UTIL;
 /

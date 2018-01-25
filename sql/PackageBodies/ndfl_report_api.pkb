@@ -115,6 +115,7 @@ create or replace package body ndfl_report_api is
           from   f2ndfl_load_totals_v lt
             full outer join dv_sr_lspv_pers_v dp
              on  lt.gf_person = dp.gf_person
+             and not dp.revenue < .01
             left join gf_people_v p
              on  p.fk_contragent = nvl(lt.gf_person, dp.gf_person)
           where  1=1
@@ -140,6 +141,7 @@ create or replace package body ndfl_report_api is
           from   f2ndfl_arh_totals_v ta
             full outer join dv_sr_lspv_pers_v dp
              on  ta.gf_person = dp.gf_person
+             and dp.exists_revenue = 'Y'
             left join gf_people_v p
              on  p.fk_contragent = nvl(ta.gf_person, dp.gf_person)
           where  1=1
@@ -208,6 +210,7 @@ create or replace package body ndfl_report_api is
                          sum(d.tax_calc) tax_calc,
                          sum(d.tax_retained) tax_retained
                   from   dv_sr_lspv_pers_v d
+                  where  d.exists_revenue = 'Y'
                   group  by d.tax_rate
                   union all
                   select 'NDFL2' src,
@@ -292,6 +295,7 @@ create or replace package body ndfl_report_api is
                          sum(d.tax_calc) tax_calc,
                          sum(d.tax_retained) tax_retained
                   from   dv_sr_lspv_pers_v d
+                  where  d.exists_revenue = 'Y'
                   group  by d.tax_rate
                   union all
                   select 'NDFL2' src,
@@ -574,6 +578,7 @@ create or replace package body ndfl_report_api is
                  null            tax_calc_div  ,
                  null            advance_amount
           from   dv_sr_lspv_pers_v d
+          where  d.exists_revenue = 'Y'
           group by d.tax_rate
           order by d.tax_rate;
       when 'ndfl6_part1_rates_13_wo_bb' then

@@ -13,9 +13,9 @@ create or replace view dv_sr_lspv_pers_v as
          end                                                tax_calc,
          sum(d.tax_return)                                  tax_return,
          sum(d.tax_83)                                      tax_83,
-         sum(d.tax_retained + coalesce(d.tax_83, 0))        tax_retained_83
+         sum(d.tax_retained + coalesce(d.tax_83, 0))        tax_retained_83,
+         case when coalesce(sum(d.revenue), 0) = 0 then 'N' else 'Y' end exists_revenue
   from   dv_sr_lspv_docs_pers_v d
   group by d.gf_person, 
            d.tax_rate
-  having sum(d.revenue) > 0
 /
