@@ -52,6 +52,10 @@ prompt install dv_sr_lspv_docs_api.pks
 @@Packages\dv_sr_lspv_docs_api.pks
 show error
 
+prompt install dv_sr_lspv_prc_api.pks
+@@Packages\dv_sr_lspv_prc_api.pks
+show error
+
 prompt install ndfl_report_api.pks
 @@Packages\ndfl_report_api.pks
 show error
@@ -62,6 +66,10 @@ show error
 
 prompt install f_ndfl_load_nalplat_api.pks
 @@Packages\f_ndfl_load_nalplat_api.pks
+show error
+
+prompt install f2ndfl_load_api.pks
+@@Packages\f2ndfl_load_api.pks
 show error
 
 prompt install gateway_pkg.pks
@@ -328,6 +336,10 @@ prompt install f_ndfl_load_nalplat_api.pkb
 @@PackageBodies\f_ndfl_load_nalplat_api.pkb
 show error
 
+prompt install f2ndfl_load_api.pkb
+@@PackageBodies\f2ndfl_load_api.pkb
+show error
+
 prompt install f2ndfl_arh_spravki_api.pkb
 @@PackageBodies\f2ndfl_arh_spravki_api.pkb
 show error
@@ -338,6 +350,10 @@ show error
 
 prompt install dv_sr_lspv_docs_api.pkb
 @@PackageBodies\dv_sr_lspv_docs_api.pkb
+show error
+
+prompt install dv_sr_lspv_prc_api.pkb
+@@PackageBodies\dv_sr_lspv_prc_api.pkb
 show error
 
 prompt install gateway_pkg.pkb

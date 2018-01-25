@@ -190,27 +190,19 @@ create or replace package body dv_sr_lspv_docs_api is
   function create_process(
     p_process_name varchar2 default Ñ_PRC_SYNCHRONIZE
   ) return dv_sr_lspv_prc_t.id%type is
-    pragma autonomous_transaction;
     --
-    l_result dv_sr_lspv_prc_t.id%type;
+    l_process_row dv_sr_lspv_prc_t%rowtype;
   begin
     --
-    --dbms_lock!!!
-    insert into dv_sr_lspv_prc_t(
-      process_name,
-      start_date,
-      end_date,
-      state
-    ) values (
-      p_process_name,
-      G_START_DATE,
-      G_END_DATE  ,
-      'CREATED'
-    ) returning id into l_result;
+    l_process_row.process_name := p_process_name;
+    l_process_row.start_date := G_START_DATE;
+    l_process_row.end_date   := G_END_DATE;
     --
-    commit;
+    dv_sr_lspv_prc_api.set_process_state(
+      p_process_row => l_process_row
+    );
     --
-    return l_result;
+    return l_process_row.id;
     --
   exception
     when others then
@@ -228,18 +220,18 @@ create or replace package body dv_sr_lspv_docs_api is
     p_deleted_rows    dv_sr_lspv_prc_t.deleted_rows%type default null,
     p_error_rows      dv_sr_lspv_prc_t.error_rows%type   default null
   ) is
-    pragma autonomous_transaction;
+    l_process_row dv_sr_lspv_prc_t%rowtype;
   begin
     --
-    update dv_sr_lspv_prc_t p
-    set    p.state         = p_state,
-           p.error_msg     = p_error_msg,
-           last_udpated_at = default,
-           p.deleted_rows  = p_deleted_rows,
-           error_rows      = p_error_rows
-    where  p.id = p_process_id;
-    --
-    commit;
+    l_process_row.id              := p_process_id  ;
+    l_process_row.state           := p_state       ;
+    l_process_row.error_msg       := p_error_msg   ;
+    l_process_row.deleted_rows    := p_deleted_rows;
+    l_process_row.error_rows      := p_error_rows  ;
+    
+    dv_sr_lspv_prc_api.set_process_state(
+      p_process_row => l_process_row
+    );
     --
   exception
     when others then
