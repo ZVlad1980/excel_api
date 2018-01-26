@@ -104,6 +104,10 @@ prompt install gf_people_v.sql
 @@Views\gf_people_v.sql
 show error
 
+prompt install gf_idcards_v.sql
+@@Views\gf_idcards_v.sql
+show error
+
 prompt install zaprvkl_lines_tmp_v.sql
 @@Views\zaprvkl_lines_tmp_v.sql
 show error

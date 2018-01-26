@@ -26,6 +26,42 @@ create or replace package body f_ndfl_load_nalplat_api is
   end update_gf_person;
   
   /**
+   *
+   */
+  procedure update_resident_status(
+    p_code_na     int,
+    p_year        int
+  ) is
+  begin
+    --
+    update (select na2.kod_na,
+                   na2.god,
+                   na2.ssylka_tip,
+                   na2.nom_vkl,
+                   na2.nom_ips,
+                   na2.nalres_status,
+                   coalesce(nn.resident, 1) resident
+            from   f_ndfl_load_nalplat na2,
+                   lateral (
+                     select case nn.resident
+                              when 'N' then 2
+                              else          1
+                            end resident
+                     from   sp_tax_residents_v nn
+                     where  nn.fk_contragent = na2.gf_person
+                   )(+)                nn
+            where  1 = 1
+            and    na2.nalres_status <> coalesce(nn.resident, 1)
+            and    na2.god = p_year
+            and    na2.kod_na = p_code_na) u
+    set    u.nalres_status = u.resident;
+    --
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end update_resident_status;
+  /**
    * Процедура fill_ndfl_load_nalplat - заполнение таблицы
    *  f_ndfl_load_nalplat, с отметкой НА с нулевым доходом
    */
@@ -49,6 +85,11 @@ create or replace package body f_ndfl_load_nalplat_api is
     l_end_date    := add_months(l_from_date, l_quarter_row.month_end); --т.к. в пакете используются условия строго меньше - дата следующая за конечной!
     l_term_year   := add_months(l_from_date, 12);
     --
+    dv_sr_lspv_docs_api.set_period(
+      p_year        => l_year,
+      p_report_date => l_end_date
+    );
+    --
     fxndfl_util.fill_ndfl_load_nalplat(
       p_code_na   => p_code_na,
       p_year      => l_year,
@@ -70,6 +111,12 @@ create or replace package body f_ndfl_load_nalplat_api is
       p_code_na => p_code_na,
       p_year    => l_year
     );
+    --Пока так. При переходе на формирование по dv_sr_lspv_docs_t - убрать!
+    update_resident_status(
+      p_code_na => p_code_na,
+      p_year    => l_year
+    );
+    --
   exception
     when others then
       fix_exception;

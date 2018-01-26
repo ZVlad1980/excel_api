@@ -347,6 +347,34 @@ create or replace package body gateway_pkg is
   end fill_ndfl_load_nalplat;
   
   /**
+   * Процедура загрузки данных в F2NDFL_LOAD_
+   */
+  procedure f2_ndfl_api(
+    x_err_msg       out varchar2,
+    p_action_code       varchar2,
+    p_code_na           varchar2,    
+    p_year              number
+  ) is
+  begin
+    --
+    f2ndfl_load_api.create_2ndfl_refs(
+      p_action_code => p_action_code,
+      p_code_na     => p_code_na,
+      p_year        => p_year
+    );
+    --
+    commit;
+    --
+  exception
+    when others then
+      rollback;
+      fix_exception('f2ndfl_api(p_year => ' || p_year || ', p_action_code => ' || p_action_code || ')');
+      x_err_msg := utl_error_api.get_error_msg;
+  end f2_ndfl_api;
+  
+  
+  
+  /**
    * Процедура request - единая точка входа
    *
    * @param x_result_set - результирующий набор данных (курсор)

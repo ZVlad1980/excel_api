@@ -84,7 +84,8 @@ procedure InitGlobals(
   pNOMVKL  in number   default null,
   pNOMIPS  in number   default null,
   pCAID    in number   default null,
-  pCOMMIT  in boolean  default true
+  pCOMMIT  in boolean  default true,
+  pNALRES_DEFFER in boolean default false
 );
 
 -- загрузить список налогоплательщиков

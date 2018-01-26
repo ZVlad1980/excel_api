@@ -102,6 +102,16 @@ create or replace package gateway_pkg is
     p_month             number
   );
   
+  /**
+   * Процедура загрузки данных в F2NDFL_LOAD_
+   */
+  procedure f2_ndfl_api(
+    x_err_msg       out varchar2,
+    p_action_code       varchar2,
+    p_code_na           varchar2,    
+    p_year              number
+  );
+  
   /** JSON не поддержвается в 12.1.0.1!!! Нужна своя реализация!
    * Процедура request - единая точка входа
    *

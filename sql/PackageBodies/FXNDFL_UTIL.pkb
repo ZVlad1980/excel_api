@@ -1,55 +1,57 @@
 CREATE OR REPLACE PACKAGE BODY FXNDFL_UTIL AS
 
 -- √ЋќЅјЋ№Ќџ≈ ѕ≈–≈ћ≈ЌЌџ≈
-gl_FLAGDEF number := 0;
-gl_KODNA   number := Null;
-gl_GOD     number := Null;
-gl_TIPDOX  number := Null;
-gl_NOMKOR  number := Null;
-gl_DATAS   date   := Null;
-gl_DATADO  date   := Null;
+gl_FLAGDEF             number := 0;
+gl_KODNA               number := Null;
+gl_GOD                 number := Null;
+gl_TIPDOX              number := Null;
+gl_NOMKOR              number := Null;
+gl_DATAS               date   := Null;
+gl_DATADO              date   := Null;
 -- 03.11.2017 RFC_3779
-gl_SPRID   number       := null;
-gl_NOMSPR  varchar2(10) := Null;
-gl_DATDOK  date         := Null;
-gl_NOMVKL  number       := Null;
-gl_NOMIPS  number       := Null;
-gl_CAID    number       := Null;
-gl_COMMIT  boolean      := true;
+gl_SPRID               number       := null;
+gl_NOMSPR              varchar2(10) := Null;
+gl_DATDOK              date         := Null;
+gl_NOMVKL              number       := Null;
+gl_NOMIPS              number       := Null;
+gl_CAID                number       := Null;
+gl_COMMIT              boolean      := true;
+gl_NALRES_DEFFER       varchar2(1)  := 'N'; --флаг отложенного определени€ статуса налогового резидента
 
 --
 -- 03.11.2017 RFC_3779 - добавил параметры дл€ формировани€ корр.справок
 --
 procedure InitGlobals( 
-  pKODNA   in number, 
-  pGOD     in number, 
-  pTIPDOX  in number, 
-  pNOMKOR  in number,
-  pSPRID   in number   default null,
-  pNOMSPR  in varchar2 default null,
-  pDATDOK  in date     default null,
-  pNOMVKL  in number   default null,
-  pNOMIPS  in number   default null,
-  pCAID    in number   default null,
-  pCOMMIT  in boolean  default true
+  pKODNA         in number, 
+  pGOD           in number, 
+  pTIPDOX        in number, 
+  pNOMKOR        in number,
+  pSPRID         in number   default null,
+  pNOMSPR        in varchar2 default null,
+  pDATDOK        in date     default null,
+  pNOMVKL        in number   default null,
+  pNOMIPS        in number   default null,
+  pCAID          in number   default null,
+  pCOMMIT        in boolean  default true,
+  pNALRES_DEFFER in boolean default false
 ) is
 begin
 
-    gl_FLAGDEF  := 1234509876;
-    gl_KODNA    := pKODNA;
-    gl_GOD      := pGOD;
-    gl_TIPDOX   := pTIPDOX;
-    gl_NOMKOR   := pNOMKOR;
-    gl_DATAS    := to_date( '01.01.'||trim(to_char(gl_GOD  ,'0000')), 'dd.mm.yyyy');
-    gl_DATADO   := to_date( '01.01.'||trim(to_char(gl_GOD+1,'0000')), 'dd.mm.yyyy');
-    gl_SPRID    := pSPRID ;
-    gl_NOMSPR   := pNOMSPR;
-    gl_DATDOK   := pDATDOK;
-    gl_NOMVKL   := pNOMVKL;
-    gl_NOMIPS   := pNOMIPS;
-    gl_CAID     := pCAID  ;
-    gl_COMMIT   := pCOMMIT;
-    
+    gl_FLAGDEF       := 1234509876;
+    gl_KODNA         := pKODNA;
+    gl_GOD           := pGOD;
+    gl_TIPDOX        := pTIPDOX;
+    gl_NOMKOR        := pNOMKOR;
+    gl_DATAS         := to_date( '01.01.'||trim(to_char(gl_GOD  ,'0000')), 'dd.mm.yyyy');
+    gl_DATADO        := to_date( '01.01.'||trim(to_char(gl_GOD+1,'0000')), 'dd.mm.yyyy');
+    gl_SPRID         := pSPRID ;
+    gl_NOMSPR        := pNOMSPR;
+    gl_DATDOK        := pDATDOK;
+    gl_NOMVKL        := pNOMVKL;
+    gl_NOMIPS        := pNOMIPS;
+    gl_CAID          := pCAID  ;
+    gl_COMMIT        := pCOMMIT;
+    gl_NALRES_DEFFER := case when pNALRES_DEFFER then 'Y' else 'N' end;
     
 end InitGlobals;
 
@@ -5603,7 +5605,6 @@ Select arh.* from  f2NDFL_ARH_MES arh where R_SPRID in (Select ID from f2NDFL_AR
 
 
 */
-
  -- загрузить список налогоплательщиков
  -- доход   пенси€ 
  -- сторно  нет
@@ -5661,7 +5662,7 @@ begin
                 1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
                 Null     /* INN_INO */,
-                aPBS(i).NAL_REZIDENT,
+                case when gl_NALRES_DEFFER = 'Y' then null else aPBS(i).NAL_REZIDENT end,
                 aPBS(i).GRAZHDAN,
                 aPBS(i).FAMILIYA,
                 aPBS(i).IMYA,
@@ -5742,7 +5743,7 @@ begin
                 1        /* PRIZNAK */,
                 aPBS(i).INN,
                 Null     /* INN_INO */,
-                aPBS(i).NAL_REZIDENT,
+                case when gl_NALRES_DEFFER = 'Y' then null else aPBS(i).NAL_REZIDENT end, --aPBS(i).NAL_REZIDENT,
                 aPBS(i).GRAZHDAN,
                 aPBS(i).FAMILIYA,
                 aPBS(i).IMYA,
@@ -5828,7 +5829,7 @@ begin
                 1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
                 Null     /* INN_INO */,
-                aPBS(i).NAL_REZIDENT,
+                case when gl_NALRES_DEFFER = 'Y' then null else aPBS(i).NAL_REZIDENT end, --aPBS(i).NAL_REZIDENT,
                 aPBS(i).GRAZHDAN,
                 aPBS(i).FAMILIYA,
                 aPBS(i).IMYA,
@@ -5928,7 +5929,7 @@ begin
                 1        /* PRIZNAK */,
                 aPBS(i).INN,
                 Null     /* INN_INO */,
-                aPBS(i).NAL_REZIDENT,
+                case when gl_NALRES_DEFFER = 'Y' then null else aPBS(i).NAL_REZIDENT end, --aPBS(i).NAL_REZIDENT,
                 aPBS(i).GRAZHDAN,
                 aPBS(i).FAMILIYA,
                 aPBS(i).IMYA,
@@ -6040,7 +6041,7 @@ begin
                 1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
                 Null     /* INN_INO */,
-                aPBS(i).NAL_REZIDENT,
+                case when gl_NALRES_DEFFER = 'Y' then null else aPBS(i).NAL_REZIDENT end, --aPBS(i).NAL_REZIDENT,
                 aPBS(i).GRAZHDAN,
                 aPBS(i).FAMILIYA,
                 aPBS(i).IMYA,
@@ -6127,7 +6128,7 @@ begin
                 1        /* PRIZNAK */,  -- признак 2 всегда вручную
                 aPBS(i).INN,
                 Null     /* INN_INO */,
-                aPBS(i).NAL_REZIDENT,
+                case when gl_NALRES_DEFFER = 'Y' then null else aPBS(i).NAL_REZIDENT end, --aPBS(i).NAL_REZIDENT,
                 aPBS(i).GRAZHDAN,
                 aPBS(i).FAMILIYA,
                 aPBS(i).IMYA,

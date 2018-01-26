@@ -551,20 +551,20 @@ create or replace package body ndfl2_report_api is
                        'PENSIONER'
                      else 'SUCCESSOR'
                    end person_type,
-                   case min(n.sgd_isprvnol)
+                   case n.sgd_isprvnol
                      when 1 then
                       'N'
                      else
                       'Y'
-                   end exists_revenue
+                   end exists_revenue,
+                   case n.nalres_status
+                     when 1 then 'Y'
+                     when 2 then 'N'
+                     else        'Unknown'
+                   end is_resident
             from   f_ndfl_load_nalplat n
             where  n.god = dv_sr_lspv_docs_api.get_year
             and    n.kod_na = 1
-            group  by n.nom_vkl,
-                   n.nom_ips,
-                   n.ssylka_sips,
-                   n.ssylka_tip,
-                   n.gf_person
           ),
           lspv_s as (
             select d.nom_vkl, 
@@ -580,7 +580,11 @@ create or replace package body ndfl2_report_api is
                      when sum(d.revenue_curr_year) > 0 then
                        'Y'
                      else 'N'
-                   end exists_revenue
+                   end exists_revenue,
+                   case max(d.tax_rate)
+                     when 30 then 'N'
+                     else         'Y'
+                   end is_resident
             from   dv_sr_lspv_docs_v d
             group by d.nom_vkl, 
                    d.nom_ips,
@@ -594,18 +598,25 @@ create or replace package body ndfl2_report_api is
                    n.ssylka_sips    ssylka_np,      
                    n.person_type    person_type_np,
                    n.exists_revenue exists_revenue_np,
+                   n.is_resident	  is_resident_np,
                    p.nom_vkl       ,
                    p.nom_ips       ,
                    p.gf_person     ,
                    p.ssylka_fl     ssylka,
                    p.person_type   ,
-                   p.exists_revenue
+                   p.exists_revenue,
+                   p.is_resident
             from   nalplat n
-            full   outer join lspv_s p
-            on     p.nom_vkl = n.nom_vkl 
-            and    p.nom_ips = n.nom_ips
-            and    p.person_type = n.person_type
-            where  coalesce(n.gf_person, -1) <> coalesce(p.gf_person, -2)
+              full   outer join lspv_s p
+              on     p.nom_vkl = n.nom_vkl 
+              and    p.nom_ips = n.nom_ips
+              and    p.person_type = n.person_type
+            where  1=1
+            and    (
+                     (coalesce(n.gf_person, -1) <> coalesce(p.gf_person, -2))
+                    or
+                     (n.is_resident <> p.is_resident)
+                   )
           )
           select p.nom_vkl_np,
                  p.nom_ips_np,
@@ -614,13 +625,15 @@ create or replace package body ndfl2_report_api is
                  p.person_type_np,
                  p.exists_revenue_np,
                  pnp.fullname,
+                 p.is_resident_np,
                  p.nom_vkl,
                  p.nom_ips,
                  p.gf_person,
                  p.ssylka,
                  p.person_type,
                  p.exists_revenue,
-                 pp.fullname
+                 pp.fullname,
+                 p.is_resident
           from   nalplat_pers_v p,
                  gf_people_v    pnp,
                  gf_people_v    pp
