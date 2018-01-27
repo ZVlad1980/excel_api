@@ -12,6 +12,80 @@ create or replace package body ndfl_report_api is
     );
   end;
   
+  
+  function is_empty_load(p_year int) return boolean is
+    l_result boolean := false;
+    l_dummy  int;
+  begin
+    begin
+      select 1
+      into   l_dummy
+      from   f2ndfl_load_spravki t
+      where  rownum = 1
+      and    t.kod_na = 1
+      and    t.god = p_year;
+      --
+      select 1
+      into   l_dummy
+      from   f2ndfl_load_mes t
+      where  rownum = 1
+      and    t.kod_na = 1
+      and    t.god = p_year;
+      --
+      select 1
+      into   l_dummy
+      from   f2ndfl_load_itogi t
+      where  rownum = 1
+      and    t.kod_na = 1
+      and    t.god = p_year;
+      --
+    exception
+      when no_data_found then
+        l_result := true;
+    end;
+    return l_result;
+  end is_empty_load;
+  
+  function is_empty_arh(p_year int) return boolean is
+    l_result boolean := false;
+    l_dummy  int;
+  begin
+    begin
+      select 1
+      into   l_dummy
+      from   f2ndfl_arh_spravki t
+      where  rownum = 1
+      and    t.kod_na = 1
+      and    t.god = p_year;
+      --
+      select 1
+      into   l_dummy
+      from   f2ndfl_arh_mes t
+      where  rownum = 1
+      and    t.r_sprid in (
+               select id
+               from   f2ndfl_arh_spravki t
+               where  t.kod_na = 1
+               and    t.god = p_year
+             );
+      --
+      select 1
+      into   l_dummy
+      from   f2ndfl_arh_itogi t
+      where  rownum = 1
+      and    t.r_sprid in (
+               select id
+               from   f2ndfl_arh_spravki t
+               where  t.kod_na = 1
+               and    t.god = p_year
+             );
+      --
+    exception
+      when no_data_found then
+        l_result := true;
+    end;
+    return l_result;
+  end is_empty_arh;
   /**
    * Функция get_report возвращает курсор с данными отчета
    * 
@@ -28,6 +102,7 @@ create or replace package body ndfl_report_api is
     --
     l_result      sys_refcursor;
     l_report_code varchar2(100);
+    l_year        int;
     --
   begin
     --
@@ -36,6 +111,7 @@ create or replace package body ndfl_report_api is
       p_end_date    => p_end_date,
       p_report_date => p_report_date
     );
+    l_year := dv_sr_lspv_docs_api.get_year;
     --
     if p_report_code = 'tax_diff_det_report' then
       dv_sr_lspv_docs_api.set_is_buff;
@@ -71,81 +147,87 @@ create or replace package body ndfl_report_api is
       when 'cmp_f2load_arh' then
         dv_sr_lspv_docs_api.set_employees(p_flag => true);
         dv_sr_lspv_docs_api.set_last_only(p_flag => true);
-        open l_result for
-          select nvl(lt.nom_spr, ta.nom_spr)               nom_spr,
-                 lt.nom_korr                               nom_korr_load,
-                 ta.nom_korr                               nom_korr_arh,
-                 nvl(lt.gf_person, ta.gf_person)           gf_person,
-                 p.fullname,
-                 nvl(lt.revenue  , ta.revenue )            revenue ,
-                 nvl(lt.benefit  , ta.benefit )            benefit ,
-                 nvl(lt.tax_calc , ta.tax_calc)            tax_calc,
-                 lt.tax_retained                           tax_retained_load,
-                 ta.tax_retained                           tax_retained_arh,
-                 coalesce(lt.tax_retained, 0) - 
-                   coalesce(ta.tax_retained, 0)            tax_retained_diff,
-                 nvl(lt.is_employee, ta.is_employee)       is_employee,
-                 nvl(lt.is_participant, ta.is_participant) is_participant
-          from   f2ndfl_arh_totals_v ta
-            full outer join f2ndfl_load_totals_v lt
-             on  lt.nom_spr = ta.nom_spr
-             and lt.tax_rate = ta.tax_rate
-            left join gf_people_v p
-             on  p.fk_contragent = nvl(ta.gf_person, lt.gf_person)
-          where  1=1
-          and    abs(coalesce(lt.tax_retained, 0) - coalesce(ta.tax_retained, 0)) > .01;
+        if not (is_empty_load(l_year) or is_empty_arh(l_year)) then
+          open l_result for
+            select nvl(lt.nom_spr, ta.nom_spr)               nom_spr,
+                   lt.nom_korr                               nom_korr_load,
+                   ta.nom_korr                               nom_korr_arh,
+                   nvl(lt.gf_person, ta.gf_person)           gf_person,
+                   p.fullname,
+                   nvl(lt.revenue  , ta.revenue )            revenue ,
+                   nvl(lt.benefit  , ta.benefit )            benefit ,
+                   nvl(lt.tax_calc , ta.tax_calc)            tax_calc,
+                   lt.tax_retained                           tax_retained_load,
+                   ta.tax_retained                           tax_retained_arh,
+                   coalesce(lt.tax_retained, 0) - 
+                     coalesce(ta.tax_retained, 0)            tax_retained_diff,
+                   nvl(lt.is_employee, ta.is_employee)       is_employee,
+                   nvl(lt.is_participant, ta.is_participant) is_participant
+            from   f2ndfl_arh_totals_v ta
+              full outer join f2ndfl_load_totals_v lt
+               on  lt.nom_spr = ta.nom_spr
+               and lt.tax_rate = ta.tax_rate
+              left join gf_people_v p
+               on  p.fk_contragent = nvl(ta.gf_person, lt.gf_person)
+            where  1=1
+            and    abs(coalesce(lt.tax_retained, 0) - coalesce(ta.tax_retained, 0)) > .01;
+          end if;
       when 'cmp_f2load_docs' then
         dv_sr_lspv_docs_api.set_employees(p_flag => false);
         dv_sr_lspv_docs_api.set_last_only(p_flag => true);
-        open l_result for
-          select lt.nom_spr                                nom_spr,
-                 lt.nom_korr                               nom_korr_lt,
-                 null                                      nom_korr_ta,
-                 nvl(lt.gf_person, dp.gf_person)           gf_person,
-                 p.fullname,
-                 nvl(lt.revenue  , dp.revenue )            revenue ,
-                 nvl(lt.benefit  , dp.benefit )            benefit ,
-                 nvl(lt.tax_calc , dp.tax_calc)            tax_calc,
-                 lt.tax_retained                           tax_retained_load,
-                 dp.tax_retained_83                        tax_retained_docs,
-                 coalesce(lt.tax_retained, 0) - 
-                   coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
-                 lt.is_employee                            is_employee,
-                 lt.is_participant                         is_participant
-          from   f2ndfl_load_totals_v lt
-            full outer join dv_sr_lspv_pers_v dp
-             on  lt.gf_person = dp.gf_person
-             and not dp.revenue < .01
-            left join gf_people_v p
-             on  p.fk_contragent = nvl(lt.gf_person, dp.gf_person)
-          where  1=1
-          and    abs(coalesce(lt.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01;
+        if not is_empty_load(l_year) then
+          open l_result for
+            select lt.nom_spr                                nom_spr,
+                   lt.nom_korr                               nom_korr_lt,
+                   null                                      nom_korr_ta,
+                   nvl(lt.gf_person, dp.gf_person)           gf_person,
+                   p.fullname,
+                   nvl(lt.revenue  , dp.revenue )            revenue ,
+                   nvl(lt.benefit  , dp.benefit )            benefit ,
+                   nvl(lt.tax_calc , dp.tax_calc)            tax_calc,
+                   lt.tax_retained                           tax_retained_load,
+                   dp.tax_retained_83                        tax_retained_docs,
+                   coalesce(lt.tax_retained, 0) - 
+                     coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
+                   lt.is_employee                            is_employee,
+                   lt.is_participant                         is_participant
+            from   f2ndfl_load_totals_v lt
+              full outer join dv_sr_lspv_pers_v dp
+               on  lt.gf_person = dp.gf_person
+               and not dp.revenue < .01
+              left join gf_people_v p
+               on  p.fk_contragent = nvl(lt.gf_person, dp.gf_person)
+            where  1=1
+            and    abs(coalesce(lt.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01;
+          end if;
       when 'cmp_f2arh_docs' then
         dv_sr_lspv_docs_api.set_employees(p_flag => false);
         dv_sr_lspv_docs_api.set_last_only(p_flag => true);
-        open l_result for
-          select ta.nom_spr                                nom_spr,
-                 ta.nom_korr                               nom_korr_lt,
-                 null                                      nom_korr_ta,
-                 nvl(ta.gf_person, dp.gf_person)           gf_person,
-                 p.fullname,
-                 nvl(ta.revenue  , dp.revenue )            revenue ,
-                 nvl(ta.benefit  , dp.benefit )            benefit ,
-                 nvl(ta.tax_calc , dp.tax_calc)            tax_calc,
-                 ta.tax_retained                           tax_retained_arh,
-                 dp.tax_retained_83                        tax_retained_docs,
-                 coalesce(ta.tax_retained, 0) - 
-                   coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
-                 ta.is_employee                            is_employee,
-                 ta.is_participant                         is_participant
-          from   f2ndfl_arh_totals_v ta
-            full outer join dv_sr_lspv_pers_v dp
-             on  ta.gf_person = dp.gf_person
-             and dp.exists_revenue = 'Y'
-            left join gf_people_v p
-             on  p.fk_contragent = nvl(ta.gf_person, dp.gf_person)
-          where  1=1
-          and    abs(coalesce(ta.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01;
+        if not is_empty_arh(l_year) then
+          open l_result for
+            select ta.nom_spr                                nom_spr,
+                   ta.nom_korr                               nom_korr_lt,
+                   null                                      nom_korr_ta,
+                   nvl(ta.gf_person, dp.gf_person)           gf_person,
+                   p.fullname,
+                   nvl(ta.revenue  , dp.revenue )            revenue ,
+                   nvl(ta.benefit  , dp.benefit )            benefit ,
+                   nvl(ta.tax_calc , dp.tax_calc)            tax_calc,
+                   ta.tax_retained                           tax_retained_arh,
+                   dp.tax_retained_83                        tax_retained_docs,
+                   coalesce(ta.tax_retained, 0) - 
+                     coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
+                   ta.is_employee                            is_employee,
+                   ta.is_participant                         is_participant
+            from   f2ndfl_arh_totals_v ta
+              full outer join dv_sr_lspv_pers_v dp
+               on  ta.gf_person = dp.gf_person
+               and dp.exists_revenue = 'Y'
+              left join gf_people_v p
+               on  p.fk_contragent = nvl(ta.gf_person, dp.gf_person)
+            where  1=1
+            and    abs(coalesce(ta.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01;
+          end if;
       when 'cmp_f2ndfl_f6_total' then
         dv_sr_lspv_docs_api.set_employees(p_flag => false);
         dv_sr_lspv_docs_api.set_last_only(p_flag => true);
