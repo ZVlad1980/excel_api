@@ -58,11 +58,105 @@ create or replace package body f2ndfl_load_api is
   end set_globals_util_pkg;
   
   /**
+   * Процедура purge_loads - очистка таблиц f2ndfl_load_ и f2ndfl_arh_nomspr
+   */
+  procedure purge_loads(
+    p_action_code  varchar2,
+    p_code_na      int,
+    p_year         int
+  ) is
+    --
+    l_process_row  dv_sr_lspv_prc_t%rowtype;
+    --
+    function exists_arh_ return boolean is
+      l_dummy int;
+    begin
+      select 1
+      into   l_dummy
+      from   f2ndfl_arh_spravki s
+      where  rownum = 1
+      and    s.kod_na = p_code_na
+      and    s.god = p_year;
+      --
+      return true;
+      --
+    exception
+      when no_data_found then
+        return false;
+    end exists_arh_;
+  begin
+    --
+    if exists_arh_ then
+      fix_exception('Справки за ' || p_year || ' скопированы в arh! Очистка load невозможна!');
+      raise no_data_found;
+    end if;
+    --
+    l_process_row.process_name := upper('p_action_code');
+    l_process_row.start_date   := to_date(p_year || '0101', 'yyyymmdd');
+    l_process_row.end_date     := to_date(p_year || '1231', 'yyyymmdd');
+    --
+    dv_sr_lspv_prc_api.create_process(
+      p_process_row => l_process_row
+    );
+    --
+    if p_action_code in ('f2_purge_amount', 'f2_purge_total', 'f2_purge_all') then
+      delete from f2ndfl_load_itogi t
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;
+      --
+      delete from f2ndfl_load_vych t
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;
+    end if;
+    --
+    if p_action_code in ('f2_purge_amount', 'f2_purge_mes', 'f2_purge_total', 'f2_purge_all') then
+      delete from f2ndfl_load_mes t
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;
+    end if;
+    --
+    if p_action_code in ('f2_purge_pers', 'f2_purge_nomspr', 'f2_purge_all') then
+      delete from f2ndfl_arh_nomspr t
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;
+    end if;
+    --
+    if p_action_code in ('f2_purge_pers', 'f2_purge_spravki', 'f2_purge_nomspr', 'f2_purge_all') then
+      delete from f2ndfl_load_spravki t
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;
+      --
+      /*delete from f2ndfl_load_adr t
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;--*/
+      --
+    end if;
+    --
+    commit;
+    --
+    l_process_row.state := 'Success';
+    dv_sr_lspv_prc_api.set_process_state(
+      p_process_row => l_process_row
+    );
+    --
+  exception
+    when others then
+      fix_exception;
+      rollback;
+      if l_process_row.id is not null then
+        l_process_row.state := 'ERROR';
+        l_process_row.error_msg := sqlerrm;
+        dv_sr_lspv_prc_api.set_process_state(
+          p_process_row => l_process_row
+        );
+      end if;
+      raise;
+  end purge_loads;
+  /**
    *
    */
   procedure fill_load_spravki(
-    p_globals in out nocopy g_util_par_type,
-    p_force   boolean
+    p_globals in out nocopy g_util_par_type
   ) is
     function exists_load_spravki_(p_code_na int, p_year int) return boolean is
       l_dummy int;
@@ -73,13 +167,6 @@ create or replace package body f2ndfl_load_api is
       where  rownum = 1
       and    s.kod_na = p_code_na
       and    s.god = p_year;
-      --
-      if p_force then
-        delete from f2ndfl_load_spravki s
-        where  s.kod_na = p_code_na
-        and    s.god = p_year;
-        raise no_data_found;
-      end if;
       --
       return true;
       --
@@ -132,17 +219,10 @@ create or replace package body f2ndfl_load_api is
    *
    */
   procedure fill_arh_nomspr(
-    p_globals in out nocopy g_util_par_type,
-    p_force   boolean
+    p_globals in out nocopy g_util_par_type
   ) is
     --
   begin
-    --
-    if p_force then
-      delete from f2ndfl_arh_nomspr ns
-      where  ns.kod_na = p_globals.KODNA
-      and    ns.god = p_globals.GOD;
-    end if;
     --
     set_globals_util_pkg(p_globals);
     --
@@ -323,16 +403,78 @@ create or replace package body f2ndfl_load_api is
   end fill_load_mes;
   
   /**
+   * Процедура create_load_total расчет итогов F2NDFL_ITOG
+   *
+   * @param  -
+   *
+   */
+  procedure fill_load_total(
+    p_globals  in out nocopy g_util_par_type
+  ) is
+    l_dummy int;
+    procedure init_ is begin set_globals_util_pkg(p_globals); end init_;
+    --
+    function not_exists_load_vych_(p_code_na int, p_year int) return boolean is
+      l_dummy int;
+    begin
+      select 1
+      into   l_dummy
+      from   f2ndfl_load_vych s
+      where  rownum = 1
+      and    s.kod_na = p_code_na
+      and    s.god = p_year;
+      --
+      return true;
+    exception
+      when no_data_found then
+        return false;
+    end not_exists_load_vych_;
+    --
+    function not_exists_load_itogi_(p_code_na int, p_year int) return boolean is
+      l_dummy int;
+    begin
+      select 1
+      into   l_dummy
+      from   f2ndfl_load_itogi s
+      where  rownum = 1
+      and    s.kod_na = p_code_na
+      and    s.god = p_year;
+      --
+      return true;
+    exception
+      when no_data_found then
+        return false;
+    end not_exists_load_itogi_;
+    --
+  begin
+    --если в заданном периоде есть хоть одна справка - пропускаем формирование! (пока так)
+    if not_exists_load_vych_(p_globals.KODNA, p_globals.GOD) then
+      init_; fxndfl_util.Load_Vychety;
+    end if;
+    --
+    if not_exists_load_itogi_(p_globals.KODNA, p_globals.GOD) then
+      init_; fxndfl_util.Load_Itogi_Pensia;
+      init_; fxndfl_util.Load_Itogi_Posob_bezIspr;
+      init_; fxndfl_util.Load_Itogi_Vykup_bezIspr;
+      init_; fxndfl_util.Load_Itogi_Vykup_sIspravl;
+    end if;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end fill_load_total;
+  
+  /**
    *
    */
   procedure create_2ndfl_refs(
     p_action_code  varchar2,
     p_code_na      int,
-    p_year         int,
-    p_force        boolean default false
+    p_year         int
   ) is
-    l_globals g_util_par_type;
-    l_process_row dv_sr_lspv_prc_t%rowtype;
+    l_globals      g_util_par_type;
+    l_result       boolean := false;
   begin
     --
     l_globals.KODNA         := p_code_na;
@@ -352,24 +494,43 @@ create or replace package body f2ndfl_load_api is
     --
     if p_action_code in ('f2_load_spravki', 'f2_load_all') then
       fill_load_spravki(
-        p_globals => l_globals,
-        p_force   => p_force
+        p_globals => l_globals
       );
     end if;
     --  
     if p_action_code in ('f2_load_spravki', 'f2_arh_nomspr', 'f2_load_all') then
       fill_arh_nomspr(
-        p_globals => l_globals,
-        p_force   => p_force
+        p_globals => l_globals
       );
       --
       update_load_spravki(
         p_globals => l_globals
       );
-    /*
-      fix_exception('create_2ndfl_refs: неизвествный код действия: ' || p_action_code);
+      --
+      l_result := true;
+    end if;
+    --  
+    if p_action_code in ('f2_load_mes', 'f2_load_total', 'f2_load_all') then
+      --
+      fill_load_mes(
+        p_globals => l_globals
+      );
+      --
+      l_result := true;
+    end if;
+    --  
+    if p_action_code in ('f2_load_itogi', 'f2_load_total', 'f2_load_all') then
+      --
+      fill_load_total(
+        p_globals => l_globals
+      );
+      --
+      l_result := true;
+    end if;
+    --
+    if not l_result then
+      fix_exception('create_2ndfl_refs('||p_action_code||'): unknown action.');
       raise no_data_found;
-      */
     end if;
     --
     l_globals.process_row.state := 'Success';
@@ -383,8 +544,8 @@ create or replace package body f2ndfl_load_api is
       rollback;
       fix_exception;
       if l_globals.process_row.id is not null then
-        l_process_row.state := 'ERROR';
-        l_process_row.error_msg := sqlerrm;
+        l_globals.process_row.state := 'ERROR';
+        l_globals.process_row.error_msg := sqlerrm;
         dv_sr_lspv_prc_api.set_process_state(
           p_process_row => l_globals.process_row
         );

@@ -1,5 +1,5 @@
 PL/SQL Developer Test script 3.0
-38
+37
 -- Created on 26.01.2018 by V.ZHURAVOV 
 declare 
   -- Local variables here
@@ -25,10 +25,9 @@ begin
   );
   --*/
   f2ndfl_load_api.create_2ndfl_refs(
-    p_action_code => 'f2_arh_nomspr',
+    p_action_code => 'f2_load_total',
     p_code_na     => 1,
-    p_year        => 2017,
-    p_force       => true
+    p_year        => 2017
   );
   --
 exception

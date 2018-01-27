@@ -5,13 +5,21 @@ create or replace package f2ndfl_load_api is
   -- Purpose : 
   
   /**
+   * Процедура purge_loads - очистка таблиц f2ndfl_load_ и f2ndfl_arh_nomspr
+   */
+  procedure purge_loads(
+    p_action_code  varchar2,
+    p_code_na      int,
+    p_year         int
+  );
+  
+  /**
    *
    */
   procedure create_2ndfl_refs(
     p_action_code  varchar2,
     p_code_na      int,
-    p_year         int,
-    p_force        boolean default false
+    p_year         int
   );
 
 end f2ndfl_load_api;

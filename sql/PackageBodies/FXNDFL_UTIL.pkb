@@ -6738,47 +6738,55 @@ begin
     dTermBeg  := gl_DATAS ;
     dTermEnd  := gl_DATADO;
     gl_TIPDOX := 1; -- пенсии
-
     Insert into F2NDFL_LOAD_VYCH 
-          ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
-    Select ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, 
-           extract(MONTH from ds.DATA_OP), 
-           coalesce(td.benefit_code, to_char(-1 * ds.shifr_schet)), --RFC_3814 
-           sum(ds.SUMMA), 13
-    from F2NDFL_LOAD_SPRAVKI ls
-         inner join SP_LSPV sp on sp.SSYLKA_FL=ls.SSYLKA
-         inner join DV_SR_LSPV ds on ds.NOM_VKL=sp.NOM_VKL and ds.NOM_IPS=sp.NOM_IPS
-         left join  taxdeductions_v td on td.nom_vkl = ds.NOM_VKL and td.nom_ips = ds.NOM_IPS and td.shifr_schet = ds.shifr_schet
-    where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR
-      and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-      and ls.STATUS_NP=1          -- резиденты
-      and ds.SHIFR_SCHET>1000     -- вычеты
-      and ds.DATA_OP >= dTermBeg  -- за год
-      and ds.DATA_OP <  dTermEnd
-    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code, ds.shifr_schet;
-    
-    gl_TIPDOX := 3; -- выкупные
-
-    Insert into F2NDFL_LOAD_VYCH 
-          ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
-    Select ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, 
-           extract(MONTH from ds.DATA_OP), 
-           coalesce(td.benefit_code, to_char(-1 * ds.shifr_schet)), --RFC_3814 
-           sum(ds.SUMMA), 13
-    from F2NDFL_LOAD_SPRAVKI ls
-         inner join SP_LSPV sp on sp.SSYLKA_FL=ls.SSYLKA
-         inner join DV_SR_LSPV ds on ds.NOM_VKL=sp.NOM_VKL and ds.NOM_IPS=sp.NOM_IPS
-         left join  taxdeductions_v td on td.nom_vkl = ds.NOM_VKL and td.nom_ips = ds.NOM_IPS and td.shifr_schet = ds.shifr_schet
-    where ls.KOD_NA = gl_KODNA and ls.GOD = gl_GOD and ls.TIP_DOX = gl_TIPDOX and ls.NOM_KORR = gl_NOMKOR
-      and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-      and ls.STATUS_NP = 1          -- резиденты
-      and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
-      and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
-      and ds.SHIFR_SCHET > 1000     -- вычеты
-      and ds.DATA_OP >= dTermBeg  -- за год
-      and ds.DATA_OP <  dTermEnd
-    group by ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, ls.NOM_KORR, extract(MONTH from ds.DATA_OP), td.benefit_code, ds.shifr_schet;    
-    
+              ( KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR, MES, VYCH_KOD_GNI, VYCH_SUM, KOD_STAVKI) 
+      select ls.kod_na,
+             ls.god,
+             ls.ssylka,
+             ls.tip_dox,
+             ls.nom_korr,
+             extract(month from ds.data_op),
+             coalesce(td.benefit_code, to_char(-1 * ds.shifr_schet)),
+             sum(coalesce((td.amount/td.amount_all * ds.summa), ds.summa)) amount_new,
+             13
+      from   f2ndfl_load_spravki ls
+        inner  join sp_lspv sp
+          on     sp.ssylka_fl = ls.ssylka
+        inner  join dv_sr_lspv ds
+          on     ds.nom_vkl = sp.nom_vkl
+          and    ds.nom_ips = sp.nom_ips
+        left   join taxdeductions_v td
+          on     td.nom_vkl = ds.nom_vkl
+          and    td.nom_ips = ds.nom_ips
+          and    td.shifr_schet = ds.shifr_schet
+      where  ls.kod_na = gl_kodna
+      and    ls.god = gl_god
+      and    ls.tip_dox = (
+               select max(case ds2.shifr_schet
+                        when 55 then 3
+                        else 1
+                      end)
+               from   dv_sr_lspv ds2
+               where  ds2.nom_vkl = ds.nom_vkl
+               and    ds2.nom_ips = ds.nom_ips
+               and    ds2.shifr_schet in (55, 60)
+               and    ds2.ssylka_doc = ds.ssylka_doc
+             )
+      and    ls.nom_korr = gl_nomkor
+      and    nvl(ls.r_sprid, -1) = nvl(gl_sprid, nvl(ls.r_sprid, -1))
+      and    ls.status_np = 1 -- резиденты
+      and    ds.shifr_schet > 1000 -- вычеты
+      and    ds.data_op >= dtermbeg --to_date(20170101, 'yyyymmdd')--dtermbeg -- за год
+      and    ds.data_op <  dtermend --to_date(20180101, 'yyyymmdd')--dtermend
+      group  by ls.kod_na,
+                ls.god,
+                ls.ssylka,
+                ls.tip_dox,
+                ls.nom_korr,
+                extract(month from ds.data_op),
+                td.benefit_code,
+                ds.shifr_schet;
+          --
     if gl_COMMIT then Commit; end if;
     
 end Load_Vychety;
