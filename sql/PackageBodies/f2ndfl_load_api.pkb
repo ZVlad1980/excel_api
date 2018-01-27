@@ -155,6 +155,129 @@ create or replace package body f2ndfl_load_api is
   end fill_arh_nomspr;
   
   /**
+   * Обновление перс.данных справок (исправление массовых ошибок) - зачем - сам не знаю, видимо так надо
+   */
+  procedure update_load_spravki(
+    p_globals in out nocopy g_util_par_type
+  ) is
+    --
+    procedure update_citizenship_ is
+    begin
+      merge into f2ndfl_load_spravki s
+      using (select s2.kod_na,
+                    s2.god,
+                    s2.ssylka,
+                    s2.tip_dox,
+                    s2.nom_korr,
+                    gs.ch_kod citizenship
+             from   f2ndfl_load_spravki s2,
+                    f_ndfl_load_nalplat np,
+                    gf_people_v         pe,
+                    gf_idcards_v        ic,
+                    GNI_STRANY          gs
+             where  1 = 1
+             and    gs.nb_kod = ic.citizenship
+             --
+             --and    ic.citizenship is not null
+             and    ic.id = pe.fk_idcard
+             and    pe.fk_contragent = np.gf_person
+             --
+             and    np.ssylka_sips = s2.ssylka 
+             and    np.ssylka_tip = case when s2.tip_dox in (1,3) then 0 when s2.tip_dox = 2 then 1 else null end
+             and    np.god = s2.god
+             and    np.kod_na = s2.kod_na
+             --
+             and    s2.grazhd is null
+             and    s2.god = p_globals.GOD
+             and    s2.kod_na = p_globals.KODNA
+            ) u
+      on    (s.kod_na   = u.kod_na   and
+             s.god      = u.god      and
+             s.ssylka   = u.ssylka   and
+             s.tip_dox  = u.tip_dox  and
+             s.nom_korr = u.nom_korr
+            )
+      when matched then
+        update set
+          s.grazhd = u.citizenship;
+    exception
+      when others then
+        fix_exception;
+        raise;
+    end update_citizenship_;
+    --
+    procedure update_idcards_ is
+    begin
+      merge into f2ndfl_load_spravki s
+      using (select s2.kod_na,
+                    s2.god,
+                    s2.ssylka,
+                    s2.tip_dox,
+                    s2.nom_korr,
+                    --s2.familiya || ' ' || s2.imya || ' ' || s2.otchestvo fio,
+                    s2.kod_ud_lichn,
+                    s2.ser_nom_doc,
+                    ic.fk_idcard_type,
+                    ic.series,
+                    ic.nbr --,       ic.lastname || ' ' || ic.firstname || ' ' || ic.secondname fio_ic
+             from   f2ndfl_load_spravki s2,
+                    f_ndfl_load_nalplat np,
+                    gf_people_v         pe,
+                    gf_idcards_v        ic
+             where  1 = 1
+                   --
+             and    ic.fk_idcard_type(+) <> s2.kod_ud_lichn
+             and    ic.id(+) = pe.fk_idcard
+             and    pe.fk_contragent(+) = np.gf_person
+                   --
+             and    np.ssylka_sips = s2.ssylka
+             and    np.ssylka_tip = case
+                      when s2.tip_dox in (1, 3) then
+                       0
+                      when s2.tip_dox = 2 then
+                       1
+                      else
+                       null
+                    end
+             and    np.god = s2.god
+             and    np.kod_na = s2.kod_na
+                   --
+             and    s2.kod_ud_lichn in (1, 2, 4, 22, 26)
+             and    s2.god = p_globals.GOD
+             and    s2.kod_na = p_globals.KODNA) u
+      on (s.kod_na = u.kod_na and s.god = u.god and s.ssylka = u.ssylka and s.tip_dox = u.tip_dox and s.nom_korr = u.nom_korr)
+      when matched then
+        update
+        set    s.kod_ud_lichn = nvl(u.fk_idcard_type, 91),
+               s.ser_nom_doc  = case when u.fk_idcard_type is not null then u.series || ' ' || u.nbr else s.ser_nom_doc end;
+      --отдельно - т.к. не поддается логике (
+      update f2ndfl_load_spravki s
+      set    s.kod_ud_lichn = 21,
+             s.grazhd = 643
+      where  s.god = p_globals.GOD
+      and    s.kod_na = p_globals.KODNA
+      and    s.tip_dox <> 2
+      and    s.ssylka = 491612
+      and    s.kod_ud_lichn is null;
+      --
+    exception
+      when others then
+        fix_exception;
+        raise;
+    end update_idcards_;
+    --
+  begin
+    --
+    update_citizenship_;
+    update_idcards_;
+    --
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end update_load_spravki;
+  
+  /**
    *
    */
   procedure fill_load_mes(
@@ -232,14 +355,21 @@ create or replace package body f2ndfl_load_api is
         p_globals => l_globals,
         p_force   => p_force
       );
-    elsif p_action_code in ('f2_arh_nomspr', 'f2_load_all') then
+    end if;
+    --  
+    if p_action_code in ('f2_load_spravki', 'f2_arh_nomspr', 'f2_load_all') then
       fill_arh_nomspr(
         p_globals => l_globals,
         p_force   => p_force
       );
-    else
+      --
+      update_load_spravki(
+        p_globals => l_globals
+      );
+    /*
       fix_exception('create_2ndfl_refs: неизвествный код действия: ' || p_action_code);
       raise no_data_found;
+      */
     end if;
     --
     l_globals.process_row.state := 'Success';
