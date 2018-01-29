@@ -442,6 +442,10 @@ create or replace package body dv_sr_lspv_docs_api is
                   dc.source_tax,
                   dc.is_tax_return
            from   dv_sr_lspv_docs_src_v  dc
+           where  coalesce(abs(dc.revenue), 0) + 
+                  coalesce(abs(dc.benefit), 0) + 
+                  coalesce(abs(dc.tax),     0)
+                   >= 0.01
          ) u
     on   (d.date_op       = u.date_op         and 
           d.ssylka_doc_op = u.ssylka_doc_op   and 
