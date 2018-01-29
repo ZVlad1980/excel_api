@@ -6833,7 +6833,20 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                           and ds.DATA_OP <  dTermEnd
                           and ds.SHIFR_SCHET = 85 
                           and ds.SUB_SHIFR_SCHET = (pNPStatus-1) -- для пенсий: 0-резиденты, 1-нерезиденты 
-                          and ds.SERVICE_DOC = 0                 -- если <>0, то это должна получиться нулевая сумма для сторно
+                          and (
+                                ds.service_doc = 0 -- если <>0, то это должна получиться нулевая сумма для сторно
+                               or
+                                (ds.service_doc <> 0 and exists( --если это коррекция и есть 83 счет на эту сумму по этому же документу - это возврат по заявлению в прошлый период- учитываем!
+                                    select 1
+                                    from   dv_sr_lspv ds83
+                                    where  1=1
+                                    and    ds83.nom_vkl = ds.nom_vkl
+                                    and    ds83.nom_ips = ds.nom_ips
+                                    and    ds83.ssylka_doc = ds.ssylka_doc
+                                    and    ds83.summa = -ds.summa
+                                  )
+                                )
+                               )
                         group by sp.SSYLKA_FL
                 union all  -- исправления ошибок расчета налога предыдущих периодов  
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED 
