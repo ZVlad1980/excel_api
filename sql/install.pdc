@@ -26,7 +26,16 @@ show error
 prompt install dv_sr_gf_persons_t.sql
 @@Tables\dv_sr_gf_persons_t.sql
 show error
+
+prompt install f_ndfl_load_employees_xml.sql
+@@Tables\f_ndfl_load_employees_xml.sql
+show error
+
 */
+
+prompt install create_error_tables.sql
+@@Tables\create_error_tables.sql
+show error
 
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
@@ -66,6 +75,10 @@ show error
 
 prompt install f_ndfl_load_nalplat_api.pks
 @@Packages\f_ndfl_load_nalplat_api.pks
+show error
+
+prompt install f2ndfl_load_empl_api.pks
+@@Packages\f2ndfl_load_empl_api.pks
 show error
 
 prompt install f2ndfl_load_api.pks
@@ -338,6 +351,10 @@ show error
 
 prompt install f_ndfl_load_nalplat_api.pkb
 @@PackageBodies\f_ndfl_load_nalplat_api.pkb
+show error
+
+prompt install f2ndfl_load_empl_api.pkb
+@@PackageBodies\f2ndfl_load_empl_api.pkb
 show error
 
 prompt install f2ndfl_load_api.pkb
