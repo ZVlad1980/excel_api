@@ -5615,7 +5615,8 @@ dTermEnd date;
 
 cursor cPBS is 
     Select sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, 
-           sfl.DATA_ROGD, sfl.DOC_TIP, trim(sfl.DOC_SER1||' '||sfl.DOC_SER2||' '||sfl.DOC_NOM) SER_NOM_DOC       
+           sfl.DATA_ROGD, sfl.DOC_TIP, 
+           trim(sfl.DOC_SER1 || ' ' || case when sfl.DOC_SER2 is not null then sfl.DOC_SER2 || ' ' end ||sfl.DOC_NOM) SER_NOM_DOC       
     from SP_FIZ_LITS sfl
         inner join SP_LSPV lspv on lspv.SSYLKA_FL=sfl.SSYLKA
         left join SP_INN_FIZ_LITS ifl on ifl.SSYLKA=sfl.SSYLKA
@@ -5690,7 +5691,8 @@ dTermEnd date;
 
 cursor cPBS is 
     Select sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, 
-           sfl.DATA_ROGD, sfl.DOC_TIP, trim(sfl.DOC_SER1||' '||sfl.DOC_SER2||' '||sfl.DOC_NOM) SER_NOM_DOC,
+           sfl.DATA_ROGD, sfl.DOC_TIP, 
+           trim(sfl.DOC_SER1 || ' ' || case when sfl.DOC_SER2 is not null then sfl.DOC_SER2 || ' ' end ||sfl.DOC_NOM) SER_NOM_DOC,
            sum(ds.SUMMA) STORNO_DOXPRAV       
     from SP_FIZ_LITS sfl
                     inner join SP_LSPV lspv on lspv.SSYLKA_FL=sfl.SSYLKA
@@ -5779,7 +5781,7 @@ cursor cPBS is
            sfl.otchestvo,
            sfl.data_rogd,
            sfl.doc_tip,
-           trim(sfl.doc_ser1 || ' ' || sfl.doc_ser2 || ' ' || sfl.doc_nom) ser_nom_doc
+           trim(sfl.DOC_SER1 || ' ' || case when sfl.DOC_SER2 is not null then sfl.DOC_SER2 || ' ' end ||sfl.DOC_NOM) SER_NOM_DOC
     from   sp_fiz_lits sfl
      inner join sp_lspv lspv
       on   lspv.ssylka_fl = sfl.ssylka
@@ -5864,7 +5866,7 @@ cursor cPBS is
         sfl.otchestvo,
         sfl.data_rogd,
         sfl.doc_tip,
-        trim(sfl.doc_ser1 || ' ' || sfl.doc_ser2 || ' ' || sfl.doc_nom) ser_nom_doc,
+        trim(sfl.DOC_SER1 || ' ' || case when sfl.DOC_SER2 is not null then sfl.DOC_SER2 || ' ' end ||sfl.DOC_NOM) SER_NOM_DOC,
         sum(ds.summa) storno_doxprav
  from   sp_fiz_lits sfl
    inner  join sp_lspv lspv
@@ -5977,7 +5979,7 @@ cursor cPBS is
                                     vp.ssylka,
                                     vp.ssylka_doc,
                                     vp.nom_vipl,
-                                    vp.ssylka_poluch,
+                                    case vp.ssylka_poluch when 0 then null else vp.ssylka_poluch end ssylka_poluch,
                                     vp.gf_person,
                                     vp.nal_rezident
                              from   vyplach_posob vp

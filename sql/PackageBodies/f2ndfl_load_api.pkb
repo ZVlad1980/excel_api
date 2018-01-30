@@ -208,6 +208,41 @@ create or replace package body f2ndfl_load_api is
     when matched then
       update set
         s.status_np = u.nalres_status;
+    --Обновление ИНН из CDM.CONTRAGENTS
+    merge into f2ndfl_load_spravki s
+    using (
+            select s.kod_na     ,
+                   s.god        ,
+                   s.ssylka     ,
+                   s.tip_dox    ,
+                   s.nom_korr   ,
+                   n.ssylka_sips, 
+                   n.gf_person,
+                   s.inn_fl,
+                   c.inn inn_cdm
+            from   f_ndfl_load_nalplat n,
+                   f2ndfl_load_spravki s,
+                   cdm.contragents     c
+            where  1=1
+            and    coalesce(c.inn, 'NULL') <> coalesce(s.inn_fl, 'NULL')
+            and    c.id = n.gf_person
+            and    case when s.tip_dox in (1,3) then 0 else 1 end = n.ssylka_tip
+            and    s.ssylka = n.ssylka_sips
+            and    s.god = n.god
+            and    s.kod_na = n.kod_na
+            and    n.god = 2017
+            and    n.kod_na = 1
+          ) u
+    on    (s.kod_na   = u.kod_na   and
+           s.god      = u.god      and
+           s.ssylka   = u.ssylka   and
+           s.tip_dox  = u.tip_dox  and
+           s.nom_korr = u.nom_korr
+          )
+    when matched then
+      update set
+        s.inn_fl_old = u.inn_fl,
+        s.inn_fl     = u.inn_cdm;
     --
   exception
     when others then
