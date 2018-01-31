@@ -463,8 +463,6 @@ create or replace package body f2ndfl_load_empl_api is
                 t.god,
                 t.ssylka,
                 t.tip_dox,
-                0 lfag_otmena,
-                t.nom_spr,
                 s.gf_person fk_contragent,
                 (select n.ssylka_real from f_ndfl_load_nalplat n where rownum = 1 and n.god = s.god and n.kod_na = s.kod_na and n.gf_person = s.gf_person) ssylka_fl
          from   f2ndfl_load_spravki t,
@@ -481,8 +479,8 @@ create or replace package body f2ndfl_load_empl_api is
               t.god,
               t.ssylka,
               t.tip_dox,
-              t.lfag_otmena,
-              t.nom_spr,
+              0    flag_otmena,
+              null nom_spr,
               t.fk_contragent,
               t.ssylka_fl,
               case when t.ssylka_fl is null then t.ssylka else t.fk_contragent end ui_person

@@ -59,6 +59,74 @@ create or replace package body f2ndfl_load_api is
   
   /**
    * Процедура purge_loads - очистка таблиц f2ndfl_load_ и f2ndfl_arh_nomspr
+   *    KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR
+   */
+  procedure delete_from_loads(
+    p_action_code  varchar2,
+    p_code_na      int,
+    p_year         int,
+    p_ssylka       int default null,
+    p_revenue_type int default null,
+    p_nom_corr     int default null
+  ) is
+  begin
+    --
+    if p_action_code in ('f2_purge_amount', 'f2_purge_total', 'f2_purge_all') then
+      delete from f2ndfl_load_itogi t
+      where  1=1
+      and    t.nom_korr = coalesce(p_nom_corr, t.nom_korr)
+      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
+      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
+      and    t.kod_na = p_code_na
+      and    t.god = p_year;
+      --
+      delete from f2ndfl_load_vych t
+      where  1=1
+      and    t.nom_korr = coalesce(p_nom_corr, t.nom_korr)
+      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
+      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
+      and    t.kod_na = p_code_na
+      and    t.god = p_year;
+    end if;
+    --
+    if p_action_code in ('f2_purge_amount', 'f2_purge_mes', 'f2_purge_total', 'f2_purge_all') then
+      delete from f2ndfl_load_mes t
+      where  1=1
+      and    t.nom_korr = coalesce(p_nom_corr, t.nom_korr)
+      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
+      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
+      and    t.kod_na = p_code_na
+      and    t.god = p_year;
+    end if;
+    --
+    if p_action_code in ('f2_purge_pers', 'f2_purge_nomspr', 'f2_purge_all') then
+      delete from f2ndfl_arh_nomspr t
+      where  1=1
+      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
+      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
+      and    t.kod_na = p_code_na
+      and    t.god = p_year;
+    end if;
+    --
+    if p_action_code in ('f2_purge_pers', 'f2_purge_spravki', 'f2_purge_nomspr', 'f2_purge_all') then
+      delete from f2ndfl_load_spravki t
+      where  1=1
+      and    t.nom_korr = coalesce(p_nom_corr, t.nom_korr)
+      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
+      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
+      and    t.kod_na = p_code_na
+      and    t.god = p_year;
+      --
+    end if;
+    --
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end delete_from_loads;
+  
+  /**
+   * Процедура purge_loads - очистка таблиц f2ndfl_load_ и f2ndfl_arh_nomspr
    */
   procedure purge_loads(
     p_action_code  varchar2,
@@ -86,10 +154,7 @@ create or replace package body f2ndfl_load_api is
     end exists_arh_;
   begin
     --
-    if exists_arh_ then
-      fix_exception('Справки за ' || p_year || ' скопированы в arh! Очистка load невозможна!');
-      raise no_data_found;
-    end if;
+    utl_error_api.init_exceptions;
     --
     l_process_row.process_name := upper('p_action_code');
     l_process_row.start_date   := to_date(p_year || '0101', 'yyyymmdd');
@@ -99,38 +164,16 @@ create or replace package body f2ndfl_load_api is
       p_process_row => l_process_row
     );
     --
-    if p_action_code in ('f2_purge_amount', 'f2_purge_total', 'f2_purge_all') then
-      delete from f2ndfl_load_itogi t
-      where  t.kod_na = p_code_na
-      and    t.god = p_year;
-      --
-      delete from f2ndfl_load_vych t
-      where  t.kod_na = p_code_na
-      and    t.god = p_year;
+    if exists_arh_ then
+      fix_exception('Справки за ' || p_year || ' скопированы в arh! Очистка load невозможна!');
+      raise no_data_found;
     end if;
     --
-    if p_action_code in ('f2_purge_amount', 'f2_purge_mes', 'f2_purge_total', 'f2_purge_all') then
-      delete from f2ndfl_load_mes t
-      where  t.kod_na = p_code_na
-      and    t.god = p_year;
-    end if;
-    --
-    if p_action_code in ('f2_purge_pers', 'f2_purge_nomspr', 'f2_purge_all') then
-      delete from f2ndfl_arh_nomspr t
-      where  t.kod_na = p_code_na
-      and    t.god = p_year;
-    end if;
-    --
-    if p_action_code in ('f2_purge_pers', 'f2_purge_spravki', 'f2_purge_nomspr', 'f2_purge_all') then
-      delete from f2ndfl_load_spravki t
-      where  t.kod_na = p_code_na
-      and    t.god = p_year;
-      --
-      /*delete from f2ndfl_load_adr t
-      where  t.kod_na = p_code_na
-      and    t.god = p_year;--*/
-      --
-    end if;
+    delete_from_loads(
+      p_action_code => p_action_code ,
+      p_code_na     => p_code_na     ,
+      p_year        => p_year        
+    );
     --
     commit;
     --
@@ -438,6 +481,56 @@ create or replace package body f2ndfl_load_api is
   end fill_load_mes;
   
   /**
+   * Процедура delete_zero_ref - удалит из f2ndfl_load и f2ndfl_arh справки с нулевым доходом
+   *   Текущая логика допускает их появление
+   *
+   */
+  procedure delete_zero_ref(
+    p_globals  in out nocopy g_util_par_type
+  ) is
+    cursor l_zero_ref_cur(p_code_na int, p_year int) is
+      select li.kod_na,
+             li.god,
+             li.ssylka,
+             li.tip_dox,
+             li.nom_korr
+      from   f2ndfl_load_itogi li
+      where  1=1
+      and    coalesce(li.sgd_sum, 0) = 0
+      and    li.kod_na = p_code_na 
+      and    li.god = p_year
+      and    li.tip_dox <> 9; --кроме сотрудников
+    type l_refs_tbl_type is table of l_zero_ref_cur%rowtype;
+    l_refs_tbl l_refs_tbl_type;
+  begin
+    --
+    open l_zero_ref_cur(p_globals.KODNA, p_globals.GOD);
+    fetch l_zero_ref_cur
+      bulk collect into l_refs_tbl;
+    close l_zero_ref_cur;
+    --
+    dbms_output.put_line('Delete zero references');
+    for i in 1..l_refs_tbl.count loop
+      dbms_output.put('  ' || lpad(to_char(i), 3, ' ') || '. ' || to_char(l_refs_tbl(i).ssylka) || '/' || to_char(l_refs_tbl(i).tip_dox) || '...');
+      delete_from_loads(
+        p_action_code  => 'f2_purge_all',
+        p_code_na      => l_refs_tbl(i).kod_na,
+        p_year         => l_refs_tbl(i).god,
+        p_ssylka       => l_refs_tbl(i).ssylka,
+        p_revenue_type => l_refs_tbl(i).tip_dox,
+        p_nom_corr     => l_refs_tbl(i).nom_korr
+      );
+      dbms_output.put_line('Ok');
+    end loop;
+    --
+  exception
+    when others then
+      dbms_output.put_line('Error: ' || sqlerrm);
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end delete_zero_ref;
+  
+  /**
    * Процедура create_load_total расчет итогов F2NDFL_ITOG
    *
    * @param  -
@@ -512,6 +605,8 @@ create or replace package body f2ndfl_load_api is
     l_result       boolean := false;
   begin
     --
+    utl_error_api.init_exceptions;
+    --
     l_globals.KODNA         := p_code_na;
     l_globals.GOD           := p_year;
     l_globals.NOMKOR        := 0;
@@ -563,6 +658,15 @@ create or replace package body f2ndfl_load_api is
       l_result := true;
     end if;
     --
+    if p_action_code in ('f2_delete_zero_ref', 'f2_load_itogi', 'f2_load_total', 'f2_load_all') then
+      --
+      delete_zero_ref(
+        p_globals => l_globals
+      );
+      --
+      l_result := true;
+    end if;
+    --
     if not l_result then
       fix_exception('create_2ndfl_refs('||p_action_code||'): unknown action.');
       raise no_data_found;
@@ -572,6 +676,7 @@ create or replace package body f2ndfl_load_api is
     dv_sr_lspv_prc_api.set_process_state(
       p_process_row => l_globals.process_row
     );
+    --
     commit;
     --
   exception

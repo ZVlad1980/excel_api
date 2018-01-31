@@ -249,7 +249,7 @@ create or replace package body ndfl_report_api is
                   from   ndfl6_part1_general_v gp
                   union all
                   select 'NDFL2' src,
-                         count(distinct lt.nom_spr) ,
+                         count(distinct lt.gf_person) ,
                          sum(lt.tax_retained)       ,
                          null                       
                   from   f2ndfl_load_totals_v lt
