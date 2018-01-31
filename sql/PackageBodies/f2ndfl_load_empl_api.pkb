@@ -439,6 +439,68 @@ create or replace package body f2ndfl_load_empl_api is
       fix_exception('load_itogi(' || p_data_id || ')');
       raise;
   end load_itogi;
+  
+  /**
+   *
+   */
+  procedure load_nomspr(
+    p_year        int
+  ) is
+  begin
+    --
+    insert into f2ndfl_arh_nomspr(
+      kod_na,
+      god,
+      ssylka,
+      tip_dox,
+      flag_otmena,
+      nom_spr,
+      fk_contragent,
+      ssylka_fl,
+      ui_person
+    )  with w_employees as (
+         select t.kod_na,
+                t.god,
+                t.ssylka,
+                t.tip_dox,
+                0 lfag_otmena,
+                t.nom_spr,
+                s.gf_person fk_contragent,
+                (select n.ssylka_real from f_ndfl_load_nalplat n where rownum = 1 and n.god = s.god and n.kod_na = s.kod_na and n.gf_person = s.gf_person) ssylka_fl
+         from   f2ndfl_load_spravki t,
+                f_ndfl_load_spisrab s
+         where  1=1
+         and    s.uid_np = t.ssylka
+         and    s.kod_na = t.kod_na
+         and    s.god = t.god
+         and    t.kod_na = 1
+         and    t.god = 2017
+         and    t.tip_dox = 9
+       )
+       select t.kod_na,
+              t.god,
+              t.ssylka,
+              t.tip_dox,
+              t.lfag_otmena,
+              t.nom_spr,
+              t.fk_contragent,
+              t.ssylka_fl,
+              case when t.ssylka_fl is null then t.ssylka else t.fk_contragent end ui_person
+       from   w_employees t
+       where  not exists (
+                select 1
+                from   f2ndfl_arh_nomspr ns
+                where  ns.kod_na = t.kod_na
+                and    ns.god = t.god
+                and    ns.ssylka = t.ssylka
+                and    ns.tip_dox = t.tip_dox
+              );
+    --
+  exception
+    when others then
+      fix_exception('load_nomspr(' || p_year || ')');
+      raise;
+  end load_nomspr;
 
   /**
    *
@@ -448,6 +510,18 @@ create or replace package body f2ndfl_load_empl_api is
     p_data_id        int,
     p_year           int
   ) is
+    procedure finally_ is
+    begin
+      update f2ndfl_load_spravki s
+      set    s.nom_spr = null
+      where  s.kod_na = 1
+      and    s.god = p_year
+      and    s.tip_dox = 9;
+    exception
+      when others then
+        fix_exception('finally_');
+        raise;
+    end finally_;
   begin
     --
     utl_error_api.init_exceptions;
@@ -458,6 +532,8 @@ create or replace package body f2ndfl_load_empl_api is
     load_mes(p_data_id => p_data_id);
     load_vych(p_data_id => p_data_id);
     load_itogi(p_data_id => p_data_id);
+    load_nomspr(p_year => p_year);
+    finally_;
     --
   exception
     when others then
