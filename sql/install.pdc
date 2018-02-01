@@ -31,6 +31,10 @@ prompt install f_ndfl_load_employees_xml.sql
 @@Tables\f_ndfl_load_employees_xml.sql
 show error
 
+prompt install f2ndfl_arh_spravki.sql
+@@Tables\f2ndfl_arh_spravki.sql
+show error
+
 */
 
 prompt install create_error_tables.sql
@@ -319,6 +323,10 @@ show error
 
 prompt install f2ndfl_load_totals_v.sql
 @@Views\f2ndfl_load_totals_v.sql
+show error
+
+prompt install f2ndfl_arh_spravki_src_v.sql
+@@Views\f2ndfl_arh_spravki_src_v.sql
 show error
 
 prompt install f2ndfl_arh_spravki_v.sql

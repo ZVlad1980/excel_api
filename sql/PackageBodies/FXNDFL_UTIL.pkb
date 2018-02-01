@@ -1526,19 +1526,29 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
         end case;                    
   
                 for rec in(
-                           Select q.*
-                              from (                                                 
-                                    Select  ns.UI_PERSON,
-                                            count(*) over(partition by ns.UI_PERSON order by ns.UI_PERSON rows unbounded preceding)  RPTCNT,
-                                            ls.*
-                                    from f2NDFL_LOAD_SPRAVKI ls
-                                            inner join f2NDFL_ARH_NOMSPR ns
-                                              on ns.KOD_NA=ls.KOD_NA and ns.GOD=ls.GOD and ns.SSYLKA=ls.SSYLKA and ns.TIP_DOX=ls.TIP_DOX  
-                                    where ls.KOD_NA=pKodNA and ls.GOD=pGod and ls.TIP_DOX>0 and ls.NOM_KORR = 0  -- выбираем впервые поданные справки за год по заданному НА
-                                      and ns.FLAG_OTMENA=0 and ns.NOM_SPR is Null  -- номера еще не были проставлены и счетчики справков не отменены (актуальные)     
-                                    ) q
-                              order by upper(q.FAMILIYA), upper(q.IMYA), upper(q.OTCHESTVO), 
-                                       q.DATA_ROZHD, q.UI_PERSON, q.RPTCNT  -- важна сортировка для обработки в цикле        
+                           select q.*
+                           from   (select ns.ui_person,
+                                          count(*) over(partition by ns.ui_person order by ns.ui_person rows unbounded preceding) rptcnt,
+                                          ls.*
+                                   from   f2ndfl_load_spravki ls
+                                     inner  join f2ndfl_arh_nomspr ns
+                                     on     ns.kod_na = ls.kod_na
+                                     and    ns.god = ls.god
+                                     and    ns.ssylka = ls.ssylka
+                                     and    ns.tip_dox = ls.tip_dox
+                                   where  ls.kod_na = pkodna
+                                   and    ls.god = pgod
+                                   and    ls.tip_dox > 0
+                                   and    ls.nom_korr = 0 -- выбираем впервые поданные справки за год по заданному НА
+                                   and    ns.flag_otmena = 0
+                                   and    ns.nom_spr is null -- номера еще не были проставлены и счетчики справков не отменены (актуальные)     
+                                   ) q
+                           order  by upper(q.familiya),
+                                     upper(q.imya),
+                                     upper(q.otchestvo),
+                                     q.data_rozhd,
+                                     q.ui_person,
+                                     q.rptcnt -- важна сортировка для обработки в цикле
                           )
                 loop
                    
@@ -9255,6 +9265,103 @@ end Parse_xml_izBuh;
     return l_result;
     --
   end get_quarter_row;
+  
+  /**
+   * Процедура enum_refs - нумерация справок 2НДФЛ
+   *  Вызывается только после полного формирования Loads и NOMSPR до заполнения f2ndfl_arh_spravki
+   * Только с 0, при полной базе!
+   */
+   /*
+   TODO: owner="V.Zhuravov" created="01.02.2018"
+   text="Добавить возможность повторного запуска, добавить защиту целостности данных"
+   */
+  procedure enum_refs(
+    p_code_na int,
+    p_year    int
+  ) is
+  begin
+    --
+    --
+    insert into f2ndfl_arh_spravki(
+      id,
+      kod_na,
+      data_dok,
+      nom_spr,
+      god,
+      nom_korr,
+      ui_person,
+      is_participant,
+      inn_fl,
+      status_np,
+      grazhd,
+      familiya,
+      imya,
+      otchestvo,
+      data_rozhd,
+      kod_ud_lichn,
+      ser_nom_doc
+    ) select F_NDFL_SPRID_SEQ.Nextval,
+             p.kod_na,
+             trunc(sysdate),
+             to_char(
+               100 + row_number()over(order by nlssort(upper(p.lastname), 'NLS_SORT=RUSSIAN'), upper(p.firstname), upper(p.secondname), to_char(p.birthdate, 'yyyymmdd'), p.ui_person),
+               '000000'
+             ) nom_spr,
+             p.god,
+             0,
+             p.ui_person,
+             p.is_participant,
+             p.inn,
+             p.resident,
+             p.citizenship,
+             p.lastname,
+             p.firstname,
+             p.secondname,
+             p.birthdate,
+             p.fk_idcard_type,
+             p.ser_nom_doc
+      from   f2ndfl_arh_spravki_src_v p
+      where  p.kod_na = p_code_na
+      and    p.god = p_year;
+    --
+    merge into f2ndfl_arh_nomspr ns
+    using (select t.kod_na,
+                  t.god,
+                  t.ui_person,
+                  t.nom_spr
+           from   f2ndfl_arh_spravki t
+           where  t.kod_na = p_code_na
+           and    t.god = p_year
+          ) u
+    on    (ns.kod_na = u.kod_na and ns.god = u.god and ns.ui_person = u.ui_person)
+    when matched then
+      update set
+        ns.nom_spr = u.nom_spr;
+    --
+    merge into f2ndfl_load_spravki s
+    using (select t.id,
+                  t.kod_na,
+                  t.god,
+                  t.ui_person,
+                  t.nom_spr,
+                  ns.tip_dox,
+                  ns.ssylka
+           from   f2ndfl_arh_spravki t,
+                  f2ndfl_arh_nomspr  ns
+           where  1=1
+           and    ns.ui_person = t.ui_person
+           and    ns.kod_na = t.kod_na 
+           and    ns.god = t.god 
+           and    t.kod_na = p_code_na
+           and    t.god = p_year
+          ) u
+    on    (s.kod_na = u.kod_na and s.god = u.god and s.ssylka = u.ssylka and s.tip_dox = u.tip_dox)
+    when matched then
+      update set
+        s.nom_spr = u.nom_spr,
+        s.r_sprid = u.id;
+    --
+  end enum_refs;
   
 END FXNDFL_UTIL;
 /

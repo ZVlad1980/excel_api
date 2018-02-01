@@ -404,6 +404,20 @@ procedure Parse_xml_izBuh(
   function get_quarter_row(
     p_date date
   ) return sp_quarters_v%rowtype;
+    
+  /**
+   * Процедура enum_refs - нумерация справок 2НДФЛ
+   *  Вызывается только после полного формирования Loads и NOMSPR до заполнения f2ndfl_arh_spravki
+   * Только с 0, при полной базе!
+   */
+   /*
+   TODO: owner="V.Zhuravov" created="01.02.2018"
+   text="Добавить возможность повторного запуска, добавить защиту целостности данных"
+   */
+  procedure enum_refs(
+    p_code_na int,
+    p_year    int
+  );
   
 END FXNDFL_UTIL;
 /

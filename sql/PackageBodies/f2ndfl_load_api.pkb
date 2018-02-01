@@ -594,6 +594,26 @@ create or replace package body f2ndfl_load_api is
   end fill_load_total;
   
   /**
+   * Процедура enum_refs - нумерация справок 2НДФЛ
+   *  Вызывается только после полного формирования Loads и NOMSPR
+   */
+  procedure enum_refs(
+    p_globals in out nocopy g_util_par_type
+  ) is
+  begin
+    --
+    fxndfl_util.enum_refs(
+      p_code_na => p_globals.KODNA,
+      p_year    => p_globals.GOD
+    );
+    -- 
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end enum_refs;
+  
+  /**
    *
    */
   procedure create_2ndfl_refs(
@@ -661,6 +681,15 @@ create or replace package body f2ndfl_load_api is
     if p_action_code in ('f2_delete_zero_ref', 'f2_load_itogi', 'f2_load_total', 'f2_load_all') then
       --
       delete_zero_ref(
+        p_globals => l_globals
+      );
+      --
+      l_result := true;
+    end if;
+    --
+    if p_action_code in ('f2_enumeration', 'f2_load_all') then
+      --
+      enum_refs(
         p_globals => l_globals
       );
       --
