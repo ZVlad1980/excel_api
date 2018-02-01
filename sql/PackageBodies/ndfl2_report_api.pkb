@@ -37,6 +37,64 @@ create or replace package body ndfl2_report_api is
     );
     --
     case l_report_code
+      when 'f2_arh_spravki_errors' then
+        open l_result for
+          with w_errors as (
+            select /*+ materialized*/
+                   e.kod_na, 
+                   e.god, 
+                   e.ui_person, 
+                   e.inn_fl, 
+                   e.grazhd, 
+                   e.familiya, 
+                   e.imya, 
+                   e.otchestvo, 
+                   e.data_rozhd, 
+                   e.kod_ud_lichn, 
+                   e.ser_nom_doc, 
+                   e.status_np, 
+                   e.is_participant,         
+                   e.error_list
+            from   f2ndfl_arh_spravki_errors_v e
+            where  1=1
+            and    e.error_list is not null
+            and    e.god = p_year
+            and    e.kod_na = 1
+          )
+          select ed.error_type, 
+                 ed.error_msg, 
+                 e.ui_person, 
+                 e.familiya, 
+                 e.imya, 
+                 e.otchestvo, 
+                 to_char(e.data_rozhd, 'dd.mm.yyyy') data_rozhd,
+                 e.inn_fl, 
+                 e.grazhd, 
+                 case e.status_np
+                   when 1 then 'Y'
+                   when 2 then 'N'
+                 end status_np, 
+                 e.kod_ud_lichn, 
+                 e.ser_nom_doc
+          from   w_errors e,
+                 lateral(
+                   select level lvl,
+                          to_number(regexp_substr(e.error_list, '[^ ]+', 1, level)) error_id
+                   from   dual
+                   connect by level <= regexp_count(e.error_list, ' +?') + 1
+                 ) p,
+                 lateral(
+                   select ed.error_msg,
+                          ed.error_type,
+                          case ed.error_id
+                            when 11 then e.inn_fl
+                            when 12 then e.ser_nom_doc
+                          end || '#' || e.familiya || '#' || e.imya || '#' || e.otchestvo || '#' || e.data_rozhd || '#' || e.ui_person
+                            ord_value
+                   from   sp_ndfl_errors ed
+                   where  ed.error_id = p.error_id
+                 ) ed
+          order by ed.error_id, ed.ord_value;
       when 'f2_full_namesake' then
         --источник запроса: fxndfl_util.SovpDan_Kontragentov
         open l_result for
