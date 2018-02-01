@@ -64,6 +64,32 @@ begin
 
 end;
 
+-- проверить ИНН
+function Check_INN( pINN in varchar2 ) return number as
+AC sys.odciNumberList;
+S11 number;
+S12 number;
+Si  number;
+begin
+    AC := sys.odciNumberList(3,7,2,4,10,3,5,9,4,6,8,0);
+    -- прверить на длину и все цифры
+    if not regexp_like(pINN,'^\d{12}$') then return 1; end if;
+    S11:=0;
+    S12:=0;
+    for i in 1 .. 11 loop
+        Si:=to_number(substr(pINN,i,1));  
+        S11 := S11 + Si*AC(i+1);
+        S12 := S12 + Si*AC( i );
+        end loop; 
+    S11:=mod(mod(S11,11),10);
+    S12:=mod(mod(S12,11),10);
+    if     S11=to_number(substr(pINN,11,1)) 
+       and S12=to_number(substr(pINN,12,1)) 
+       then return 0; 
+    end if;
+    return 2;   
+end;
+
 -- заполнить список налогоплательщиков за период по движению средств на ЛСПВ
 -- данные заносятся в таблицу F_NDFL_LOAD_NALPLAT
 /*

@@ -48,6 +48,9 @@ procedure Spisok_NalPlat_poLSPV( pErrInfo out varchar2, pSPRID in number  );
 -- комит должен быть внешний!
 procedure Spisok_NalPlat_DohodNol( pSPRID in number );
 
+-- проверить ИНН
+function Check_INN( pINN in varchar2 ) return number;
+
 -- проверить созданный список налогоплательщиков, получить перечень ошибок 
 procedure Oshibki_vSpisNalPlat( pReportCursor out sys_refcursor, pErrInfo out varchar2, pKodNA in number, pGod in number, pPeriod in number );
 
