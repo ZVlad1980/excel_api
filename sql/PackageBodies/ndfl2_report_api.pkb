@@ -61,8 +61,8 @@ create or replace package body ndfl2_report_api is
             and    e.god = p_year
             and    e.kod_na = 1
           )
-          select ed.error_type, 
-                 ed.error_msg, 
+          select coalesce(ed.error_type, 'ErrorUnknown') error_type, 
+                 coalesce(ed.error_msg, to_char(p.error_id)) error_msg, 
                  e.ui_person, 
                  e.familiya, 
                  e.imya, 
@@ -75,7 +75,12 @@ create or replace package body ndfl2_report_api is
                    when 2 then 'N'
                  end status_np, 
                  e.kod_ud_lichn, 
-                 e.ser_nom_doc
+                 e.ser_nom_doc,
+                 s_prev.inn_fl          prev_inn_fl         ,
+                 s_prev.grazhd          prev_grazhd         ,
+                 s_prev.status_np       prev_status_np      ,
+                 s_prev.kod_ud_lichn    prev_kod_ud_lichn   ,
+                 s_prev.ser_nom_doc     prev_ser_nom_doc
           from   w_errors e,
                  lateral(
                    select level lvl,
@@ -93,7 +98,13 @@ create or replace package body ndfl2_report_api is
                             ord_value
                    from   sp_ndfl_errors ed
                    where  ed.error_id = p.error_id
-                 ) ed
+                 )(+) ed,
+                 f2ndfl_arh_spravki s_prev
+          where  1=1
+          and    s_prev.nom_korr(+) = 0 --Пока шо так
+          and    s_prev.ui_person(+) = e.ui_person
+          and    s_prev.god(+) = e.god - 1
+          and    s_prev.kod_na(+) = e.kod_na
           order by ed.error_id, ed.ord_value;
       when 'f2_full_namesake' then
         --источник запроса: fxndfl_util.SovpDan_Kontragentov

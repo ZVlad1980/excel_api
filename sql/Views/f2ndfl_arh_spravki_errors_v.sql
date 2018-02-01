@@ -88,8 +88,30 @@ create or replace view f2ndfl_arh_spravki_errors_v as
                    case
                      when count(distinct s.ui_person) over(partition by s.kod_na, s.god, 
                             s.familiya, s.imya, s.otchestvo, s.data_rozhd) > 1                      then 13 --Дублирование ФИОД
+                   end || ' ' ||
+                   case
+                     when s.inn_fl is null                                                          then 14 --ИНН не заполнен
+                   end || ' ' ||
+                   case
+                     when s.inn_fl is not null and
+                       fxndfl_util.Check_INN(s.inn_fl) <> 0                                         then 15 --Некорректный ИНН
+                   end || ' ' ||
+                   case
+                     when fxndfl_util.Check_ResidentTaxRate(s.kod_na, s.god, 
+                       s.ui_person, s.status_np) <> 0                                               then 16 --Не соотвутствие ставки и статуса резидента
+                   end || ' ' ||
+                   case
+                     when ip.is_invalid_doc = 'Y'                                                   then 17 --Недействительный паспорт РФ
                    end --*/
                  )       error_list
-          from   f2ndfl_arh_spravki s
-         ) s
+          from   f2ndfl_arh_spravki s,
+                 lateral(
+                   select case when ip.series is not null then 'Y' else 'N' end is_invalid_doc 
+                   from   gazfond.v_podft_invalid_passports ip
+                   where  1=1
+                   and    ip.series = substr(replace(s.ser_nom_doc, ' ', null), 1, 4)
+                   and    ip.num = substr(replace(s.ser_nom_doc, ' ', null), 5, 6) --regexp_substr(ar.ser_nom_doc, '\d{6}$')
+                   and    s.kod_ud_lichn = 21
+                 )(+) ip
+        ) s
 /

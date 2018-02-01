@@ -9338,7 +9338,7 @@ end Parse_xml_izBuh;
              p.ui_person,
              p.is_participant,
              p.inn,
-             p.resident,
+             p.status_np,
              p.citizenship,
              p.lastname,
              p.firstname,
@@ -9388,6 +9388,35 @@ end Parse_xml_izBuh;
         s.r_sprid = u.id;
     --
   end enum_refs;
+  
+  
+  /**
+  */
+  function check_residenttaxrate
+  (
+    p_code_na   int,
+    p_year      int,
+    p_nom_spr   varchar2,
+    p_resident  int
+  ) return number result_cache relies_on(f2ndfl_arh_spravki) is
+    l_tax_rate int;
+  begin
+    select min(li.kod_stavki)
+    into   l_tax_rate
+    from   f2ndfl_arh_nomspr ns,
+           f2ndfl_load_itogi li
+    where  1 = 1
+    and    li.ssylka = ns.ssylka
+    and    li.god = ns.god
+    and    li.kod_na = ns.kod_na
+    and    ns.nom_spr = p_nom_spr
+    and    ns.god = p_year
+    and    ns.kod_na = p_code_na
+    group  by ns.kod_na,
+              ns.god,
+              ns.nom_spr;
+    return case when p_resident = case  when l_tax_rate = 13 then 1 when l_tax_rate = 30 then 2 else 3 end then 0 else 2 end;
+  end check_residenttaxrate;
   
 END FXNDFL_UTIL;
 /

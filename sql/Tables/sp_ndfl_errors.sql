@@ -18,7 +18,11 @@ begin
               select 10, 'Значения ГРАЖДАНСТВО и ШАБЛОН УДОСТОВЕРЕНИЯ соответствуют коду ПАСПОРТА РФ', 'Warning' from dual union all
               select 11, 'Дублирование ИНН', 'Error' from dual union all
               select 12, 'Дублирование УЛ', 'Error' from dual union all
-              select 13, 'Дублирование ФИОД', 'Error' from dual
+              select 13, 'Дублирование ФИОД', 'Error' from dual union all
+              select 14, 'Пустой ИНН', 'Warning' from dual union all
+              select 15, 'Некорректный ИНН', 'Error' from dual union all
+              select 16, 'Не соотвутствие ставки и статуса резидента', 'Error' from dual union all
+              select 17, 'Недействительный паспорт РФ', 'Error' from dual
              ) u
   on         (se.error_id = u.error_id)
   when matched then
@@ -26,7 +30,7 @@ begin
       se.error_msg = u.error_msg,
       se.error_type = u.error_type
   when not matched then
-    insert (error_id, error_msg) values(u.error_id, u.error_msg);
+    insert (error_id, error_msg, error_type) values(u.error_id, u.error_msg, u.error_type);
   dbms_output.put_line(sql%rowcount);
   commit;
 end;

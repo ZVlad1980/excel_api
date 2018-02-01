@@ -422,5 +422,14 @@ procedure Parse_xml_izBuh(
     p_year    int
   );
   
+  /**
+   */
+  function Check_ResidentTaxRate(
+    p_code_na   int,
+    p_year      int,
+    p_nom_spr   varchar2,
+    p_resident  int
+  ) return number RESULT_CACHE;
+  
 END FXNDFL_UTIL;
 /

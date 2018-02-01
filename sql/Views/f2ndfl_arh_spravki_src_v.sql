@@ -12,9 +12,14 @@ create or replace view f2ndfl_arh_spravki_src_v as
              when 9 then
                'Y'
              else 'N'
-           end  is_employee
-    from   f2ndfl_arh_nomspr ns
+           end  is_employee,
+           max(ls.status_np) status_np
+    from   f2ndfl_arh_nomspr   ns,
+           f2ndfl_load_spravki ls
     where  1=1
+    and    ls.ssylka = ns.ssylka
+    and    ls.god = ns.god
+    and    ls.kod_na = ns.kod_na
     group by ns.kod_na,
              ns.god,
              ns.ui_person
@@ -25,7 +30,7 @@ create or replace view f2ndfl_arh_spravki_src_v as
          p.is_participant,
          p.is_employee,
          gfp.inn,
-         gfp.resident,
+         p.status_np,
          ac.code3d citizenship,
          gfp.lastname,
          gfp.firstname,
