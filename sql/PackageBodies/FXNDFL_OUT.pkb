@@ -1,6 +1,7 @@
 CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
 
   gCurrentPersData number;  -- режим вывода персональных данных
+  gFormDate        date;    -- дата на которую формируются данные
   --  0  - копия справки из архива переданного в ГНИ
   --  1  - текущие персональные данные в GAZFOND
   gContragentID number;       -- идентификатор контрагента
@@ -53,10 +54,14 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
        Select * into rFXML from F_NDFL_ARH_XML_FILES where ID=pFileId;
   end Read_XML_TITLE;
   
-  procedure Read_NA_PODPIS(pGod in number)  is  
+  procedure Read_NA_PODPIS  is  
   begin 
        ERR_Pref := 'Формирование документа / Подписант ';
-       Select * into rPODPISANT from F2NDFL_SPR_PODPISANT where PKG_DFLT=1 and GOD=pGOD;  
+       select *
+       into   rpodpisant
+       from   f2ndfl_spr_podpisant p
+       where  pkg_dflt = 1
+       and    nvl(gFormDate, sysdate) between p.from_date and nvl(p.to_date, sysdate);
        
        tag_PODPISANT:=  
          '<Подписант ПрПодп="'||rPODPISANT.PODPISANT_TYPE||'">'||CrLf
@@ -75,7 +80,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
              ||'         <СвНАЮЛ НаимОрг="'||replace(rNALAG.NAZV,'"','&quot;')||'" ИННЮЛ="'||rNALAG.INN||'" КПП="'||rNALAG.KPP||'"/>'||CrLf
              ||'      </СвНА>';
              
-       Read_NA_PODPIS( rNALAG.GOD );
+       Read_NA_PODPIS;
              
   end Read_NA_DATA2;
   
@@ -88,7 +93,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
              ||'         <НПЮЛ НаимОрг="'||replace(rNALAG.NAZV,'"','&quot;')||'" ИННЮЛ="'||rNALAG.INN||'" КПП="'||rNALAG.KPP||'"/>'||CrLf
              ||'      </СвНП>';
              
-       Read_NA_PODPIS( rNALAG.GOD );
+       Read_NA_PODPIS;
              
   end Read_NA_DATA6;
   
@@ -384,13 +389,18 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
             
   end Insert_tagDocument;
 
-  -- Получить xml-файл 2 НДФЛ для передачи данных в ГНИ 
+  -- Получить xml-файл для передачи данных в ГНИ 
   -- параметры:
-  --    pFileId  идентификатор в реестре файлов F_NDFL_ARH_XML_FILES
-  function GetXML_XChFileF2(pFileId in number) return clob is
+  --    pFileId   - идентификатор в реестре файлов F_NDFL_ARH_XML_FILES
+  --    pFormDate - дата на которую формируется справка (влияет на подписанта)
+  function GetXML_XChFileF2(
+    pFileId   in number,
+    pFormDate date default sysdate
+  ) return clob is
   begin
-  
+         
          gCurrentPersData := 0;
+         gFormDate        := pFormDate;
   
          cXML := Null;
          CrLf := chr(13)||chr(10);
@@ -431,13 +441,20 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
   --    номер справки - строка с ведущими нулями
   --    номер корректировки - для первой справки 0
   --    0 - выводить архив справок в ГНИ /  1 - текущие персональные данные  
-  function GetXML_SpravkaF2(  pKodNA in number, pGOD in number, pNomSpravki in varchar2, pNomKorr in number, pCurrentPersData in number default 0  ) return clob is
+  function GetXML_SpravkaF2(  
+    pKodNA in number, 
+    pGOD in number, 
+    pNomSpravki in varchar2, 
+    pNomKorr in number, 
+    pCurrentPersData in number default 0  ,
+    pFormDate date default sysdate
+  ) return clob is
   nSprId  number;
   nFileId  number;
   begin
          
          gCurrentPersData := pCurrentPersData; 
-  
+         gFormDate        := pFormDate;
          CrLf := chr(13)||chr(10);  
          ERR_Pref := 'Чтение идентификатора Справки';
          Select ID, R_XMLID into nSprId, nFileId from f2NDFL_ARH_SPRAVKI where KOD_NA=pKodNA and GOD=pGOD and NOM_SPR=pNomSpravki and NOM_KORR=pNomKorr;
@@ -462,9 +479,15 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
 
 
   -- окно для выкачивания файлов из БД
-  procedure GetXML_All_XChFileF2( pXmlCursor out sys_refcursor, pErrInfo out varchar2, pFirstXmlID in number, pLastXmlID in number ) as
+  procedure GetXML_All_XChFileF2(
+    pXmlCursor out sys_refcursor, 
+    pErrInfo out varchar2, 
+    pFirstXmlID in number, 
+    pLastXmlID in number ,
+    pFormDate date default sysdate
+  ) as
   begin
-  
+    gFormDate := pFormDate;
     open pXmlCursor for
         Select xf.*, GetXML_XChFileF2( xf.ID ) CLOBXML 
             from f_NDFL_ARH_XML_FILES xf 
@@ -476,14 +499,20 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
           
   end GetXML_All_XChFileF2;
   
-  function GetXML_SpravkaF2CA(  pContragentID in number, pYear in number, pCurrentPersData in number default 0 ) return clob as
+  function GetXML_SpravkaF2CA(  
+    pContragentID in number, 
+    pYear in number, 
+    pCurrentPersData in number default 0,
+    pFormDate date default sysdate
+  ) return clob as
   vNOMKOR F2NDFL_ARH_SPRAVKI.NOM_KORR%type;
   rSPR    F2NDFL_ARH_SPRAVKI%rowtype;
   vRES    clob;
   fBAL    float;  
   begin
   
-     gContragentID:=0;
+     gContragentID := 0;
+     gFormDate     := pFormDate;
   
      for ns in ( Select * from f2NDFL_ARH_NOMSPR where KOD_NA=1 and GOD=pYear and fk_CONTRAGENT=pContragentID and flag_OTMENA=0 and ROWNUM=1 )    -- test 3397318,  3026175
      loop
@@ -526,7 +555,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
             
      return vRES;
   
-     end;  
+     end GetXML_SpravkaF2CA;  
      
   -- получить за 2015 год список пенсионеров без ИНН
   procedure Get_Spisok_PenBezINN2015(  pSpPenBazINN out sys_refcursor, pErrInfo out varchar2 ) as
@@ -632,11 +661,14 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
   -- Получить xml-файл 6 НДФЛ для передачи данных в ГНИ 
   -- параметры:
   --    pFileId  идентификатор в реестре файлов F_NDFL_ARH_XML_FILES
-  function GetXML_XChFileF6(pFileId in number) return clob is
+  function GetXML_XChFileF6(
+    pFileId in number,
+    pFormDate date default sysdate
+  ) return clob is
   begin
   
          gCurrentPersData := 0;
-  
+         gFormDate        := pFormDate;
          cXML := Null;
          CrLf := chr(13)||chr(10);
          ERR_SprID :=' файл ';

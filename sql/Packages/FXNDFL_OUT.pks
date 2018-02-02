@@ -35,11 +35,21 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
 
   -- Получить xml-файл для передачи данных в ГНИ 
   -- параметры:
-  --    pFileId  идентификатор в реестре файлов F_NDFL_ARH_XML_FILES
-  function GetXML_XChFileF2(pFileId in number) return clob;
+  --    pFileId   - идентификатор в реестре файлов F_NDFL_ARH_XML_FILES
+  --    pFormDate - дата на которую формируется справка (влияет на подписанта)
+  function GetXML_XChFileF2(
+    pFileId   in number,
+    pFormDate date default sysdate
+  ) return clob;
   
   -- окно для выкачивания файлов из БД
-  procedure GetXML_All_XChFileF2( pXmlCursor out sys_refcursor, pErrInfo out varchar2, pFirstXmlID in number, pLastXmlID in number );
+  procedure GetXML_All_XChFileF2(
+    pXmlCursor out sys_refcursor, 
+    pErrInfo out varchar2, 
+    pFirstXmlID in number, 
+    pLastXmlID in number ,
+    pFormDate date default sysdate
+  );
   
   -- Получить xml-файл для печати справки 
   -- параметры:
@@ -48,11 +58,23 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
   --    номер справки - строка с ведущими нулями
   --    номер корректировки - для первой справки 0
   --    0 - выводить архив справок в ГНИ /  1 - текущие персональные данные
-  function GetXML_SpravkaF2(  pKodNA in number, pGOD in number, pNomSpravki in varchar2, pNomKorr in number, pCurrentPersData in number default 0  ) return clob;
+  function GetXML_SpravkaF2(  
+    pKodNA in number, 
+    pGOD in number, 
+    pNomSpravki in varchar2, 
+    pNomKorr in number, 
+    pCurrentPersData in number default 0  ,
+    pFormDate date default sysdate
+  ) return clob;
   
   -- test:   Select FXNDFL_OUT.GetXML_SpravkaF2(  1, 2015, '000186', 0  ) from dual;
 
-  function GetXML_SpravkaF2CA(  pContragentID in number, pYear in number, pCurrentPersData in number default 0  ) return clob;
+  function GetXML_SpravkaF2CA(  
+    pContragentID in number, 
+    pYear in number, 
+    pCurrentPersData in number default 0,
+    pFormDate date default sysdate
+  ) return clob;
   
   -- получить за 2015 год список пенсионеров без ИНН
   procedure Get_Spisok_PenBezINN2015(  pSpPenBazINN out sys_refcursor , pErrInfo out varchar2 );
@@ -61,7 +83,10 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
   -- Получить xml-файл 6 НДФЛ для передачи данных в ГНИ 
   -- параметры:
   --    pFileId  идентификатор в реестре файлов F_NDFL_ARH_XML_FILES
-  function GetXML_XChFileF6(pFileId in number) return clob;
+  function GetXML_XChFileF6(
+    pFileId in number,
+    pFormDate date default sysdate
+  ) return clob;
   
 
 END FXNDFL_OUT;
