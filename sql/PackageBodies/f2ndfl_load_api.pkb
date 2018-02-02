@@ -614,6 +614,39 @@ create or replace package body f2ndfl_load_api is
   end enum_refs;
   
   /**
+   * Процедура copy_to_arh - копирование load в arh
+   */
+  procedure copy_to_arh(
+    p_globals in out nocopy g_util_par_type
+  ) is
+  begin
+    --
+    /*
+    TODO: owner="V.Zhuravov" created="02.02.2018"
+    text="Добавить защиту от повторного запуска"
+    */
+    fxndfl_util.KopirSprItog_vArhiv(
+      pKodNA  => p_globals.KODNA,
+      pGod    => p_globals.GOD
+    );
+    --
+    fxndfl_util.KopirSprMes_vArhiv(
+      pKodNA  => p_globals.KODNA,
+      pGod    => p_globals.GOD
+    );
+    --
+    fxndfl_util.KopirSprVych_vArhiv(
+      pKodNA  => p_globals.KODNA,
+      pGod    => p_globals.GOD
+    );
+    -- 
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end copy_to_arh;
+  
+  /**
    *
    */
   procedure create_2ndfl_refs(
@@ -690,6 +723,15 @@ create or replace package body f2ndfl_load_api is
     if p_action_code in ('f2_enumeration', 'f2_load_all') then
       --
       enum_refs(
+        p_globals => l_globals
+      );
+      --
+      l_result := true;
+    end if;
+    --
+    if p_action_code in ('f2_copy2arh', 'f2_load_all') then
+      --
+      copy_to_arh(
         p_globals => l_globals
       );
       --

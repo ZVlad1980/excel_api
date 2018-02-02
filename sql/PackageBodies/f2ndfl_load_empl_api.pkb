@@ -249,16 +249,20 @@ create or replace package body f2ndfl_load_empl_api is
              to_number(replace(r.rev_amount, ',', '.'), '99999999D99', 'NLS_NUMERIC_CHARACTERS=''.,''') rev_amount,
              coalesce(r.ben_code, '0'),
              to_number(replace(r.ben_amount, ',', '.'), '99999999D99', 'NLS_NUMERIC_CHARACTERS=''.,''') ben_amount,
-             r.tax_rate
+             sd.tax_rate
       from   f_ndfl_load_employees_xml t,
              xmltable('/Файл/Документ' passing(t.xml_data)
                columns
                  doc_num         varchar2(10)   path '@НомСпр',
                  rev_data        xmltype        path 'СведДох'
              ) d,
-             xmltable('/СведДох/ДохВыч/СвСумДох' passing(d.rev_data)
+             xmltable('/СведДох' passing(d.rev_data) 
                columns
-                 tax_rate     number        path '@Ставка',
+                 tax_rate number path '@Ставка',
+                 rev_ben  xmltype path 'ДохВыч'
+             ) sd,
+             xmltable('/ДохВыч/СвСумДох' passing(sd.rev_ben)
+               columns
                  month        varchar2(2)   path '@Месяц',
                  rev_code     varchar2(5)   path '@КодДоход',
                  rev_amount   varchar2(10)  path '@СумДоход',

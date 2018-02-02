@@ -19,3 +19,12 @@ when matched then
     s.ui_person = u.ui_person,
     s.is_participant = u.is_participant
 /
+select ns.nom_spr, count(1)
+from   f2ndfl_arh_spravki ns
+            where  1=1
+            and    ns.kod_na = 1
+            and    ns.god = 2016
+            group by ns.kod_na,
+                   ns.god,
+                   ns.nom_spr
+                   having count(1) > 1
