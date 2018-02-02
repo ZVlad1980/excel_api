@@ -602,6 +602,8 @@ create or replace package body f2ndfl_load_api is
   ) is
   begin
     --
+    set_globals_util_pkg(p_globals);
+    --
     fxndfl_util.enum_refs(
       p_code_na => p_globals.KODNA,
       p_year    => p_globals.GOD
@@ -620,6 +622,8 @@ create or replace package body f2ndfl_load_api is
     p_globals in out nocopy g_util_par_type
   ) is
   begin
+    --
+    set_globals_util_pkg(p_globals);
     --
     /*
     TODO: owner="V.Zhuravov" created="02.02.2018"
@@ -645,6 +649,29 @@ create or replace package body f2ndfl_load_api is
       fix_exception;
       raise;
   end copy_to_arh;
+  
+  /**
+   * Процедура enum_refs - нумерация справок 2НДФЛ
+   *  Вызывается только после полного формирования Loads и NOMSPR
+   */
+  procedure init_xml(
+    p_globals in out nocopy g_util_par_type
+  ) is
+  begin
+    --
+    set_globals_util_pkg(p_globals);
+    --
+    fxndfl_util.raspredspravki_poxml(
+      pKodNA => p_globals.KODNA,
+      pGod   => p_globals.GOD,
+      pForma => 2
+    );
+    -- 
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end init_xml;
   
   /**
    *
@@ -732,6 +759,15 @@ create or replace package body f2ndfl_load_api is
     if p_action_code in ('f2_copy2arh', 'f2_load_all') then
       --
       copy_to_arh(
+        p_globals => l_globals
+      );
+      --
+      l_result := true;
+    end if;
+    --
+    if p_action_code in ('f2_init_xml', 'f2_load_all') then
+      --
+      init_xml(
         p_globals => l_globals
       );
       --

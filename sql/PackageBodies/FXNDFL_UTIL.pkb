@@ -1928,70 +1928,144 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
     end;
   */
   
- -- создать запись в Реестре XML-файлов
- function Zareg_XML( pKodNA in number, pGod in number, pForma in number, pCommit in number default 1 ) return number as
- rNALAG F2NDFL_SPR_NAL_AGENT%rowtype;
- nXMLID number;
- frmFmt  varchar2(10);
- begin
- 
-     Case pForma 
-         when 2 then frmFmt := '5.04';
-         when 6 then frmFmt := '5.01';
-         else 
-                 return Null; 
-     end case;
-
-                 Select * into rNALAG from F2NDFL_SPR_NAL_AGENT where KOD_NA=pKodNA and GOD=pGOD;
-                 Select F_NDFL_XMLID_SEQ.Nextval into nXMLID from dual;
-                 Insert into F_NDFL_ARH_XML_FILES
-                           ( ID, FILENAME, KOD_FORMY, VERS_FORM, OKTMO, INN_YUL, KPP, NAIMEN_ORG, TLF, KOD_NO, GOD, KVARTAL, PRIZNAK_F)
-                 values ( nXMLID, 'NO_NDFL'||trim(to_char(pForma))||'_'||rNALAG.IFNS||'_'||rNALAG.IFNS||'_'||rNALAG.INN||rNALAG.KPP||'_'||to_char(SYSDATE,'YYYYMMDD')||'_'||trim(to_char(nXMLID,'0000000000')),
-                             pForma,  frmFmt, rNALAG.OKTMO, rNALAG.INN, rNALAG.KPP, rNALAG.NAZV, rNALAG.PHONE, rNALAG.IFNS, pGOD, 4, 1 );
-                 if pCommit<>0 then 
-                    if gl_COMMIT then Commit; end if;
-                    end if;
-                 return  nXMLID;   
-   
-    exception
-        when OTHERS then
-           if gl_COMMIT then Rollback; end if;
-           return Null;             
- 
- end Zareg_XML;  
+  -- создать запись в Реестре XML-файлов
+  function zareg_xml
+  (
+    pkodna  in number,
+    pgod    in number,
+    pforma  in number,
+    pcommit in number default 1
+  ) return number as
+    rnalag f2ndfl_spr_nal_agent%rowtype;
+    nxmlid number;
+    frmfmt varchar2(10);
+  begin
+    --
+    /*
+    case pforma
+      when 2 then
+        frmfmt := '5.04';
+      when 6 then
+        frmfmt := '5.01';
+      else
+        return null;
+    end case;
+    */
+    select t.form_version
+    into   frmfmt
+    from   f2ndfl_spr_forms t
+    where  t.form_code = to_char(pforma)
+    and    to_date(pgod || '0101', 'yyyymmdd') between t.from_date and nvl(t.to_date, sysdate);
+    --
+    select na.*
+    into   rnalag
+    from   f2ndfl_spr_nal_agent na
+    where  na.kod_na = pkodna
+    and    na.god = pgod;
+    --
+    nxmlid := f_ndfl_xmlid_seq.nextval();
+    --
+    insert into f_ndfl_arh_xml_files(
+      id,
+      filename,
+      kod_formy,
+      vers_form,
+      oktmo,
+      inn_yul,
+      kpp,
+      naimen_org,
+      tlf,
+      kod_no,
+      god,
+      kvartal,
+      priznak_f
+    ) values (
+      nxmlid,
+      'NO_NDFL' || trim(to_char(pforma)) || '_' || rnalag.ifns || '_' ||
+      rnalag.ifns || '_' || rnalag.inn || rnalag.kpp || '_' ||
+      to_char(sysdate, 'YYYYMMDD') || '_' ||
+      trim(to_char(nxmlid, '0000000000')),
+      pforma,
+      frmfmt,
+      rnalag.oktmo,
+      rnalag.inn,
+      rnalag.kpp,
+      rnalag.nazv,
+      rnalag.phone,
+      rnalag.ifns,
+      rnalag.god,
+      4,
+      1
+    );
+    --
+    if pcommit <> 0 and gl_commit then
+        commit;
+    end if;
+    --
+    return nxmlid;
+    --
+  exception
+    when others then
+      if gl_commit then
+        rollback;
+      end if;
+      return null;
+  end zareg_xml;
  
 
 -- распределить данные справок по XML-файлам
-procedure RaspredSpravki_poXML( pKodNA in number, pGod in number, pForma in number ) as
- maxSprNo number;
- nXMLID number;
- nXML number;
- vFirstSN number;
- vLastSN number;
- begin
- 
-             Case pForma 
-                 when 2 then 
-                       Select to_number(max(NOM_SPR)) into maxSprNo from f2NDFL_ARH_SPRAVKI where KOD_NA=pKodNA and GOD=pGod; -- and R_XMLID is Null;
-                       nXML := trunc( (maxSprNo+2999) / 3000 );
-                           for iXML in 1 .. nXML loop
-                                  nXMLID := Zareg_XML( pKodNA, pGod, pForma, 0 );
-                                  vLastSN :=  iXML*3000;
-                                  vFirstSN := iXML*3000 - 2999;
-                                  Update f2NDFL_ARH_SPRAVKI
-                                       set R_XMLID =  nXMLID
-                                       where R_XMLID is Null  and  to_number(NOM_SPR)>= vFirstSN  and to_number(NOM_SPR)<= vLastSN;        
-                           end loop;
-                       if gl_COMMIT then Commit; end if;   
-                 else 
-                       Raise_application_Error( -20001, 'Параметр pForma не равен 2.' ); 
-             end case;
-   
-    exception
-        when OTHERS then
-           if gl_COMMIT then Rollback; end if;
-           Raise;
- 
+  procedure raspredspravki_poxml(
+    pkodna in number,
+    pgod   in number,
+    pforma in number
+  ) as
+    maxsprno number;
+    nxmlid   number;
+    nxml     number;
+    vfirstsn number;
+    vlastsn  number;
+  begin
+    
+    case pforma
+      when 2 then
+        --
+        select max(to_number(s.nom_spr))
+        into   maxsprno
+        from   f2ndfl_arh_spravki s
+        where  s.kod_na = pkodna
+        and    s.god = pgod; -- and R_XMLID is Null;
+        --
+        nxml := trunc((maxsprno + 2999) / 3000);
+        --
+        for ixml in 1 .. nxml loop
+          --
+          nxmlid   := zareg_xml(pkodna, pgod, pforma, 0);
+          vlastsn  := ixml * 3000;
+          vfirstsn := ixml * 3000 - 2999;
+          --
+          update f2ndfl_arh_spravki s
+          set    s.r_xmlid = nxmlid
+          where  s.r_xmlid is null
+          and    to_number(s.nom_spr) >= vfirstsn
+          and    to_number(s.nom_spr) <= vlastsn
+          and    s.kod_na = pkodna
+          and    s.god = pgod;
+          --
+        end loop;
+        if gl_commit then
+          commit;
+        end if;
+      else
+        raise_application_error(-20001,
+                                'Параметр pForma не равен 2.');
+    end case;
+
+  exception
+    when others then
+      if gl_commit then
+        rollback;
+      end if;
+      raise;
  end RaspredSpravki_poXML;  
  
  

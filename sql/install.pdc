@@ -39,6 +39,10 @@ prompt install sp_ndfl_errors.sql
 @@Tables\sp_ndfl_errors.sql
 show error
 
+prompt install f2ndfl_spr_forms.sql
+@@Tables\f2ndfl_spr_forms.sql
+show error
+
 */
 
 prompt install create_error_tables.sql
