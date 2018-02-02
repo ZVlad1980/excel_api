@@ -57,6 +57,10 @@ prompt install FXNDFL_UTIL.pks
 @@Packages\FXNDFL_UTIL.pks
 show error
 
+prompt install FXNDFL_OUT.pks
+@@Packages\FXNDFL_OUT.pks
+show error
+
 prompt install zaprvkl_api.pks
 @@Packages\zaprvkl_api.pks
 show error
@@ -409,11 +413,14 @@ prompt install ndfl2_report_api.pkb
 @@PackageBodies\ndfl2_report_api.pkb
 show error
 
---/*
 prompt install FXNDFL_UTIL.pkb
 @@PackageBodies\FXNDFL_UTIL.pkb
 show error
---*/
+
+prompt install FXNDFL_OUT.pkb
+@@PackageBodies\FXNDFL_OUT.pkb
+show error
+
 prompt Install grants.sql
 @@grants.sql
 show error
