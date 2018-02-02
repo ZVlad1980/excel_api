@@ -2,6 +2,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
 
   gCurrentPersData number;  -- режим вывода персональных данных
   gFormDate        date;    -- дата на которую формируются данные
+  gFormVersion     number;  -- номер версии формы!
   --  0  - копия справки из архива переданного в ГНИ
   --  1  - текущие персональные данные в GAZFOND
   gContragentID number;       -- идентификатор контрагента
@@ -52,6 +53,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
   procedure Read_XML_TITLE(pFileId in number)  is
   begin
        Select * into rFXML from F_NDFL_ARH_XML_FILES where ID=pFileId;
+       gFormVersion := to_number(replace(rFXML.Vers_Form, ',', '.'), '90D00', 'NLS_NUMERIC_CHARACTERS=''.,''');
   end Read_XML_TITLE;
   
   procedure Read_NA_PODPIS  is  
@@ -115,25 +117,25 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
   end tag_DocumentHead6;     
   
                   -- построить именной элемент адреса
-                function MakeAdrEl( pName varchar2, pAbrCode in number ) return varchar2 as
-                Abr gazfond.ADDRESS_ABRVS.POST_ABRV%type;
-                begin
-                
-                     if pName is Null then return ''; end if;
-                     
-                     if pAbrCode is not Null then
-                        begin
-                            Select POST_ABRV into Abr from gazfond.ADDRESS_ABRVS where ID = pAbrCode;
-                        exception
-                            when OTHERS then Abr := '';
-                        end;    
-                        end if;
-                     
-                     if Abr is Null then return pName; end if;
-                     
-                     return pName||' '||Abr;
-                        
-                end; 
+  function MakeAdrEl( pName varchar2, pAbrCode in number ) return varchar2 as
+  Abr gazfond.ADDRESS_ABRVS.POST_ABRV%type;
+  begin
+  
+       if pName is Null then return ''; end if;
+       
+       if pAbrCode is not Null then
+          begin
+              Select POST_ABRV into Abr from gazfond.ADDRESS_ABRVS where ID = pAbrCode;
+          exception
+              when OTHERS then Abr := '';
+          end;    
+          end if;
+       
+       if Abr is Null then return pName; end if;
+       
+       return pName||' '||Abr;
+          
+  end MakeAdrEl; 
   
   function tag_AdresPoluchDoh return varchar2 as
   vADR f2NDFL_ARH_ADR%rowtype;
@@ -217,7 +219,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
                                             ||'" ДатаРожд="'||to_char(rSprData.DATA_ROZHD,'dd.mm.yyyy')||'" Гражд="'||rSprData.GRAZHD||'">'||CrLf
         ||'    <ФИО Фамилия="'||rSprData.FAMILIYA||'" Имя="'||rSprData.IMYA|| case when rSprData.OTCHESTVO is Null then Null else '" Отчество="'||rSprData.OTCHESTVO end ||'" />'||CrLf
         ||'    <УдЛичнФЛ КодУдЛичн="'||trim(to_char(rSprData.KOD_UD_LICHN,'00'))||'" СерНомДок="'||rSprData.SER_NOM_DOC||'"/>'||CrLf
-        ||'    '||tag_AdresPoluchDoh||CrLf  
+        ||'    '||case when gFormVersion <= 5.04 then tag_AdresPoluchDoh || CrLf  end
         ||'</ПолучДох>';
         
   end tag_PoluchDoh;
@@ -373,7 +375,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
       cXML:=cXML||CrLf||tag_DocumentHead;
               Ident_Right;
               cXML:=cXML||CrLf
-                 ||tag_PODPISANT||CrLf
+                 || case when gFormVersion <= 5.04 then tag_PODPISANT||CrLf end
                  ||tag_SVED_NALAG||CrLf
                  ||tag_PoluchDoh||CrLf;
                 
@@ -417,7 +419,8 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
          cXML := '<?xml version="1.0" encoding="windows-1251"?>'||CrLf
                     ||'<Файл xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ИдФайл="' ||rFXML.FILENAME||'"  ВерсПрог="2" ВерсФорм="'||rFXML.VERS_FORM||'">'||CrLf
                     ||'   <СвРекв  ОКТМО="'||rFXML.OKTMO||'" ОтчетГод="'||to_char(rFXML.GOD)||'" ПризнакФ="'||rFXML.PRIZNAK_F||'">'||CrLf  
-                    ||'   <СвЮЛ ИННЮЛ="'||rFXML.INN_YUL||'" КПП="'||rFXML.KPP||'" />'||CrLf
+                    ||'   <СвЮЛ ИННЮЛ="'||rFXML.INN_YUL||'" КПП="'||rFXML.KPP||'" />' || CrLf
+                    || case when gFormVersion >= 5.05 then '   ' || replace(tag_PODPISANT, chr(10), '   ' ) || CrLf end
                     ||'   </СвРекв>'||CrLf;
 
          ERR_Pref := 'Выборка справок для файла.';  
@@ -459,13 +462,18 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
          ERR_Pref := 'Чтение идентификатора Справки';
          Select ID, R_XMLID into nSprId, nFileId from f2NDFL_ARH_SPRAVKI where KOD_NA=pKodNA and GOD=pGOD and NOM_SPR=pNomSpravki and NOM_KORR=pNomKorr;
                   
+         if nFileId is not null then
+           Read_XML_TITLE(nFileId);
+         else
+           gFormVersion := 5.04;
+         end if;
          -- данные налогового агента для справок
          ERR_Pref := 'Чтение данных Налогового Агента';
          Read_NA_DATA2(nFileId);
          
          cXML := '<?xml version="1.0" encoding="windows-1251"?>'
             ||CrLf||'<?xml-stylesheet type="text/xsl" href="2NDFL_2015.xsl"?>'
-            ||CrLf||'<Файл ВерсФорм="5.04">';
+            ||CrLf||'<Файл ВерсФорм="' || rFXML.Vers_Form || '">';
             
             Insert_tagDocument( nSprId );
             
