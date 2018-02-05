@@ -431,5 +431,13 @@ procedure Parse_xml_izBuh(
     p_resident  int
   ) return number RESULT_CACHE;
   
+  /**
+   * Процедура финального обновления ARH_SPRAVKI (расставляет PRIZNAK_S справки и т.д.
+   */
+  procedure update_spravki_finally(
+    p_code_na int,
+    p_year    int
+  ); 
+  
 END FXNDFL_UTIL;
 /

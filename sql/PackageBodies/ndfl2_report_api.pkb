@@ -37,6 +37,48 @@ create or replace package body ndfl2_report_api is
     );
     --
     case l_report_code
+      when 'f2_arh_batch_xml' then
+        open l_result for
+          select x.id, 
+                 x.filename, 
+                 count(distinct s.id) cnt_spr,
+                 min(s.familiya)      from_familiya,
+                 max(s.familiya)      to_familiya,
+                 min(s.nom_spr)       from_nom_spr,
+                 max(s.nom_spr)       to_nom_spr,
+                 max(s.priznak_s)     priznak_s
+          from   f_ndfl_arh_xml_files x,
+                 f2ndfl_arh_spravki   s
+          where  1=1
+          and    s.r_xmlid = x.id
+          and    s.god = x.god
+          and    s.kod_na = 1
+          and    x.god = p_year
+          and    x.kod_formy = 2
+          group by x.id, x.filename, x.god
+          order by id;
+      when 'f2_priznak2' then
+        open l_result for
+          select s.nom_spr,
+                 s.familiya || ' ' || s.imya || ' ' || s.otchestvo || ' (' || to_char(s.data_rozhd, 'dd.mm.yyyy') || ')' fio,
+                 s.ui_person,
+                 case s.status_np
+                   when 1 then 'Да'
+                   when 2 then 'Нет'
+                   else 'Не определено'
+                 end       is_resident,
+                 s.grazhd,
+                 (select sum(ai.vzysk_ifns)
+                  from   f2ndfl_arh_itogi ai
+                  where  ai.r_sprid = s.id
+                 ) debt_amount,
+                 s.nom_korr
+          from   f2ndfl_arh_spravki   s
+          where  1=1
+          and    s.priznak_s = 2
+          and    s.kod_na = 1
+          and    s.god = p_year
+          order by s.nom_spr, s.nom_korr;
       when 'f2_arh_spravki_errors' then
         open l_result for
           with w_errors as (

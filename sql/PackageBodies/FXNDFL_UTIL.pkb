@@ -2014,52 +2014,75 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
  
 
 -- распределить данные справок по XML-файлам
-  procedure raspredspravki_poxml(
+  procedure raspredSpravki_poXml(
     pkodna in number,
     pgod   in number,
     pforma in number
   ) as
-    maxsprno number;
-    nxmlid   number;
-    nxml     number;
-    vfirstsn number;
-    vlastsn  number;
+    --
+    c_batch_size int := 3000;
+    --
+    cursor l_batches_cur is
+      select s.priznak_s,
+             count(1) cnt_spr
+      from   f2ndfl_arh_spravki s
+      where  s.kod_na = pkodna
+      and    s.god = pgod
+      and    s.r_xmlid is null
+      group by s.priznak_s;
+    --
+    /**
+       доделать распределение по пачакам по количеству справок (пагинаци€!)
+    */
+    procedure raspredspravki_poxml_(
+      p_priznak_s int,
+      p_batch_cnt int
+    ) is
+      l_xmlid    int;
+      l_pass_cnt int;
+    begin
+      for batch_num in 1 .. p_batch_cnt loop
+        --
+        l_xmlid    := zareg_xml(pkodna, pgod, pforma, 0);
+        l_pass_cnt := (batch_num - 1) * c_batch_size;
+        --
+        update (select s.r_xmlid 
+                from   f2ndfl_arh_spravki s
+                where  s.id in (
+                         select ss.id
+                         from   f2ndfl_arh_spravki ss
+                         where  1=1
+                         and    ss.r_xmlid is null
+                         and    ss.priznak_s = p_priznak_s
+                         and    ss.kod_na = pkodna
+                         and    ss.god = pgod
+                         order by ss.nom_spr, ss.nom_korr, ss.id
+                         fetch next c_batch_size rows only
+                       )
+               ) u
+        set    u.r_xmlid = l_xmlid;
+        --
+      end loop;
+    end raspredspravki_poxml_;
+    --
   begin
-    
+    --
     case pforma
       when 2 then
         --
-        select max(to_number(s.nom_spr))
-        into   maxsprno
-        from   f2ndfl_arh_spravki s
-        where  s.kod_na = pkodna
-        and    s.god = pgod; -- and R_XMLID is Null;
-        --
-        nxml := trunc((maxsprno + 2999) / 3000);
-        --
-        for ixml in 1 .. nxml loop
-          --
-          nxmlid   := zareg_xml(pkodna, pgod, pforma, 0);
-          vlastsn  := ixml * 3000;
-          vfirstsn := ixml * 3000 - 2999;
-          --
-          update f2ndfl_arh_spravki s
-          set    s.r_xmlid = nxmlid
-          where  s.r_xmlid is null
-          and    to_number(s.nom_spr) >= vfirstsn
-          and    to_number(s.nom_spr) <= vlastsn
-          and    s.kod_na = pkodna
-          and    s.god = pgod;
-          --
+        for b in l_batches_cur loop
+          raspredspravki_poxml_(b.priznak_s, trunc((b.cnt_spr + (c_batch_size - 1)) / c_batch_size));
         end loop;
-        if gl_commit then
-          commit;
-        end if;
+        --
       else
         raise_application_error(-20001,
                                 'ѕараметр pForma не равен 2.');
     end case;
-
+    --
+    if gl_commit then
+      commit;
+    end if;
+    --
   exception
     when others then
       if gl_commit then
@@ -9399,7 +9422,8 @@ end Parse_xml_izBuh;
       otchestvo,
       data_rozhd,
       kod_ud_lichn,
-      ser_nom_doc
+      ser_nom_doc,
+      priznak_s
     ) select F_NDFL_SPRID_SEQ.Nextval,
              p.kod_na,
              trunc(sysdate),
@@ -9419,7 +9443,8 @@ end Parse_xml_izBuh;
              p.secondname,
              p.birthdate,
              p.fk_idcard_type,
-             p.ser_nom_doc
+             p.ser_nom_doc,
+             1
       from   f2ndfl_arh_spravki_src_v p
       where  p.kod_na = p_code_na
       and    p.god = p_year;
@@ -9491,6 +9516,36 @@ end Parse_xml_izBuh;
               ns.nom_spr;
     return case when p_resident = case  when l_tax_rate = 13 then 1 when l_tax_rate = 30 then 2 else 3 end then 0 else 2 end;
   end check_residenttaxrate;
+  
+  /**
+   * ѕроцедура финального обновлени€ ARH_SPRAVKI (расставл€ет PRIZNAK_S справки и т.д.
+   */
+  procedure update_spravki_finally(
+    p_code_na int,
+    p_year    int
+  ) is
+  begin
+    --
+    merge into f2ndfl_arh_spravki s
+    using (
+            select ai.r_sprid,
+                   2 priznak_s
+            from   f2ndfl_arh_spravki s,
+                   f2ndfl_arh_itogi ai
+            where  1=1
+            and    ai.vzysk_ifns <> 0
+            and    ai.r_sprid = s.id
+            and    s.god = 2017
+            and    s.kod_na = 1
+            group by ai.r_sprid
+            having max(case when ai.vzysk_ifns <> 0 then 2 else 1 end) = 2
+          ) u
+    on    (s.id = u.r_sprid)
+    when matched then
+      update set
+        s.priznak_s = u.priznak_s;
+    --
+  end update_spravki_finally; 
   
 END FXNDFL_UTIL;
 /

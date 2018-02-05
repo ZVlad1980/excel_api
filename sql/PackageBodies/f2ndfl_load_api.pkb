@@ -71,6 +71,18 @@ create or replace package body f2ndfl_load_api is
   ) is
   begin
     --
+    if p_action_code in ('f2_purge_all', 'f2_arh_purge_xml') then
+      update f2ndfl_arh_spravki s
+      set    s.r_xmlid = null
+      where  s.kod_na = p_code_na
+      and    s.god = p_year;
+      --
+      delete from f_ndfl_arh_xml_files x
+      where  x.god = p_year
+      and    x.kod_formy = 2;
+      --
+    end if;
+    --
     if p_action_code in ('f2_purge_amount', 'f2_purge_total', 'f2_purge_all') then
       delete from f2ndfl_load_itogi t
       where  1=1
@@ -156,7 +168,7 @@ create or replace package body f2ndfl_load_api is
     --
     utl_error_api.init_exceptions;
     --
-    l_process_row.process_name := upper('p_action_code');
+    l_process_row.process_name := upper(p_action_code);
     l_process_row.start_date   := to_date(p_year || '0101', 'yyyymmdd');
     l_process_row.end_date     := to_date(p_year || '1231', 'yyyymmdd');
     --
@@ -164,7 +176,7 @@ create or replace package body f2ndfl_load_api is
       p_process_row => l_process_row
     );
     --
-    if exists_arh_ then
+    if p_action_code not like '%arh%' and exists_arh_ then
       fix_exception('Справки за ' || p_year || ' скопированы в arh! Очистка load невозможна!');
       raise no_data_found;
     end if;
@@ -643,7 +655,12 @@ create or replace package body f2ndfl_load_api is
       pKodNA  => p_globals.KODNA,
       pGod    => p_globals.GOD
     );
-    -- 
+    --
+    fxndfl_util.update_spravki_finally(
+      p_code_na  => p_globals.KODNA,
+      p_year     => p_globals.GOD
+    );
+    --
   exception
     when others then
       fix_exception;
@@ -765,13 +782,14 @@ create or replace package body f2ndfl_load_api is
       l_result := true;
     end if;
     --
-    if p_action_code in ('f2_init_xml', 'f2_load_all') then
+    if p_action_code in ('f2_arh_init_xml', 'f2_load_all') then
       --
       init_xml(
         p_globals => l_globals
       );
       --
       l_result := true;
+      --
     end if;
     --
     if not l_result then
