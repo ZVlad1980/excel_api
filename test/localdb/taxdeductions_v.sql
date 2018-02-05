@@ -1,14 +1,20 @@
 create or replace view taxdeductions_v as
-  select -1 nom_vkl    ,
-         -1 nom_ips    ,
-         -1 shifr_schet,
-         -1 ssylka_fl  ,
-         -1 fk_contragent,
-         -1 rid_td     ,
-         -1 ssylka_td  ,
-         -1 tdid       ,
-         -1 benefit_code
-  from   dual
+  select t.nom_vkl,
+         t.nom_ips,
+         t.shifr_schet,
+         t.ssylka_fl,
+         t.fk_contragent,
+         t.rid_td,
+         t.startdate,
+         t.enddate,
+         t.ssylka_td,
+         t.tdid,
+         t.benefit_code,
+         t.amount,
+         t.upper_income,
+         t.name,
+         t.amount_all
+  from   taxdeductions_v@fnd_fondb t
 /
 drop synonym GNI_KLADR
 /

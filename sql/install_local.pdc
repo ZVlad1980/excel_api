@@ -51,10 +51,6 @@ show error
 prompt install create_error_tables.sql
 @@Tables\create_error_tables.sql
 show error
-
-prompt install f2ndfl_load_spravki.sql
-@@Tables\f2ndfl_load_spravki.sql
-show error
 */
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
@@ -324,10 +320,11 @@ prompt install ndfl2_corr_spr_rep_v.sql
 @@Views\ndfl2_corr_spr_rep_v.sql
 show error
 
+/*
 prompt install taxdeductions_v.sql
 @@Views\taxdeductions_v.sql
 show error
-
+*/
 prompt install contragent_merge_log_v.sql
 @@Views\contragent_merge_log_v.sql
 show error
@@ -347,11 +344,11 @@ show error
 prompt install f2ndfl_arh_spravki_src_v.sql
 @@Views\f2ndfl_arh_spravki_src_v.sql
 show error
-
+/*
 prompt install f2ndfl_arh_spravki_errors_v.sql
 @@Views\f2ndfl_arh_spravki_errors_v.sql
 show error
-
+*/
 prompt install f2ndfl_arh_spravki_v.sql
 @@Views\f2ndfl_arh_spravki_v.sql
 show error

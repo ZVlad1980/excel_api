@@ -7,6 +7,8 @@ create table f_ndfl_load_employees_xml(
   code_na          int,
   year             int,
   xml_data         xmltype,
+  api_version      VARCHAR2(100) NOT NULL ENABLE, 
+  form_version     VARCHAR2(10) NOT NULL ENABLE,
   created_at       timestamp
     default        systimestamp,
   created_by       varchar2(30)
