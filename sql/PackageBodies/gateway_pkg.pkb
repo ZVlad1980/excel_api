@@ -170,11 +170,19 @@ create or replace package body gateway_pkg is
       to_char(get_date(p_year, p_month), 'dd.mm.yyyy') || ', ' || 
       to_char(to_date$(p_report_date), 'dd.mm.yyyy');
     return;--*/
-    x_result := ndfl_report_api.get_report(
-      p_report_code => p_report_code, 
-      p_end_date    => get_date(p_year, p_month),
-      p_report_date => to_date$(p_report_date)
-    );
+    if lower(substr(p_report_code, 1, 2)) = 'f2' then
+      x_result := ndfl2_report_api.get_report(
+        p_report_code => p_report_code, 
+        p_year        => p_year,
+        p_report_date => to_date$(p_report_date)
+      );
+    else
+      x_result := ndfl_report_api.get_report(
+        p_report_code => p_report_code, 
+        p_end_date    => get_date(p_year, p_month),
+        p_report_date => to_date$(p_report_date)
+      );
+    end if;
     --
   exception
     when others then
@@ -313,5 +321,90 @@ create or replace package body gateway_pkg is
       x_err_msg := utl_error_api.get_error_msg;
   end build_tax_diff_det_table;
   
+  /**
+   * Процедура загрузки данных в таблицу f_ndfl_load_nalplat
+   */
+  procedure fill_ndfl_load_nalplat(
+    x_err_msg       out varchar2,
+    p_code_na           varchar2,    
+    p_year              number,
+    p_month             number
+  ) is
+  begin
+    --
+    f_ndfl_load_nalplat_api.fill_ndfl_load_nalplat(
+      p_code_na     => p_code_na,
+      p_load_date   => get_date(p_year, p_month, false)
+    );
+    --
+    commit;
+    --
+  exception
+    when others then
+      rollback;
+      fix_exception('fill_ndfl_load_nalplat(p_year => ' || p_year || ', p_month => ' || p_month || ')');
+      x_err_msg := utl_error_api.get_error_msg;
+  end fill_ndfl_load_nalplat;
+  
+  /**
+   * Процедура загрузки данных в F2NDFL_LOAD_
+   */
+  procedure f2_ndfl_api(
+    x_err_msg       out varchar2,
+    p_action_code       varchar2,
+    p_code_na           varchar2,    
+    p_year              number
+  ) is
+  begin
+    --
+    f2ndfl_load_api.create_2ndfl_refs(
+      p_action_code => p_action_code,
+      p_code_na     => p_code_na,
+      p_year        => p_year
+    );
+    --
+    commit;
+    --
+  exception
+    when others then
+      rollback;
+      fix_exception('f2ndfl_api(p_year => ' || p_year || ', p_action_code => ' || p_action_code || ')');
+      x_err_msg := utl_error_api.get_error_msg;
+  end f2_ndfl_api;
+  
+  
+  
+  /**
+   * Процедура request - единая точка входа
+   *
+   * @param x_result_set - результирующий набор данных (курсор)
+   * @param x_status     - статус завершения: (S)uccess/(E)rror/(M)an
+   * @param x_err_code   - код ошибки (аналог HTTP status)
+   * @param x_err_msg    - сообщение об ошибке
+   * @param p_path       - путь запрашиваемого сервиса (пока только одноуровневый)
+   * @param p_req_json   - параметры запроса в формате JSON
+   *
+   /
+  procedure request(
+    x_result_set out sys_refcursor,
+    x_status     out varchar2,
+    x_err_msg    out varchar2,
+    p_path       in  varchar2,
+    p_req_json   in  varchar2
+  ) is
+    l_req_body   
+  begin
+    --
+    call$(get_execute(p_path => p_path), )
+    --
+    x_status := 'S';
+    --
+  exception
+    when others then
+      fix_exception('request(p_path => "'||p_path||'"): ');
+      x_err_msg := utl_error_api.get_error_msg;
+      x_status  := 'E';
+  end request;
+  */
 end gateway_pkg;
 /

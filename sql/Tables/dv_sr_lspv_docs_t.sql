@@ -52,12 +52,6 @@ create table dv_sr_lspv_docs_t (
 /
 alter table dv_sr_lspv_docs_t add constraint dv_sr_lspv_docs_chk1 check (not(coalesce(type_op, 0) = -1 and ssylka_doc = ssylka_doc_op))
 /
-begin
-  DBMS_ERRLOG.CREATE_ERROR_LOG(dml_table_name => 'dv_sr_lspv_docs_t');
-end;
-/
-create index err$_dv_sr_lspv_docs_i1 on err$_dv_sr_lspv_docs_t(process_id)
-/
 create unique index dv_sr_lspv_docs_u1 on dv_sr_lspv_docs_t(date_op, ssylka_doc_op, date_doc, ssylka_doc, nom_vkl, nom_ips, gf_person, tax_rate)
 /
 create index dv_sr_lspv_docs_i1 on dv_sr_lspv_docs_t(gf_person, tax_rate, date_op)

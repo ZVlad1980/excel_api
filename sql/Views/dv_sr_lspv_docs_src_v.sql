@@ -57,7 +57,13 @@ create or replace view dv_sr_lspv_docs_src_v as
          end det_charge_type,
          dc.revenue, 
          dc.benefit, 
-         nvl(dc.tax, dc.tax_83) tax, 
+         coalesce(
+           dc.tax, 
+           case 
+             when coalesce(sum(dc.tax)over(partition by lspv.gf_person), 0) <> 0 then dc.tax_83
+             else 0
+           end
+         ) tax, 
          dc.source_revenue, 
          dc.source_benefit, 
          dc.source_tax,

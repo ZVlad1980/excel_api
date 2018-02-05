@@ -41,6 +41,9 @@ create or replace view gf_people_v as
          gp.lastname_at_birth, 
          gp.firstname_at_birth, 
          gp.secondname_at_birth, 
-         gp.fullname_at_birth
-  from   gazfond.people gp
+         gp.fullname_at_birth,
+         c.inn
+  from   gazfond.people gp,
+         gazfond.contragents c
+  where  c.id = gp.fk_contragent
 /

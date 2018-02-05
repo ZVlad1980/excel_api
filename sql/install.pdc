@@ -26,9 +26,43 @@ show error
 prompt install dv_sr_gf_persons_t.sql
 @@Tables\dv_sr_gf_persons_t.sql
 show error
+
+prompt install f_ndfl_load_employees_xml.sql
+@@Tables\f_ndfl_load_employees_xml.sql
+show error
+
+prompt install f2ndfl_arh_spravki.sql
+@@Tables\f2ndfl_arh_spravki.sql
+show error
+
+prompt install sp_ndfl_errors.sql
+@@Tables\sp_ndfl_errors.sql
+show error
+
+prompt install f2ndfl_spr_forms.sql
+@@Tables\f2ndfl_spr_forms.sql
+show error
+
+prompt install f2ndfl_spr_podpisant.sql
+@@Tables\f2ndfl_spr_podpisant.sql
+show error
+
 */
+
+prompt install create_error_tables.sql
+@@Tables\create_error_tables.sql
+show error
+
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
+show error
+
+prompt install FXNDFL_UTIL.pks
+@@Packages\FXNDFL_UTIL.pks
+show error
+
+prompt install FXNDFL_OUT.pks
+@@Packages\FXNDFL_OUT.pks
 show error
 
 prompt install zaprvkl_api.pks
@@ -47,12 +81,28 @@ prompt install dv_sr_lspv_docs_api.pks
 @@Packages\dv_sr_lspv_docs_api.pks
 show error
 
+prompt install dv_sr_lspv_prc_api.pks
+@@Packages\dv_sr_lspv_prc_api.pks
+show error
+
 prompt install ndfl_report_api.pks
 @@Packages\ndfl_report_api.pks
 show error
 
 prompt install f_ndfl_load_spisrab_api.pks
 @@Packages\f_ndfl_load_spisrab_api.pks
+show error
+
+prompt install f_ndfl_load_nalplat_api.pks
+@@Packages\f_ndfl_load_nalplat_api.pks
+show error
+
+prompt install f2ndfl_load_empl_api.pks
+@@Packages\f2ndfl_load_empl_api.pks
+show error
+
+prompt install f2ndfl_load_api.pks
+@@Packages\f2ndfl_load_api.pks
 show error
 
 prompt install gateway_pkg.pks
@@ -65,6 +115,10 @@ show error
 
 prompt install f2ndfl_arh_spravki_api.pks
 @@Packages\f2ndfl_arh_spravki_api.pks
+show error
+
+prompt install ndfl2_report_api.pks
+@@Packages\ndfl2_report_api.pks
 show error
 
 prompt install sp_quarters_v.sql
@@ -81,6 +135,10 @@ show error
 
 prompt install gf_people_v.sql
 @@Views\gf_people_v.sql
+show error
+
+prompt install gf_idcards_v.sql
+@@Views\gf_idcards_v.sql
 show error
 
 prompt install zaprvkl_lines_tmp_v.sql
@@ -283,6 +341,14 @@ prompt install f2ndfl_load_totals_v.sql
 @@Views\f2ndfl_load_totals_v.sql
 show error
 
+prompt install f2ndfl_arh_spravki_src_v.sql
+@@Views\f2ndfl_arh_spravki_src_v.sql
+show error
+
+prompt install f2ndfl_arh_spravki_errors_v.sql
+@@Views\f2ndfl_arh_spravki_errors_v.sql
+show error
+
 prompt install f2ndfl_arh_spravki_v.sql
 @@Views\f2ndfl_arh_spravki_v.sql
 show error
@@ -311,6 +377,18 @@ prompt install f_ndfl_load_spisrab_api.pkb
 @@PackageBodies\f_ndfl_load_spisrab_api.pkb
 show error
 
+prompt install f_ndfl_load_nalplat_api.pkb
+@@PackageBodies\f_ndfl_load_nalplat_api.pkb
+show error
+
+prompt install f2ndfl_load_empl_api.pkb
+@@PackageBodies\f2ndfl_load_empl_api.pkb
+show error
+
+prompt install f2ndfl_load_api.pkb
+@@PackageBodies\f2ndfl_load_api.pkb
+show error
+
 prompt install f2ndfl_arh_spravki_api.pkb
 @@PackageBodies\f2ndfl_arh_spravki_api.pkb
 show error
@@ -323,6 +401,10 @@ prompt install dv_sr_lspv_docs_api.pkb
 @@PackageBodies\dv_sr_lspv_docs_api.pkb
 show error
 
+prompt install dv_sr_lspv_prc_api.pkb
+@@PackageBodies\dv_sr_lspv_prc_api.pkb
+show error
+
 prompt install gateway_pkg.pkb
 @@PackageBodies\gateway_pkg.pkb
 show error
@@ -330,11 +412,19 @@ show error
 prompt install gateway_user_pkg.pkb
 @@PackageBodies\gateway_user_pkg.pkb
 show error
-/*
+
+prompt install ndfl2_report_api.pkb
+@@PackageBodies\ndfl2_report_api.pkb
+show error
+
 prompt install FXNDFL_UTIL.pkb
 @@PackageBodies\FXNDFL_UTIL.pkb
 show error
-*/
+
+prompt install FXNDFL_OUT.pkb
+@@PackageBodies\FXNDFL_OUT.pkb
+show error
+
 prompt Install grants.sql
 @@grants.sql
 show error

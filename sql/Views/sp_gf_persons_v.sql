@@ -10,7 +10,7 @@ create or replace view sp_gf_persons_v as
              d.nom_ips,
              case d.det_charge_type when 'RITUAL' then 'S' else 'P' end
   )
-  select 'PENSIONER' contragent_type,
+  select cast('PENSIONER' as varchar2(40)) contragent_type,
          d.nom_vkl,
          d.nom_ips,
          fl.ssylka,
@@ -23,7 +23,7 @@ create or replace view sp_gf_persons_v as
   and    fl.nom_vkl = d.nom_vkl
   --
   and    d.contragent_type = 'P'
-  union all
+  union
   select 'SUCCESSOR' contragent_type,
          d.nom_vkl,
          d.nom_ips,
@@ -40,4 +40,24 @@ create or replace view sp_gf_persons_v as
   and    fl.nom_vkl = d.nom_vkl
   --
   and    d.contragent_type = 'S'
+  union
+  select case when dd.det_charge_type = 'RITUAL' then 'SUCCESSOR' else 'PENSIONER' end contragent_type,
+         dd.nom_vkl,
+         dd.nom_ips,
+         dd.ssylka_fl,
+         dd.gf_person
+  from   dv_sr_lspv_docs_t dd
+  where  dd.det_charge_type is not null
+  union
+  select case
+                when n.ssylka_tip = 1 then
+                 'SUCCESSOR'
+                else
+                 'PENSIONER'
+              end contragent_type,
+         n.nom_vkl,
+         n.nom_ips,
+         n.ssylka_sips,
+         n.gf_person
+  from   f_ndfl_load_nalplat n
 /

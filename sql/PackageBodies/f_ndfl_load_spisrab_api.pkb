@@ -27,15 +27,16 @@ create or replace package body f_ndfl_load_spisrab_api is
   function get_quarter_code(
     p_date date
   ) return sp_quarters_v.code%type is
-    l_result sp_quarters_v.code%type;
   begin
     --
+    return fxndfl_util.get_quarter_row(p_date => p_date).code;
+    /*
     select q.code
     into   l_result
     from   sp_quarters_v q
     where  extract(month from p_date) between q.month_start and q.month_end;
     --
-    return l_result;
+    return l_result;*/
     --
   exception
     when others then

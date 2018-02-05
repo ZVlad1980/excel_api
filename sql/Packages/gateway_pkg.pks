@@ -92,5 +92,44 @@ create or replace package gateway_pkg is
     p_month             number
   );
   
+  /**
+   * Процедура загрузки данных в таблицу f_ndfl_load_nalplat
+   */
+  procedure fill_ndfl_load_nalplat(
+    x_err_msg       out varchar2,
+    p_code_na           varchar2,    
+    p_year              number,
+    p_month             number
+  );
+  
+  /**
+   * Процедура загрузки данных в F2NDFL_LOAD_
+   */
+  procedure f2_ndfl_api(
+    x_err_msg       out varchar2,
+    p_action_code       varchar2,
+    p_code_na           varchar2,    
+    p_year              number
+  );
+  
+  /** JSON не поддержвается в 12.1.0.1!!! Нужна своя реализация!
+   * Процедура request - единая точка входа
+   *
+   * @param x_result_set - результирующий набор данных (курсор)
+   * @param x_status     - статус завершения: (S)uccess/(E)rror/(M)an
+   * @param x_err_code   - код ошибки (аналог HTTP status)
+   * @param x_err_msg    - сообщение об ошибке
+   * @param p_path       - путь запрашиваемого сервиса (пока только одноуровневый)
+   * @param p_req_json   - параметры запроса в формате JSON
+   *
+   /
+  procedure request(
+    x_result_set out sys_refcursor,
+    x_status     out varchar2,
+    x_err_msg    out varchar2,
+    p_path       in  varchar2,
+    p_req_json   in  varchar2
+  );
+  */
 end gateway_pkg;
 /

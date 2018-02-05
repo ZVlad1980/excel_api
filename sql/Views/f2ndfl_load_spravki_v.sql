@@ -36,7 +36,7 @@ create or replace view f2ndfl_load_spravki_v as
          end is_last_spr
   from   f2ndfl_load_spravki sp
   where  1 = 1
-  and    substr(sp.nom_spr, 1, 4) <> 'ноль' 
+  and    nvl(substr(sp.nom_spr, 1, 4), 'XXX') <> 'ноль'
   and    sp.god = dv_sr_lspv_docs_api.get_year
   and    sp.kod_na = 1
 /
