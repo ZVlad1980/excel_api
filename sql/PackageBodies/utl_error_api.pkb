@@ -151,7 +151,7 @@ create or replace package body utl_error_api is
    */
   function get_error_msg return varchar2 is
   begin
-    return get_exception(1, 'U');
+    return get_exception(1, 'F');
   end get_error_msg;
   /**
    *

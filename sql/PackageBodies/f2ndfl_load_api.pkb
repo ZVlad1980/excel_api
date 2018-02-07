@@ -58,8 +58,149 @@ create or replace package body f2ndfl_load_api is
   end set_globals_util_pkg;
   
   /**
-   * Процедура purge_loads - очистка таблиц f2ndfl_load_ и f2ndfl_arh_nomspr
-   *    KOD_NA, GOD, SSYLKA, TIP_DOX, NOM_KORR
+   * Процедура check_legacy_action - проверка допустимости действия
+   *   загрузки или очистки
+   * !!! Пока только контроль допустимости удаления, НЕТ контроля последовательности создания справок!
+   */
+  function check_legacy_action(
+    p_action_code  varchar2,
+    p_code_na      int,
+    p_year         int
+  ) return boolean is
+    l_dummy int;
+    --
+    function exists_xml_ return boolean is
+    begin
+      select 1
+      into   l_dummy
+      from   dual
+      where  exists(
+               select 1
+               from   f_ndfl_arh_xml_files f
+               where  f.god = p_year
+               and    f.kod_formy = 2
+             );
+      return true;
+    exception
+      when no_data_found then
+        return false;
+    end exists_xml_;
+    --
+    function exists_load_spravki_ return boolean is
+    begin
+      select 1
+      into   l_dummy
+      from   dual
+      where exists(
+              select 1 
+              from   f2ndfl_load_spravki s
+              where  s.god = p_year
+              and    s.kod_na = p_code_na
+            );
+      return true;
+    exception
+      when no_data_found then
+        return false;
+    end exists_load_spravki_;
+    --
+    function exists_load_totals_ return boolean is
+    begin
+      select 1
+      into   l_dummy
+      from   dual
+      where exists(
+              select 1 
+              from   f2ndfl_load_itogi s
+              where  s.god = p_year
+              and    s.kod_na = p_code_na
+             union all
+              select 1 
+              from   f2ndfl_load_mes s
+              where  s.god = p_year
+              and    s.kod_na = p_code_na
+             union all
+              select 1 
+              from   f2ndfl_load_vych s
+              where  s.god = p_year
+              and    s.kod_na = p_code_na
+            );
+      return true;
+    exception
+      when no_data_found then
+        return false;
+    end exists_load_totals_;
+    --
+    function exists_arh_spravki_ return boolean is
+    begin
+      select 1
+      into   l_dummy
+      from   dual
+      where exists(
+              select 1
+              from   f2ndfl_arh_spravki ss
+              where  ss.god = p_year
+              and    ss.kod_na = p_code_na
+            );
+      return true;
+    exception
+      when no_data_found then
+        return false;
+    end exists_arh_spravki_;
+    --
+    function exists_arh_totals_ return boolean is
+    begin
+      select 1
+      into   l_dummy
+      from   dual
+      where exists(
+              select 1
+              from   f2ndfl_arh_spravki ss
+              where  ss.god = p_year
+              and    ss.kod_na = p_code_na
+              and    exists  (
+                       select s.r_sprid
+                       from   f2ndfl_arh_itogi s
+                       where  s.r_sprid = ss.id
+                      union all
+                       select s.r_sprid
+                       from   f2ndfl_arh_mes s
+                       where  s.r_sprid = ss.id
+                      union all
+                       select s.r_sprid
+                       from   f2ndfl_arh_vych s
+                       where  s.r_sprid = ss.id
+                     )
+            );
+      return true;
+    exception
+      when no_data_found then
+        return false;
+    end exists_arh_totals_;
+    --
+    
+  begin
+    --
+    if p_action_code in (C_ACT_LOAD_SPRAVKI, C_PRG_LOAD_SPRAVKI) then
+      return not exists_load_totals_;
+    elsif p_action_code in (C_ACT_LOAD_EMPLOYEE, C_ACT_DEL_ZERO_REF) then
+      return not exists_arh_spravki_;
+    elsif p_action_code in (C_ACT_LOAD_TOTAL, C_PRG_LOAD_TOTAL, C_ACT_ENUMERATION, C_PRG_ARH_SPRAVKI) then
+      return not exists_arh_totals_;
+    else
+      return not exists_xml_; --запустить purge_loads с флагом force
+    end if;
+    --
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end check_legacy_action;
+  
+  /**
+   * Процедура purge_loads - очистка таблиц LOAD и ARH
+   *
+   * @param p_action_code
+   *
    */
   procedure delete_from_loads(
     p_action_code  varchar2,
@@ -71,64 +212,120 @@ create or replace package body f2ndfl_load_api is
   ) is
   begin
     --
-    if p_action_code in ('f2_purge_all', 'f2_arh_purge_xml') then
+    if (p_ssylka is not null or p_revenue_type is not null or p_nom_corr is not null) and
+      p_action_code <> C_PRG_LOAD_SPRAVKI then
+      fix_exception('delete_from_loads(' || 
+        p_action_code   || ', ' ||
+        p_code_na       || ', ' ||
+        p_year          || ', ' ||
+        p_ssylka        || ', ' ||
+        p_revenue_type  || ', ' ||
+        p_nom_corr
+      || '): запрещенная комбинация параметров очистки!');
+      raise no_data_found;
+    end if;
+    --
+    if p_action_code in (C_PRG_XML, C_PRG_ARH_TOTAL) then
       update f2ndfl_arh_spravki s
       set    s.r_xmlid = null
       where  s.kod_na = p_code_na
       and    s.god = p_year;
-      --
-      delete from f_ndfl_arh_xml_files x
-      where  x.god = p_year
-      and    x.kod_formy = 2;
-      --
     end if;
     --
-    if p_action_code in ('f2_purge_amount', 'f2_purge_total', 'f2_purge_all') then
+    if p_action_code in (C_PRG_ARH_SPRAVKI) then
+      update f2ndfl_arh_nomspr t
+      set    t.nom_spr = null
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;
+      --
+      update f2ndfl_load_spravki t
+      set    t.nom_spr = null,
+             t.r_sprid = null
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;
+   end if;
+   --
+   if p_action_code in (C_PRG_XML, C_PRG_ARH_TOTAL, C_PRG_ARH_SPRAVKI, C_PRG_LOAD_TOTAL, C_PRG_LOAD_SPRAVKI, C_PRG_LOAD_ALL) then
+     delete from f_ndfl_arh_xml_files x
+      where  x.god = p_year
+      and    x.kod_formy = 2;
+   end if;
+   --
+   if p_action_code in (C_PRG_ARH_TOTAL, C_PRG_ARH_SPRAVKI, C_PRG_LOAD_TOTAL, C_PRG_LOAD_SPRAVKI, C_PRG_LOAD_ALL) then
+      delete from f2ndfl_arh_itogi t
+      where  t.r_sprid in (
+               select s.id
+               from   f2ndfl_arh_spravki s
+               where  s.kod_na = p_code_na
+               and    s.god = p_year
+             );
+      --
+      delete from f2ndfl_arh_vych t
+      where  t.r_sprid in (
+               select s.id
+               from   f2ndfl_arh_spravki s
+               where  s.kod_na = p_code_na
+               and    s.god = p_year
+             );
+      --
+      delete from f2ndfl_arh_mes t
+      where  t.r_sprid in (
+               select s.id
+               from   f2ndfl_arh_spravki s
+               where  s.kod_na = p_code_na
+               and    s.god = p_year
+             );
+    end if;
+    --
+    if p_action_code in (C_PRG_LOAD_TOTAL, C_PRG_LOAD_SPRAVKI, C_PRG_LOAD_ALL) then
+      delete from f2ndfl_arh_nomspr t
+      where  t.kod_na = p_code_na
+      and    t.god = p_year;
+    end if;
+    --
+    /*
+    p_ssylka      
+    p_revenue_type
+    p_nom_corr    
+    */
+    if p_action_code in (C_PRG_LOAD_TOTAL, C_PRG_LOAD_SPRAVKI, C_PRG_LOAD_ALL) then
       delete from f2ndfl_load_itogi t
       where  1=1
-      and    t.nom_korr = coalesce(p_nom_corr, t.nom_korr)
-      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
-      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
+      and    t.nom_korr = nvl(p_nom_corr, t.nom_korr)
+      and    t.tip_dox = nvl(p_revenue_type, t.tip_dox)
+      and    t.ssylka = nvl(p_ssylka, t.ssylka)
       and    t.kod_na = p_code_na
       and    t.god = p_year;
       --
       delete from f2ndfl_load_vych t
       where  1=1
-      and    t.nom_korr = coalesce(p_nom_corr, t.nom_korr)
-      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
-      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
-      and    t.kod_na = p_code_na
-      and    t.god = p_year;
-    end if;
-    --
-    if p_action_code in ('f2_purge_amount', 'f2_purge_mes', 'f2_purge_total', 'f2_purge_all') then
-      delete from f2ndfl_load_mes t
-      where  1=1
-      and    t.nom_korr = coalesce(p_nom_corr, t.nom_korr)
-      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
-      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
-      and    t.kod_na = p_code_na
-      and    t.god = p_year;
-    end if;
-    --
-    if p_action_code in ('f2_purge_pers', 'f2_purge_nomspr', 'f2_purge_all') then
-      delete from f2ndfl_arh_nomspr t
-      where  1=1
-      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
-      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
-      and    t.kod_na = p_code_na
-      and    t.god = p_year;
-    end if;
-    --
-    if p_action_code in ('f2_purge_pers', 'f2_purge_spravki', 'f2_purge_nomspr', 'f2_purge_all') then
-      delete from f2ndfl_load_spravki t
-      where  1=1
-      and    t.nom_korr = coalesce(p_nom_corr, t.nom_korr)
-      and    t.tip_dox = coalesce(p_revenue_type, t.tip_dox)
-      and    t.ssylka = coalesce(p_ssylka, t.ssylka)
+      and    t.nom_korr = nvl(p_nom_corr, t.nom_korr)
+      and    t.tip_dox = nvl(p_revenue_type, t.tip_dox)
+      and    t.ssylka = nvl(p_ssylka, t.ssylka)
       and    t.kod_na = p_code_na
       and    t.god = p_year;
       --
+      delete from f2ndfl_load_mes t
+      where  1=1
+      and    t.nom_korr = nvl(p_nom_corr, t.nom_korr)
+      and    t.tip_dox = nvl(p_revenue_type, t.tip_dox)
+      and    t.ssylka = nvl(p_ssylka, t.ssylka)
+      and    t.kod_na = p_code_na
+      and    t.god = p_year;
+    end if;
+    --
+    if p_action_code in (C_PRG_LOAD_SPRAVKI, C_PRG_LOAD_ALL) then
+      delete from f2ndfl_arh_nomspr t
+      where  1=1
+      and    t.tip_dox = nvl(p_revenue_type, t.tip_dox)
+      and    t.ssylka = nvl(p_ssylka, t.ssylka)
+      and    t.kod_na = p_code_na
+      and    t.god = p_year;
+      --
+      delete from f2ndfl_load_spravki t
+      where  1=1
+      and    t.kod_na = p_code_na
+      and    t.god = p_year;
     end if;
     --
   exception
@@ -138,12 +335,19 @@ create or replace package body f2ndfl_load_api is
   end delete_from_loads;
   
   /**
-   * Процедура purge_loads - очистка таблиц f2ndfl_load_ и f2ndfl_arh_nomspr
+   * Процедура purge_loads удаление данных из таблиц LOAD и ARH
+   *
+   * @param p_action_code - код действия, см. C_PRG_
+   * @param p_code_na     - 
+   * @param p_year        - 
+   * @param p_force       - флаг форсированного режима (без него не будут работать режимы C_PRG_LOAD_ALL, C_PRG_XML)
+   * 
    */
   procedure purge_loads(
     p_action_code  varchar2,
     p_code_na      int,
-    p_year         int
+    p_year         int,
+    p_force        boolean default false
   ) is
     --
     l_process_row  dv_sr_lspv_prc_t%rowtype;
@@ -176,8 +380,14 @@ create or replace package body f2ndfl_load_api is
       p_process_row => l_process_row
     );
     --
-    if p_action_code not like '%arh%' and exists_arh_ then
-      fix_exception('Справки за ' || p_year || ' скопированы в arh! Очистка load невозможна!');
+    if not check_legacy_action(p_action_code, p_code_na, p_year) 
+        or (p_action_code in (C_PRG_LOAD_ALL, C_PRG_XML) and not p_force)
+      then
+      fix_exception('purge_loads(' ||
+        p_action_code || ', ' ||
+        p_code_na     || ', ' ||
+        p_year
+      || '): удаление отклонено');
       raise no_data_found;
     end if;
     --
@@ -304,6 +514,42 @@ create or replace package body f2ndfl_load_api is
       fix_exception;
       raise;
   end fill_load_spravki;
+  
+  /**
+   * Процедура загрузки данных по сотрудникам фонда
+   *
+   *  p_required - флаг обязательности наличия данных, если false и нет данных XML - пропускаем
+   *
+   */
+  procedure load_employee(
+    p_globals in out nocopy g_util_par_type,
+    p_required boolean
+  ) is
+    --
+  begin
+    --
+    begin
+      f2ndfl_load_empl_api.merge_load_xml(
+        p_code_na => p_globals.KODNA,
+        p_year    => p_globals.GOD
+      );
+    exception
+      when f2ndfl_load_empl_api.e_no_xml_found then
+        if p_required then
+          --если загрузка XML обязательна - пропрасываем ошибку дальше
+          raise f2ndfl_load_empl_api.e_no_xml_found;
+        else
+          --иначе - чистим стек ошибок!
+          utl_error_api.init_exceptions;
+        end if;
+    end;
+    --
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end load_employee;
+  
   
   /**
    *
@@ -516,6 +762,11 @@ create or replace package body f2ndfl_load_api is
     l_refs_tbl l_refs_tbl_type;
   begin
     --
+    if not check_legacy_action(C_ACT_DEL_ZERO_REF, p_globals.KODNA, p_globals.GOD) then
+      fix_exception('delete_zero_ref: удаление справок с 0 доходом не доступно, т.к. заполнены таблицы ARH');
+      raise no_data_found;
+    end if;
+    --
     open l_zero_ref_cur(p_globals.KODNA, p_globals.GOD);
     fetch l_zero_ref_cur
       bulk collect into l_refs_tbl;
@@ -525,7 +776,7 @@ create or replace package body f2ndfl_load_api is
     for i in 1..l_refs_tbl.count loop
       dbms_output.put('  ' || lpad(to_char(i), 3, ' ') || '. ' || to_char(l_refs_tbl(i).ssylka) || '/' || to_char(l_refs_tbl(i).tip_dox) || '...');
       delete_from_loads(
-        p_action_code  => 'f2_purge_all',
+        p_action_code  => C_PRG_LOAD_SPRAVKI,
         p_code_na      => l_refs_tbl(i).kod_na,
         p_year         => l_refs_tbl(i).god,
         p_ssylka       => l_refs_tbl(i).ssylka,
@@ -668,8 +919,7 @@ create or replace package body f2ndfl_load_api is
   end copy_to_arh;
   
   /**
-   * Процедура enum_refs - нумерация справок 2НДФЛ
-   *  Вызывается только после полного формирования Loads и NOMSPR
+   * Процедура init_xml - инициализация файлов XML
    */
   procedure init_xml(
     p_globals in out nocopy g_util_par_type
@@ -691,6 +941,11 @@ create or replace package body f2ndfl_load_api is
   end init_xml;
   
   /**
+   * Процедура create_2ndfl_refs создает справки 2НДФЛ
+   * 
+   * @ p_action_code - код действия, см. в специи пакета константы C_ACT_
+   * @ p_code_na     - 
+   * @ p_year        - 
    *
    */
   procedure create_2ndfl_refs(
@@ -719,13 +974,43 @@ create or replace package body f2ndfl_load_api is
       p_process_row => l_globals.process_row
     );
     --
-    if p_action_code in ('f2_load_spravki', 'f2_load_all') then
+    if not check_legacy_action(p_action_code => p_action_code, p_code_na => l_globals.KODNA, p_year => l_globals.GOD) 
+      then
+      fix_exception('create_2ndfl_refs(' ||
+        p_action_code || ', ' ||
+        p_code_na     || ', ' ||
+        p_year        || ', ' ||
+      '): действие не доступно.');
+    end if;
+    
+    --Очистка перед выполнением
+    delete_from_loads(
+      p_action_code  => case p_action_code
+                          when C_ACT_LOAD_ALL      then C_PRG_LOAD_ALL    
+                          when C_ACT_LOAD_SPRAVKI  then C_PRG_LOAD_SPRAVKI
+                          when C_ACT_LOAD_TOTAL    then C_PRG_LOAD_TOTAL  
+                          when C_ACT_LOAD_EMPLOYEE then C_PRG_ARH_SPRAVKI    
+                          when C_ACT_ENUMERATION   then C_PRG_ARH_SPRAVKI 
+                          when C_ACT_COPY2ARH      then C_PRG_ARH_TOTAL   
+                          when C_ACT_INIT_XML      then C_PRG_XML         
+                          else null
+                        end,
+      p_code_na      => p_code_na    ,
+      p_year         => p_year       
+    );
+    --
+    if p_action_code in (C_ACT_LOAD_EMPLOYEE, C_ACT_LOAD_SPRAVKI, C_ACT_LOAD_ALL) then
+      load_employee(
+        p_globals  => l_globals,
+        p_required => case p_action_code when C_ACT_LOAD_SPRAVKI then false else true end
+      );
+    end if;
+    --
+    if p_action_code in (C_ACT_LOAD_SPRAVKI, C_ACT_LOAD_ALL) then
       fill_load_spravki(
         p_globals => l_globals
       );
-    end if;
-    --  
-    if p_action_code in ('f2_load_spravki', 'f2_arh_nomspr', 'f2_load_all') then
+      --
       fill_arh_nomspr(
         p_globals => l_globals
       );
@@ -734,28 +1019,17 @@ create or replace package body f2ndfl_load_api is
         p_globals => l_globals
       );
       --
-      l_result := true;
     end if;
     --  
-    if p_action_code in ('f2_load_mes', 'f2_load_total', 'f2_load_all') then
+    if p_action_code in (C_ACT_LOAD_TOTAL, C_ACT_LOAD_ALL) then
       --
       fill_load_mes(
         p_globals => l_globals
       );
       --
-      l_result := true;
-    end if;
-    --  
-    if p_action_code in ('f2_load_itogi', 'f2_load_total', 'f2_load_all') then
-      --
       fill_load_total(
         p_globals => l_globals
       );
-      --
-      l_result := true;
-    end if;
-    --
-    if p_action_code in ('f2_delete_zero_ref', 'f2_load_itogi', 'f2_load_total', 'f2_load_all') then
       --
       delete_zero_ref(
         p_globals => l_globals
@@ -764,7 +1038,7 @@ create or replace package body f2ndfl_load_api is
       l_result := true;
     end if;
     --
-    if p_action_code in ('f2_enumeration', 'f2_load_all') then
+    if p_action_code in (C_ACT_ENUMERATION, C_ACT_LOAD_ALL) then
       --
       enum_refs(
         p_globals => l_globals
@@ -773,7 +1047,7 @@ create or replace package body f2ndfl_load_api is
       l_result := true;
     end if;
     --
-    if p_action_code in ('f2_copy2arh', 'f2_load_all') then
+    if p_action_code in (C_ACT_COPY2ARH, C_ACT_LOAD_ALL) then
       --
       copy_to_arh(
         p_globals => l_globals
@@ -782,7 +1056,7 @@ create or replace package body f2ndfl_load_api is
       l_result := true;
     end if;
     --
-    if p_action_code in ('f2_arh_init_xml', 'f2_load_all') then
+    if p_action_code in (C_ACT_INIT_XML, C_ACT_LOAD_ALL) then
       --
       init_xml(
         p_globals => l_globals

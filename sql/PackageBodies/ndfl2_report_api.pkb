@@ -676,6 +676,7 @@ create or replace package body ndfl2_report_api is
             from   f_ndfl_load_nalplat n
             where  n.god = dv_sr_lspv_docs_api.get_year
             and    n.kod_na = 1
+            and    n.sgd_isprvnol = 0
           ),
           lspv_s as (
             select d.nom_vkl, 
@@ -728,6 +729,7 @@ create or replace package body ndfl2_report_api is
                     or
                      (n.is_resident <> p.is_resident)
                    )
+            and    not(n.nom_vkl is null and p.exists_revenue = 'N')
           )
           select p.nom_vkl_np,
                  p.nom_ips_np,
