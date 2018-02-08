@@ -354,7 +354,7 @@ create or replace package body f2ndfl_load_api is
     if p_action_code in (C_PRG_LOAD_SPRAVKI, C_PRG_EMPLOYEES, C_PRG_LOAD_ALL) then
       delete from f2ndfl_arh_nomspr t
       where  1=1
-      and    p_nom_corr = 0
+      and    nvl(p_nom_corr, 0) = 0
       and    t.tip_dox = nvl(p_revenue_type, t.tip_dox)
       and    t.ssylka = nvl(p_ssylka, t.ssylka)
       and    t.kod_na = p_code_na

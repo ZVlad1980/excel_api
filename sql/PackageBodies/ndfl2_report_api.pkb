@@ -147,6 +147,7 @@ create or replace package body ndfl2_report_api is
                  end status_np, 
                  e.kod_ud_lichn, 
                  e.ser_nom_doc,
+                 s_prev.nom_spr         prev_nom_spr        ,
                  s_prev.inn_fl          prev_inn_fl         ,
                  s_prev.grazhd          prev_grazhd         ,
                  s_prev.status_np       prev_status_np      ,

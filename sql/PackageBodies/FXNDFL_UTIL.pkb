@@ -109,9 +109,6 @@ procedure Zapoln_Buf_NalogIschisl( pSPRID in number ) as
   nKodNA    number;
   nGod        number;
   nPeriod    number;
-  nKFLUch number;
-  nKFLRab number;
-  nKFLObs number;
 begin
         -- выборка периода справки
         Select KOD_NA,GOD, PERIOD into  nKodNA,nGod, nPeriod  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
@@ -295,9 +292,6 @@ end Zapoln_Buf_NalogIschisl;
     nkodna    number;
     ngod      number;
     nperiod   number;
-    nkfluch   number;
-    nkflrab   number;
-    nkflobs   number;
   begin
     perrinfo := null;
 
@@ -372,7 +366,7 @@ end Zapoln_Buf_NalogIschisl;
     ngod      number;
     nperiod   number;
     nnomkor   number;
-    nrit      number;
+    --
   begin
 
     -- выборка периода справки
@@ -428,8 +422,6 @@ end Zapoln_Buf_NalogIschisl;
 --                KFL_RAB - число НП-Работников с доходом больше ноля
 --                KFL_SOVP - число НП одновременно в двух списках      
 procedure Raschet_Chisla_NalPlat( pErrInfo out varchar2, pSPRID in number ) as 
-  dTermBeg date;
-  dTermEnd date;
   nKodNA   number;
   nGod     number;
   nPeriod  number;
@@ -443,13 +435,12 @@ begin
           -- выборка периода справки
           Select KOD_NA,GOD, PERIOD, NOM_KORR into  nKodNA,nGod, nPeriod, nNomKor  from f6NDFL_LOAD_SPRAVKI where R_SPRID=pSPRID;
          
-          dTermBeg :=   to_date( '01.01.'||to_char(nGod),'dd.mm.yyyy' );
          
           case nPeriod
-               when 21 then dTermEnd := add_months(dTermBeg,3);         
-               when 31 then dTermEnd := add_months(dTermBeg,6);        
-               when 33 then dTermEnd := add_months(dTermBeg,9);        
-               when 34 then dTermEnd := add_months(dTermBeg,12);      
+               when 21 then null;      
+               when 31 then null;     
+               when 33 then null;     
+               when 34 then null;    
                else pErrInfo :='Ошибка: значение '||to_char(nPeriod)||' параметра pPeriod не равно 21, 31, 33 или 34 (коды кварталов).'; return;                
           end case;          
                          
@@ -499,8 +490,6 @@ procedure Raschet_Chisla_SovpRabNp( pErrInfo out varchar2, pSPRID in number ) as
   nGod     number;
   nPeriod  number;
   nNomKor  number;
-  nKFLUch  number;
-  nKFLRab  number;
   nKFLObs  number;
 begin
           pErrInfo := Null;  
@@ -746,11 +735,11 @@ end Load_Numerator;
      
 -- проставить SSYLKA и FK_CONTRAGENT в счетчик для KOD_NA=1
    function UstIdent_GAZFOND( pGod in number ) return number as
-   dTermBeg date;
-   dTermEnd date;
+   --dTermBeg date;
+   --dTermEnd date;
    begin
-
-        dTermBeg := to_date( '01.01.'||trim(to_char(pGOD  ,'0000')),'dd.mm.yyyy');
+null;
+        /*dTermBeg := to_date( '01.01.'||trim(to_char(pGOD  ,'0000')),'dd.mm.yyyy');
         dTermEnd := to_date( '01.01.'||trim(to_char(pGOD+1,'0000')),'dd.mm.yyyy');
 
 /*
@@ -1754,7 +1743,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                                      on vc.KOD_NA=it.KOD_NA and vc.GOD=it.GOD and vc.SSYLKA=it.SSYLKA and vc.TIP_DOX=it.TIP_DOX 
                                         and vc.NOM_KORR=it.NOM_KORR and vc.KOD_STAVKI=it.KOD_STAVKI
                                  where it.KOD_NA=pKodNA and it.GOD=pGod and it.KOD_STAVKI=13 
-                                 and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+                                 and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1
                              ) group by R_SPRID   
                         )   
                     )     
@@ -1771,8 +1760,8 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                          inner join f2NDFL_ARH_NOMSPR ns 
                             on ns.KOD_NA=it.KOD_NA and ns.GOD=it.GOD and ns.SSYLKA=it.SSYLKA and ns.TIP_DOX=it.TIP_DOX and ns.FLAG_OTMENA=0 and it.NOM_KORR=0
                      where it.KOD_NA=pKodNA and it.GOD=pGod and it.KOD_STAVKI=30  
-                     and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-                     group by ls.R_SPRID                       
+                     and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1 --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+                     group by ls.R_SPRID
                 ) rs 
         union all
         -- 35% (просто копируем то, что прислала бухгалтерия)
@@ -1782,7 +1771,7 @@ procedure Numerovat_Spravki( pKodNA in number, pGod in number ) as
                     on ns.KOD_NA=it.KOD_NA and ns.GOD=it.GOD and ns.SSYLKA=it.SSYLKA and ns.TIP_DOX=it.TIP_DOX and ns.FLAG_OTMENA=0 and it.NOM_KORR=0
                  inner join f2NDFL_ARH_SPRAVKI ar on ns.KOD_NA=ar.KOD_NA and ns.GOD=ar.GOD and ar.NOM_SPR=ns.NOM_SPR   
              where it.KOD_NA=pKodNA and it.GOD=pGod and it.KOD_STAVKI=35  
-             and   nvl(ar.id, -1) = nvl(gl_SPRID, nvl(ar.id, -1))
+             and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ar.id, -1) then 1 else 0 end = 1 --nvl(ar.id, -1) = nvl(gl_SPRID, nvl(ar.id, -1))
         ;
 
        if gl_COMMIT then Commit; end if;
@@ -1805,7 +1794,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
                 from f2NDFL_LOAD_MES mo
                         inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
                 where mo.KOD_NA=pKodNA and mo.GOD=pGod
-                and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+                and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1 --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
                 group by  ls.R_SPRID, mo.KOD_STAVKI, mo.MES, mo.DOH_KOD_GNI, mo.VYCH_KOD_GNI;  
        if gl_COMMIT then Commit; end if;
         
@@ -1827,7 +1816,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
             from f2NDFL_LOAD_VYCH mo
                     inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
             where mo.KOD_NA=pKodNA and mo.GOD=pGod 
-            and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+            and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1--nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
             group by  ls.R_SPRID, mo.KOD_STAVKI, mo.VYCH_KOD_GNI;
             
        if gl_COMMIT then Commit; end if;
@@ -1850,7 +1839,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
             from f2NDFL_LOAD_UVED mo
                     inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
             where mo.KOD_NA=pKodNA and mo.GOD=pGod
-            and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
+            and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1; --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
             /*           
             Select a2.ID, MO.KOD_STAVKI, MO.SCHET_KRATN, MO.NOMER_UVED, MO.DATA_UVED, MO.IFNS_KOD, MO.UVED_TIP_VYCH
             from f2NDFL_LOAD_UVED mo
@@ -6305,7 +6294,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ls.god = gl_god
         and    ls.tip_dox = gl_tipdox
         and    ls.nom_korr = gl_nomkor
-        and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+        and    case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1--nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         and    ls.storno_flag = 0
         and    ls.status_np = pnpstatus
         and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
@@ -6402,7 +6391,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ls.nom_korr = gl_nomkor
         and    ls.storno_flag <> 0
         and    ls.status_np = pnpstatus
-        and    nvl(ls.r_sprid, -1) = nvl(gl_sprid, nvl(ls.r_sprid, -1))
+        and    case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1--nvl(ls.r_sprid, -1) = nvl(gl_sprid, nvl(ls.r_sprid, -1))
         and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
         and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
         and    ds.data_op >= dtermbeg
@@ -6445,7 +6434,7 @@ begin
                  ) dvsr                
                 inner join F2NDFL_LOAD_SPRAVKI ls on dvsr.SSYLKA_FL=ls.SSYLKA    
             where ls.KOD_NA=gl_KODNA and ls.GOD=gl_god and ls.TIP_DOX=1 and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0
-            and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+            and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1--nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
             group by dvsr.SSYLKA_FL   
             having sum(dvsr.SUMMA)<>0
         );  
@@ -6530,7 +6519,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ls.god = gl_god
         and    ls.tip_dox = gl_tipdox
         and    ls.nom_korr = gl_nomkor
-        and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+        and    case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1 --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         and    ls.storno_flag = 0
         and    ls.status_np = pnpstatus
         and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
@@ -6660,7 +6649,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ls.god = gl_god
         and    ls.tip_dox = gl_tipdox
         and    ls.nom_korr = gl_nomkor
-        and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+        and    case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1 --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         and    ls.storno_flag = 0
         and    ls.status_np = pnpstatus
         and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
@@ -6758,7 +6747,7 @@ cursor cPBS( pNPStatus in number ) is
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                          inner join F2NDFL_LOAD_SPRAVKI ls on lspv.SSYLKA_FL=ls.SSYLKA 
                     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus    
-                        and nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+                        and case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1 --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
                         and ds.SHIFR_SCHET= 55      -- выкупная
                         and ds.DATA_OP >= dTermBeg  
                         and ds.DATA_OP <  dTermEnd
@@ -6791,7 +6780,7 @@ cursor cPBS( pNPStatus in number ) is
                      ) dvsr                
                     inner join F2NDFL_LOAD_SPRAVKI ls on dvsr.SSYLKA=ls.SSYLKA    
                 where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus
-                and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+                and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1--nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
         ) where DOH_SUM<>0
           order by SSYLKA, MES, SUB_SHIFR_SCHET;
 
@@ -6885,6 +6874,75 @@ begin
              ls.ssylka,
              ls.tip_dox,
              ls.nom_korr,
+             ds.month,
+             coalesce(td.benefit_code, to_char(-1 * ds.shifr_schet)),
+             sum(coalesce((td.amount / td.amount_all * ds.summa), ds.summa)) amount_new,
+             13
+      from   (select case coalesce(ds2.shifr_schet, 60)
+                       when 60 then
+                        1
+                       else
+                        3
+                     end tip_dox,
+                     ds.nom_vkl,
+                     ds.nom_ips,
+                     ds.shifr_schet,
+                     ds.summa,
+                     extract(month from ds.data_op) month
+              from   dv_sr_lspv_v ds,
+                     dv_sr_lspv_v ds2
+              where  1 = 1
+              --
+              and    ds2.ssylka_doc(+) = ds.ssylka_doc
+              and    ds2.shifr_schet(+) in (55, 60)
+              and    ds2.nom_ips(+) = ds.nom_ips
+              and    ds2.nom_vkl(+) = ds.nom_vkl
+              --
+              and    ds.shifr_schet > 1000
+              and    ds.data_op >= dtermbeg --to_date(20170101, 'yyyymmdd')
+              and    ds.data_op < dtermend --to_date(20180101, 'yyyymmdd')
+              and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
+              and    ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
+             ) ds,
+             lateral (select ls.kod_na,
+                             ls.god,
+                             ls.ssylka,
+                             ls.tip_dox,
+                             ls.nom_korr
+                      from   f2ndfl_load_spravki ls,
+                             sp_lspv             sp
+                      where  case when gl_sprid is null then 1 when gl_sprid = nvl(ls.r_sprid, -1) then 1 else 0 end = 1-- = nvl(b7, nvl(ls.r_sprid, -1))nvl(ls.r_sprid, -1) = nvl(gl_sprid, nvl(ls.r_sprid, -1))
+                      and    ls.kod_na = gl_kodna
+                      and    ls.god = gl_god
+                      and    ls.nom_korr = 0
+                      and    ls.status_np = 1
+                      and    ls.tip_dox = ds.tip_dox
+                      and    ls.ssylka = sp.ssylka_fl
+                      and    sp.nom_vkl = ds.nom_vkl
+                      and    sp.nom_ips = ds.nom_ips
+                     ) ls,
+             lateral (select td.benefit_code,
+                             td.amount,
+                             td.amount_all
+                      from   taxdeductions_v td
+                      where  td.nom_vkl = ds.nom_vkl
+                      and    td.nom_ips = ds.nom_ips
+                      and    td.shifr_schet = ds.shifr_schet
+             )(+) td
+      where  1 = 1
+      group  by ls.kod_na,
+                ls.god,
+                ls.ssylka,
+                ls.tip_dox,
+                ls.nom_korr,
+                ds.month, --extract(month from ds.data_op),
+                td.benefit_code,
+                ds.shifr_schet;
+      /*select ls.kod_na,
+             ls.god,
+             ls.ssylka,
+             ls.tip_dox,
+             ls.nom_korr,
              extract(month from ds.data_op),
              coalesce(td.benefit_code, to_char(-1 * ds.shifr_schet)),
              sum(coalesce((td.amount/td.amount_all * ds.summa), ds.summa)) amount_new,
@@ -6913,7 +6971,7 @@ begin
                and    ds2.ssylka_doc = ds.ssylka_doc
              )
       and    ls.nom_korr = gl_nomkor
-      and    nvl(ls.r_sprid, -1) = nvl(gl_sprid, nvl(ls.r_sprid, -1))
+      and    case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1
       and    ls.status_np = 1 -- резиденты
       and    ds.shifr_schet > 1000 -- вычеты
       and    ds.data_op >= dtermbeg --to_date(20170101, 'yyyymmdd')--dtermbeg -- за год
@@ -6925,7 +6983,7 @@ begin
                 ls.nom_korr,
                 extract(month from ds.data_op),
                 td.benefit_code,
-                ds.shifr_schet;
+                ds.shifr_schet;*/
           --
     if gl_COMMIT then Commit; end if;
     
@@ -7008,7 +7066,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
             ) group by SSYLKA_FL
         ) nal on ls.SSYLKA=nal.SSYLKA_FL
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STATUS_NP=pNPStatus
-    and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
+    and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1; --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -7122,7 +7180,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                 group by sp.SSYLKA_FL             
             ) nal on ls.SSYLKA=nal.SSYLKA_FL    
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=0 and ls.STATUS_NP=pNPStatus
-    and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
+    and    case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1; --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
 
 type tPBS is table of cPBS%rowtype;
 aPBS tPBS; 
@@ -7261,7 +7319,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
   and    ls.nom_korr = gl_nomkor
   and    storno_flag = 0
   and    ls.status_np = pnpstatus
-  and    nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
+  and    case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1;--nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
 
 
 type tPBS is table of cPBS%rowtype;
@@ -7395,7 +7453,7 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
                 ) group by SSYLKA_FL               
             ) nal on ls.SSYLKA=nal.SSYLKA_FL        
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and STORNO_FLAG=1 and ls.STATUS_NP=pNPStatus
-    and   nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
+    and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1;--nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1));
 
 
 type tPBS is table of cPBS%rowtype;
@@ -8422,8 +8480,6 @@ end Parse_xml_izBuh;
   procedure calc_benefit_usage(
     p_spr_id f2ndfl_arh_spravki.id%type
   ) is
-    l_from_date date;
-    l_end_date  date;
   begin
     --
     update f2ndfl_arh_vych av
@@ -9541,8 +9597,8 @@ end Parse_xml_izBuh;
             where  1=1
             and    ai.vzysk_ifns <> 0
             and    ai.r_sprid = s.id
-            and    s.god = 2017
-            and    s.kod_na = 1
+            and    s.god = p_year
+            and    s.kod_na = p_code_na
             group by ai.r_sprid
             having max(case when ai.vzysk_ifns <> 0 then 2 else 1 end) = 2
           ) u
