@@ -24,7 +24,8 @@ create or replace package f2ndfl_load_empl_api is
    */
   procedure merge_load_xml(
     p_code_na    int,
-    p_year       int
+    p_year       int,
+    p_commit     boolean default false
   );
 
 end f2ndfl_load_empl_api;

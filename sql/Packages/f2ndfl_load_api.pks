@@ -5,7 +5,7 @@ create or replace package f2ndfl_load_api is
   -- Purpose : 
   
   --Коды действий процедуры create_2ndfl_refs
-  C_ACT_LOAD_ALL      constant varchar2(30) := 'f2_load_spravki';       --Полный цикл создания справок 2НДФЛ
+  C_ACT_LOAD_ALL      constant varchar2(30) := 'f2_load_all';           --Полный цикл создания справок 2НДФЛ
   C_ACT_LOAD_SPRAVKI  constant varchar2(30) := 'f2_load_spravki';       --Загрузка F2NDFL_LOAD_SPRAVKI и F2NDFL_ARH_NOMSPR
   C_ACT_LOAD_TOTAL    constant varchar2(30) := 'f2_load_total';         --Загрузка F2NDFL_LOAD_MES, F2NDFL_LOAD_VYCH, F2NDFL_LOAD_ITOGI + удаление справок с 0 доходом (пока еще могут быть)
   C_ACT_LOAD_EMPLOYEE constant varchar2(30) := 'f2_load_employee';      --Загрузка данных по сотрудникам фонда (данные д.б. в таблице f_ndfl_load_employees_xml
@@ -19,9 +19,14 @@ create or replace package f2ndfl_load_api is
   C_PRG_LOAD_ALL      constant varchar2(30) := 'f2_purge_all';          --Удаление всей информации из LOAD и ARH
   C_PRG_LOAD_SPRAVKI  constant varchar2(30) := 'f2_purge_load_spravki'; --Удаление F2NDFL_ARH_NOMSPR и F2NDFL_LOAD_SPRAVKI
   C_PRG_LOAD_TOTAL    constant varchar2(30) := 'f2_purge_load_total';   --Удаление суммовых показателей из F2NDFL_LOAD_
+  C_PRG_EMPLOYEES     constant varchar2(30) := 'f2_purge_employees';    --Удаление данных по сотрудникам
   C_PRG_ARH_SPRAVKI   constant varchar2(30) := 'f2_purge_arh_spravki';  --Удаление ARH_SPRAVKI, очистка нумерации
   C_PRG_ARH_TOTAL     constant varchar2(30) := 'f2_purge_arh_total';    --Удаление суммовых показателей из F2NDFL_ARH_
   C_PRG_XML           constant varchar2(30) := 'f2_purge_xml';          --Удаление файлов XML, с предварительной отвязкой справок от них
+  
+  --
+  e_action_forbidden exception; --Действие запрещено!
+  e_unknown_action   exception; --Неизвестный код действия!
   
   /**
    * Процедура purge_loads удаление данных из таблиц LOAD и ARH
@@ -31,6 +36,8 @@ create or replace package f2ndfl_load_api is
    * @param p_year        - 
    * @param p_force       - флаг форсированного режима (без него не будут работать режимы C_PRG_LOAD_ALL, C_PRG_XML)
    * 
+   * Если действие запрещено - e_action_forbidden
+   *
    */
   procedure purge_loads(
     p_action_code  varchar2,
@@ -45,6 +52,8 @@ create or replace package f2ndfl_load_api is
    * @ p_action_code - код действия, см. в специи пакета константы C_ACT_
    * @ p_code_na     - 
    * @ p_year        - 
+   * 
+   * Если действие запрещено - e_action_forbidden
    *
    */
   procedure create_2ndfl_refs(

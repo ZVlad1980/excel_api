@@ -55,6 +55,10 @@ show error
 prompt install f2ndfl_load_spravki.sql
 @@Tables\f2ndfl_load_spravki.sql
 show error
+
+prompt install f2ndfl_arh_nomspr.sql
+@@Tables\f2ndfl_arh_nomspr.sql
+show error
 */
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
@@ -178,6 +182,10 @@ show error
 
 prompt install zaprvkl_part_ident_v.sql
 @@Views\zaprvkl_part_ident_v.sql
+show error
+
+prompt install dv_sr_lspv_v.sql
+@@Views\dv_sr_lspv_v.sql
 show error
 
 prompt install dv_sr_lspv_acc_v.sql

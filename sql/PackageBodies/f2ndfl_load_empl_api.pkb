@@ -548,7 +548,8 @@ create or replace package body f2ndfl_load_empl_api is
    */
   procedure merge_load_xml(
     p_code_na    int,
-    p_year       int
+    p_year       int,
+    p_commit     boolean default false
   ) is
     l_data_row       f_ndfl_load_employees_xml%rowtype;
     l_parser_version int;
@@ -597,11 +598,16 @@ create or replace package body f2ndfl_load_empl_api is
       p_year           => p_year
     );
     --
-    commit;
+    if p_commit then
+      commit;
+    end if;
     --
   exception
     when others then
-      rollback;
+      if p_commit then
+        rollback;
+      end if;
+      --
       fix_exception('merge_load_xml(' || p_code_na || ', '||p_year||')');
       raise;
   end merge_load_xml;

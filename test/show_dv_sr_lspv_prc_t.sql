@@ -10,3 +10,9 @@ select pt.*
 from   prc p,
        dv_sr_gf_persons_t pt
 where  pt.process_id = p.id
+/
+/* -- Check is null
+select *
+from   dv_sr_gf_persons_t pt
+where  pt.gf_person_new is null
+*/
