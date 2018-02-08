@@ -548,25 +548,35 @@ create or replace package body f2ndfl_load_empl_api is
    */
   procedure merge_load_xml(
     p_code_na    int,
-    p_year       int
+    p_year       int,
+    p_commit     boolean default false
   ) is
     l_data_row       f_ndfl_load_employees_xml%rowtype;
     l_parser_version int;
   begin
     --
-    select n.id, n.code_na, n.year, n.api_version, n.form_version
-    into   l_data_row.id,
-           l_data_row.code_na,
-           l_data_row.year,
-           l_data_row.api_version,
-           l_data_row.form_version
-    from   f_ndfl_load_employees_xml n
-    where  n.id = (
-             select max(nn.id)keep(dense_rank last order by nn.created_at)
-             from   f_ndfl_load_employees_xml nn
-             where  nn.code_na = p_code_na
-             and    nn.year = p_year
-           );
+    begin
+      select n.id, n.code_na, n.year, n.api_version, n.form_version
+      into   l_data_row.id,
+             l_data_row.code_na,
+             l_data_row.year,
+             l_data_row.api_version,
+             l_data_row.form_version
+      from   f_ndfl_load_employees_xml n
+      where  n.id = (
+               select max(nn.id)keep(dense_rank last order by nn.created_at)
+               from   f_ndfl_load_employees_xml nn
+               where  nn.code_na = p_code_na
+               and    nn.year = p_year
+             );
+    exception
+      when no_data_found then
+        fix_exception('merge_load_xml(' || 
+          p_code_na || ', ' ||
+          p_year || '): нет данных в таблице f_ndfl_load_employees_xml'
+        );
+        raise e_no_xml_found;
+    end;
     --
     l_parser_version := 
       case substr(l_data_row.api_version, 1, 2)
@@ -576,6 +586,7 @@ create or replace package body f2ndfl_load_empl_api is
               1
           end
       end;
+    --
     if l_parser_version is null then
       fix_exception('merge_load_data(rowID='||l_data_row.id||'): необрабатываемый формат ' || l_data_row.api_version || ':' || l_data_row.form_version);
       raise no_data_found;
@@ -587,11 +598,16 @@ create or replace package body f2ndfl_load_empl_api is
       p_year           => p_year
     );
     --
-    commit;
+    if p_commit then
+      commit;
+    end if;
     --
   exception
     when others then
-      rollback;
+      if p_commit then
+        rollback;
+      end if;
+      --
       fix_exception('merge_load_xml(' || p_code_na || ', '||p_year||')');
       raise;
   end merge_load_xml;

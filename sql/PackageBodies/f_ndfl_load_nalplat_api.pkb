@@ -16,7 +16,6 @@ create or replace package body f_ndfl_load_nalplat_api is
   /**
    */
   procedure update_gf_person(
-    p_code_na     int,
     p_year        int
   ) is
   begin
@@ -61,6 +60,39 @@ create or replace package body f_ndfl_load_nalplat_api is
       fix_exception;
       raise;
   end update_resident_status;
+  
+  /**
+   * Процедура установит флаг отсутствия дохода если не было движения (так бывает...)
+   */
+  procedure set_zero_nalplat(
+    p_code_na     int
+  ) is
+  begin
+    --
+    update (select n.sgd_isprvnol
+            from   f_ndfl_load_nalplat n
+            where  1=1
+            and    not exists (
+                     select 1
+                     from   dv_sr_lspv_acc_v a
+                     where  a.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
+                     and    a.nom_vkl = n.nom_vkl
+                     and    a.nom_ips = n.nom_ips
+                   )
+            and    n.kod_na = p_code_na
+            and    n.god = dv_sr_lspv_docs_api.get_year
+            and    n.sgd_isprvnol = 0
+           ) u
+    set    u.sgd_isprvnol = 1;
+    --
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end set_zero_nalplat;
+  
+  
+  
   /**
    * Процедура fill_ndfl_load_nalplat - заполнение таблицы
    *  f_ndfl_load_nalplat, с отметкой НА с нулевым доходом
@@ -107,8 +139,11 @@ create or replace package body f_ndfl_load_nalplat_api is
       p_term_year => l_term_year
     );
     --
+    set_zero_nalplat(
+      p_code_na => p_code_na
+    );
+    --
     update_gf_person(
-      p_code_na => p_code_na,
       p_year    => l_year
     );
     --Пока так. При переходе на формирование по dv_sr_lspv_docs_t - убрать!

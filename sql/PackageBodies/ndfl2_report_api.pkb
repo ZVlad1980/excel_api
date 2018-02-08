@@ -37,6 +37,35 @@ create or replace package body ndfl2_report_api is
     );
     --
     case l_report_code
+      when 'f2_enumarate_error' then
+        open l_result for
+          select 'LOAD_SPRAVKI' table_name,
+                 sp.ssylka,
+                 sp.tip_dox,
+                 sp.familiya,
+                 sp.imya,
+                 sp.otchestvo,
+                 to_char(sp.data_rozhd, 'dd.mm.yyyy') data_rozhd,
+                 cast(null as number) ssylka_real,
+                 cast(null as number) ui_person
+          from   f2ndfl_load_spravki sp
+          where  sp.nom_spr is null
+          and    sp.god = p_year
+          and    sp.kod_na = 1
+         union all
+          select 'ARH_NOMSPR' table_name,
+                 ns.ssylka,
+                 ns.tip_dox,
+                 null familiya,
+                 null imya,
+                 null otchestvo,
+                 null data_rozhd,
+                 ns.ssylka_fl,
+                 ns.ui_person
+          from   f2ndfl_arh_nomspr ns
+          where  ns.nom_spr is null
+          and    ns.god = p_year
+          and    ns.kod_na = 1;          
       when 'f2_arh_batch_xml' then
         open l_result for
           select x.id, 
@@ -676,6 +705,7 @@ create or replace package body ndfl2_report_api is
             from   f_ndfl_load_nalplat n
             where  n.god = dv_sr_lspv_docs_api.get_year
             and    n.kod_na = 1
+            and    n.sgd_isprvnol = 0
           ),
           lspv_s as (
             select d.nom_vkl, 
@@ -728,6 +758,7 @@ create or replace package body ndfl2_report_api is
                     or
                      (n.is_resident <> p.is_resident)
                    )
+            and    not(n.nom_vkl is null and p.exists_revenue = 'N')
           )
           select p.nom_vkl_np,
                  p.nom_ips_np,

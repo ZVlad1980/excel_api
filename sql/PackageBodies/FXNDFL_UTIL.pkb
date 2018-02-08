@@ -136,11 +136,11 @@ begin
         -- пенсии       
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH )
         Select np.GF_PERSON, 10 TIP, sum(ds.SUMMA) DOX_SUM 
-            from DV_SR_LSPV ds
+            from dv_sr_lspv_v ds
                 inner join F_NDFL_LOAD_NALPLAT np
                     on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                  
                 left join 
-                   (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV 
+                   (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v 
                         where DATA_OP>=dTermBeg and DATA_OP< dTermEnd
                           and SHIFR_SCHET=85 and SUB_SHIFR_SCHET=1 and SERVICE_DOC=0 
                    )n30 
@@ -156,10 +156,10 @@ begin
         -- пособия     
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH )            
         Select np.GF_PERSON, 20 TIP, sum(ds.SUMMA) DOX_SUM                  
-            from DV_SR_LSPV ds
+            from dv_sr_lspv_v ds
                 inner join F_NDFL_LOAD_NALPLAT np
                     on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=1 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                
-                left join DV_SR_LSPV n30 
+                left join dv_sr_lspv_v n30 
                     on n30.NOM_VKL=ds.NOM_VKL and n30.NOM_IPS=ds.NOM_IPS and n30.SHIFR_SCHET=86 and n30.SUB_SHIFR_SCHET=1
                        and n30.DATA_OP=ds.DATA_OP and n30.SSYLKA_DOC=ds.SSYLKA_DOC and n30.SERVICE_DOC=0                   
             where ds.DATA_OP>=dTermBeg
@@ -172,10 +172,10 @@ begin
         -- выкупные        
         Insert into F2NDFL_LOAD_NALISCH( GF_PERSON, TIP_DOX, SUM_DOH ) 
         Select np.GF_PERSON, 30 TIP, sum(ds.SUMMA) DOX_SUM
-            from DV_SR_LSPV ds
+            from dv_sr_lspv_v ds
                 inner join F_NDFL_LOAD_NALPLAT np
                     on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                    
-                left join DV_SR_LSPV n30 
+                left join dv_sr_lspv_v n30 
                     on n30.NOM_VKL=ds.NOM_VKL and n30.NOM_IPS=ds.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=3
                        and n30.DATA_OP=ds.DATA_OP and n30.SSYLKA_DOC=ds.SSYLKA_DOC and n30.SERVICE_DOC=0                   
                 where ds.DATA_OP>=dTermBeg
@@ -192,7 +192,7 @@ begin
         from
            (Select * from (    
                 Select ds.*        -- все исправления пенсии должны выполняться в текущем году
-                from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                     where  ds.SERVICE_DOC<>0
                     start with   ds.SHIFR_SCHET= 60          -- пенсия
                              and ds.NOM_VKL<991              -- и пенсия не своя
@@ -209,12 +209,12 @@ begin
             inner join F_NDFL_LOAD_NALPLAT np
                     on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=dox.NOM_VKL and np.NOM_IPS=dox.NOM_IPS
             left join   
-               (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV 
+               (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v 
                     where DATA_OP>=dTermBeg and DATA_OP< dTermEnd
                       and SHIFR_SCHET=85 and SUB_SHIFR_SCHET=1 and SERVICE_DOC=0 
                )n30 
                 on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS                                    
-           -- left join DV_SR_LSPV n30 
+           -- left join dv_sr_lspv_v n30 
            --           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=1
            --              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC
         where n30.NOM_VKL is Null 
@@ -227,7 +227,7 @@ begin
             from
                (Select * from (    
                     Select ds.*        -- все исправления пособий должны выполняться в текущем году
-                    from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                    from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                         where  ds.SERVICE_DOC<>0
                         start with   ds.SHIFR_SCHET= 62          -- пособие
                                  and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
@@ -242,7 +242,7 @@ begin
                 ) dox 
                 inner join F_NDFL_LOAD_NALPLAT np
                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=1 and np.NOM_VKL=dox.NOM_VKL and np.NOM_IPS=dox.NOM_IPS                        
-                left join DV_SR_LSPV n30 
+                left join dv_sr_lspv_v n30 
                           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=86 and n30.SUB_SHIFR_SCHET=1
                              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC    
             where n30.NOM_VKL is Null     
@@ -255,7 +255,7 @@ begin
             from
                (Select * from (    
                     Select ds.*, min(DATA_OP) over(partition by ds.NOM_VKL, ds.NOM_IPS) MINDATOP
-                    from DV_SR_LSPV ds
+                    from dv_sr_lspv_v ds
                         where  ds.SERVICE_DOC<>0
                         start with   ds.SHIFR_SCHET= 55        -- пенсия
                                  and ds.SERVICE_DOC=-1         -- коррекция (начинаем поиск с -1)
@@ -269,7 +269,7 @@ begin
                 ) dox 
                 inner join F_NDFL_LOAD_NALPLAT np
                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=dox.NOM_VKL and np.NOM_IPS=dox.NOM_IPS                        
-                left join DV_SR_LSPV n30 
+                left join dv_sr_lspv_v n30 
                           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=3
                              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC  
             group by np.GF_PERSON  
@@ -519,7 +519,7 @@ begin
           end case; 
           
             Select count(distinct sr.GF_PERSON) into nKFLObs
-            from DV_SR_LSPV ds
+            from dv_sr_lspv_v ds
               inner join SP_LSPV lspv           on ds.NOM_VKL=lspv.NOM_VKL and ds.NOM_IPS=lspv.NOM_IPS
               inner join SP_FIZ_LITS sfl        on sfl.SSYLKA=lspv.SSYLKA_FL  
               inner join f_NDFL_LOAD_SPISRAB sr on sr.GF_PERSON=sfl.GF_PERSON
@@ -722,12 +722,14 @@ begin
        ls.KOD_NA, ls.GOD, ls.SSYLKA, ls.TIP_DOX, 0 FLAG_OTMENA, vp.GF_PERSON FK_CONTRAGENT, vp.SSYLKA_POLUCH SSYLKA_FL, vp.GF_PERSON UI_PERSON
     from f2NDFL_LOAD_SPRAVKI ls
          inner join (
-                     Select distinct SSYLKA, SSYLKA_POLUCH, GF_PERSON  
-                        from  VYPLACH_POSOB 
-                        where DATA_VYPL >= dTermBeg
-                          and DATA_VYPL <  dTermEnd
-                          and TIP_VYPL=1010
-                          and NOM_VIPL=1
+                     Select distinct vp.SSYLKA, vp.SSYLKA_POLUCH, rp.Fk_Contragent GF_PERSON
+                        from  VYPLACH_POSOB vp,
+                              sp_ritual_pos rp 
+                        where vp.DATA_VYPL >= dTermBeg
+                          and vp.DATA_VYPL <  dTermEnd
+                          and vp.TIP_VYPL=1010
+                          and vp.NOM_VIPL=1
+                          and rp.ssylka = vp.ssylka
                     ) vp on vp.SSYLKA=ls.SSYLKA
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=2 and ls.NOM_KORR=gl_NOMKOR; 
 
@@ -2300,7 +2302,7 @@ begin
                      -- пенсии 
                      -- пенсия (без исправленных записей)
                      Select sfl.GF_PERSON,  ds.SUMMA DOH_POLUCH
-                        from DV_SR_LSPV ds
+                        from dv_sr_lspv_v ds
                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                 inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL       
                         where ds.SHIFR_SCHET=60   -- пенсия
@@ -2312,7 +2314,7 @@ begin
                      -- исправления  к пенсиям
                         Select GF_PERSON, DOH_POLUCH from (
                         Select sfl.GF_PERSON, min(ds.DATA_OP) DATA_OSH_DOH, sum(SUMMA) DOH_POLUCH 
-                        from  DV_SR_LSPV ds            
+                        from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                          start with ds.SHIFR_SCHET=60  -- пенсия
@@ -2331,7 +2333,7 @@ begin
                      UNION       
                     -- ритаулки и наследуемые пенсии
                      Select vrp.GF_PERSON,  ds.SUMMA DOH_POLUCH
-                     from DV_SR_LSPV ds
+                     from dv_sr_lspv_v ds
                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON   
                                                 from VYPLACH_POSOB 
@@ -2351,7 +2353,7 @@ begin
                                   max(case when SERVICE_DOC=-1 then ds.SSYLKA_DOC else 0 end) SSDOC,
                                   min(ds.DATA_OP) DATA_OSH_DOH, 
                                   sum(SUMMA) DOH_POLUCH
-                        from  DV_SR_LSPV ds                
+                        from  dv_sr_lspv_v ds                
                          start with ds.SHIFR_SCHET=62  -- ритуалки и наследуемые пенсии
                                 and ds.SERVICE_DOC=-1  -- коррекция (начинаем с -1)
                                 and ds.DATA_OP>=dTermBeg    -- исправление сделано
@@ -2374,7 +2376,7 @@ begin
                      UNION       
                      -- выкупные суммы
                      Select sfl.GF_PERSON,  ds.SUMMA DOH_POLUCH
-                     from DV_SR_LSPV ds
+                     from dv_sr_lspv_v ds
                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                              inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                  
                      where ds.SHIFR_SCHET=55 -- выкупные суммы
@@ -2385,7 +2387,7 @@ begin
                      -- исправления к выкупным
                         Select GF_PERSON, DOH_POLUCH from (
                         Select sfl.GF_PERSON, min(ds.DATA_OP) DATA_OSH_DOH, sum(SUMMA) DOH_POLUCH 
-                        from  DV_SR_LSPV ds            
+                        from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                          start with ds.SHIFR_SCHET=55  -- выкупная сумма, облагаемая часть
@@ -2463,7 +2465,7 @@ begin
                         from(    
                             -- первичные записи, изначально правильные без исправлений
                             Select np.GF_PERSON, sum(SUMMA) VYCH_SUMMA
-                            from DV_SR_LSPV ds    
+                            from dv_sr_lspv_v ds    
                                 inner join F_NDFL_LOAD_NALPLAT np
                                     on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
                                 where ds.DATA_OP>=dTermBeg   -- предоставлено в расчетном периоде
@@ -2479,7 +2481,7 @@ begin
                                (Select NOM_VKL, NOM_IPS, sum(SUMMA) VYCH_SUM
                                 from(Select * from (    
                                         Select ds.*        -- все исправления пенсии должны выполняться в текущем году
-                                        from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                                        from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                                             where  ds.SERVICE_DOC<>0
                                             start with   ds.SHIFR_SCHET>1000         -- вычет
                                                      and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
@@ -2506,7 +2508,7 @@ begin
                           from(
                                 -- первичные записи, изначально правильные без исправлений
                                 Select np.GF_PERSON, sum(SUMMA) NAL_SUM
-                                from DV_SR_LSPV ds    
+                                from dv_sr_lspv_v ds    
                                     inner join F_NDFL_LOAD_NALPLAT np
                                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
                                     where ds.DATA_OP>=dTermBeg   -- удержано в расчетном периоде
@@ -2518,7 +2520,7 @@ begin
                                     having sum(ds.SUMMA)<>0    
                               UNION ALL
                                 Select np.GF_PERSON, sum(SUMMA) NAL_SUM
-                                from DV_SR_LSPV ds    
+                                from dv_sr_lspv_v ds    
                                     inner join F_NDFL_LOAD_NALPLAT np
                                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=1 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
                                     where ds.DATA_OP>=dTermBeg   -- удержано в расчетном периоде
@@ -2535,7 +2537,7 @@ begin
                                    (Select NOM_VKL, NOM_IPS, sum(SUMMA) NAL_SUM
                                     from(Select * from (    
                                             Select ds.*        -- все исправления пенсии должны выполняться в текущем году
-                                            from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                                            from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                                                 where  ds.SERVICE_DOC<>0
                                                 start with   ds.SHIFR_SCHET in 85   -- налог
                                                          and ds.SUB_SHIFR_SCHET in (0,2) -- 13%
@@ -2559,7 +2561,7 @@ begin
                           on nal.GF_PERSON=sgd.GF_PERSON 
                     left join
                        (Select np.GF_PERSON, 83 TIP, sum(ds.SUMMA) NAL_KOR83
-                        from DV_SR_LSPV ds
+                        from dv_sr_lspv_v ds
                             inner join F_NDFL_LOAD_NALPLAT np
                                 on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                                   
                             where ds.DATA_OP>=dTermBeg
@@ -2576,10 +2578,10 @@ begin
                                -- пенсии и выкупные (только УЧАСТНИКИ)
                                -- изначально правильные, без исправлений
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
-                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                         inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                            where SHIFR_SCHET=85
                                                                and DATA_OP>=dTermBeg  
                                                                and DATA_OP < dTermEnd ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
@@ -2596,10 +2598,10 @@ begin
                                -- начисленные и скорректированные в текущем периоде
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                                        inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                            where SHIFR_SCHET=85 
                                                                and DATA_OP>=dTermBeg  
                                                                and DATA_OP < dTermEnd ) c85  on lspv.NOM_VKL=c85.NOM_VKL and lspv.NOM_IPS=c85.NOM_IPS 
@@ -2624,7 +2626,7 @@ begin
                               -- ритуалки и наследуемые пенсии
                                -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                     from DV_SR_LSPV ds
+                                     from dv_sr_lspv_v ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
@@ -2716,8 +2718,8 @@ begin
         from (  -- изначально правильные, без исправлений
                 -- пенсии
                 Select nvl(sum(ds.SUMMA),0) NACH_DOH 
-                from DV_SR_LSPV ds
-                     left join DV_SR_LSPV n13 
+                from dv_sr_lspv_v ds
+                     left join dv_sr_lspv_v n13 
                             on n13.NOM_VKL=ds.NOM_VKL and n13.NOM_IPS=ds.NOM_IPS and n13.SHIFR_SCHET=85 and n13.SUB_SHIFR_SCHET=1
                            and n13.DATA_OP=ds.DATA_OP and n13.SSYLKA_DOC=ds.SSYLKA_DOC and n13.SERVICE_DOC=0                
                     where ds.DATA_OP>=dTermBeg
@@ -2729,8 +2731,8 @@ begin
                 union all  
                 -- пособия 
                 Select nvl(sum(ds.SUMMA),0) NACH_DOH                 
-                from DV_SR_LSPV ds
-                     left join DV_SR_LSPV n13 
+                from dv_sr_lspv_v ds
+                     left join dv_sr_lspv_v n13 
                             on n13.NOM_VKL=ds.NOM_VKL and n13.NOM_IPS=ds.NOM_IPS and n13.SHIFR_SCHET=86 and n13.SUB_SHIFR_SCHET=1
                            and n13.DATA_OP=ds.DATA_OP and n13.SSYLKA_DOC=ds.SSYLKA_DOC and n13.SERVICE_DOC=0                   
                     where ds.DATA_OP>=dTermBeg
@@ -2741,8 +2743,8 @@ begin
                 union all  
                 -- выкупные 
                 Select nvl(sum(ds.SUMMA),0) NACH_DOH
-                from DV_SR_LSPV ds
-                     left join DV_SR_LSPV n13 
+                from dv_sr_lspv_v ds
+                     left join dv_sr_lspv_v n13 
                             on n13.NOM_VKL=ds.NOM_VKL and n13.NOM_IPS=ds.NOM_IPS and n13.SHIFR_SCHET=85 and n13.SUB_SHIFR_SCHET=3
                            and n13.DATA_OP=ds.DATA_OP and n13.SSYLKA_DOC=ds.SSYLKA_DOC and n13.SERVICE_DOC=0                   
                     where ds.DATA_OP>=dTermBeg
@@ -2757,7 +2759,7 @@ begin
                 from
                    (Select * from (    
                         Select ds.*        -- все исправления пенсии должны выполняться в текущем году
-                        from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                        from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                             where  ds.SERVICE_DOC<>0
                             start with   ds.SHIFR_SCHET= 60          -- пенсия
                                      and ds.NOM_VKL<991              -- и пенсия не своя
@@ -2771,7 +2773,7 @@ begin
                                      and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
                         ) where DATA_OP>=dTermBeg and DATA_OP<dTermKor               
                     ) dox 
-                    left join DV_SR_LSPV n13 
+                    left join dv_sr_lspv_v n13 
                               on n13.NOM_VKL=dox.NOM_VKL and n13.NOM_IPS=dox.NOM_IPS and n13.SHIFR_SCHET=85 and n13.SUB_SHIFR_SCHET=1
                                  and n13.DATA_OP=dox.DATA_OP and n13.SSYLKA_DOC=dox.SSYLKA_DOC and n13.SERVICE_DOC=dox.SERVICE_DOC    
                     where nvl(n13.SUB_SHIFR_SCHET,0)=nPenSSS         
@@ -2781,7 +2783,7 @@ begin
                 from
                    (Select * from (    
                         Select ds.*        -- все исправления пособий должны выполняться в текущем году
-                        from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                        from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                             where  ds.SERVICE_DOC<>0
                             start with   ds.SHIFR_SCHET= 62          -- пособие
                                      and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
@@ -2794,7 +2796,7 @@ begin
                                      and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
                         ) where DATA_OP>=dTermBeg and DATA_OP<dTermKor               
                     ) dox 
-                    left join DV_SR_LSPV n13 
+                    left join dv_sr_lspv_v n13 
                               on n13.NOM_VKL=dox.NOM_VKL and n13.NOM_IPS=dox.NOM_IPS and n13.SHIFR_SCHET=86 and n13.SUB_SHIFR_SCHET=1
                                  and n13.DATA_OP=dox.DATA_OP and n13.SSYLKA_DOC=dox.SSYLKA_DOC and n13.SERVICE_DOC=dox.SERVICE_DOC    
                     where nvl(n13.SUB_SHIFR_SCHET,0)=nPenSSS                               
@@ -2804,7 +2806,7 @@ begin
                 from
                    (Select * from (    
                         Select ds.*, min(DATA_OP) over(partition by ds.NOM_VKL, ds.NOM_IPS) MINDATOP
-                        from DV_SR_LSPV ds
+                        from dv_sr_lspv_v ds
                             where  ds.SERVICE_DOC<>0
                             start with   ds.SHIFR_SCHET= 55        -- пенсия
   --                                 and ds.NOM_VKL<991            -- и пенсия не своя
@@ -2817,7 +2819,7 @@ begin
                                      and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
                         ) where  MINDATOP>=dTermBeg and DATA_OP>=dTermBeg and DATA_OP<dTermEnd               
                     ) dox 
-                    left join DV_SR_LSPV n13 
+                    left join dv_sr_lspv_v n13 
                               on n13.NOM_VKL=dox.NOM_VKL and n13.NOM_IPS=dox.NOM_IPS and n13.SHIFR_SCHET=85 and n13.SUB_SHIFR_SCHET=3
                                  and n13.DATA_OP=dox.DATA_OP and n13.SSYLKA_DOC=dox.SSYLKA_DOC and n13.SERVICE_DOC=dox.SERVICE_DOC    
                     where nvl(n13.SUB_SHIFR_SCHET,2)=nVykSSS                               
@@ -2879,7 +2881,7 @@ begin
                         from(    
                             -- первичные записи, изначально правильные без исправлений
                             Select np.GF_PERSON, sum(SUMMA) VYCH_SUMMA
-                            from DV_SR_LSPV ds    
+                            from dv_sr_lspv_v ds    
                                 inner join F_NDFL_LOAD_NALPLAT np
                                     on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
                                 where ds.DATA_OP>=dTermBeg   -- предоставлено в расчетном периоде
@@ -2895,7 +2897,7 @@ begin
                                (Select NOM_VKL, NOM_IPS, sum(SUMMA) VYCH_SUM
                                 from(Select * from (    
                                         Select ds.*        -- все исправления пенсии должны выполняться в текущем году
-                                        from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                                        from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                                             where  ds.SERVICE_DOC<>0
                                             start with   ds.SHIFR_SCHET>1000         -- вычет
                                                      and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
@@ -2922,7 +2924,7 @@ begin
                           from(
                                 -- первичные записи, изначально правильные без исправлений
                                 Select np.GF_PERSON, sum(SUMMA) NAL_SUM
-                                from DV_SR_LSPV ds    
+                                from dv_sr_lspv_v ds    
                                     inner join F_NDFL_LOAD_NALPLAT np
                                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
                                     where ds.DATA_OP>=dTermBeg   -- удержано в расчетном периоде
@@ -2934,7 +2936,7 @@ begin
                                     having sum(ds.SUMMA)<>0    
                               UNION ALL
                                 Select np.GF_PERSON, sum(SUMMA) NAL_SUM
-                                from DV_SR_LSPV ds    
+                                from dv_sr_lspv_v ds    
                                     inner join F_NDFL_LOAD_NALPLAT np
                                         on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=1 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS          
                                     where ds.DATA_OP>=dTermBeg   -- удержано в расчетном периоде
@@ -2951,7 +2953,7 @@ begin
                                    (Select NOM_VKL, NOM_IPS, sum(SUMMA) NAL_SUM
                                     from(Select * from (    
                                             Select ds.*        -- все исправления пенсии должны выполняться в текущем году
-                                            from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                                            from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                                                 where  ds.SERVICE_DOC<>0
                                                 start with   ds.SHIFR_SCHET in 85   -- налог
                                                          and ds.SUB_SHIFR_SCHET in (0,2) -- 13%
@@ -2975,7 +2977,7 @@ begin
                           on nal.GF_PERSON=sgd.GF_PERSON 
                     left join
                        (Select np.GF_PERSON, 83 TIP, sum(ds.SUMMA) NAL_KOR83
-                        from DV_SR_LSPV ds
+                        from dv_sr_lspv_v ds
                             inner join F_NDFL_LOAD_NALPLAT np
                                 on np.KOD_NA=nKodNA and np.GOD=nGOD and np.SSYLKA_TIP=0 and np.NOM_VKL=ds.NOM_VKL and np.NOM_IPS=ds.NOM_IPS                                   
                             where ds.DATA_OP>=dTermBeg
@@ -2995,11 +2997,11 @@ begin
                               -- изначально правильные, без исправлений
                               -- ПЕНСИИ 
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                          -- только те ЛСПВ, с которых перечислялся налог
-                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                         inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                              where SHIFR_SCHET=85
                                                                and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                and DATA_OP>=dTermBeg  
@@ -3014,11 +3016,11 @@ begin
                               -- ВЫКУПНЫЕ
                               UNION ALL
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                          -- только те ЛСПВ, с которых перечислялся налог
-                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                         inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                            where   SHIFR_SCHET=85
                                                                and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                and DATA_OP>=dTermBeg  
@@ -3041,10 +3043,10 @@ begin
                                -- ПЕНСИИ
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                                        inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                                      where SHIFR_SCHET=85 
                                                                        and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                        and DATA_OP>=dTermBeg  
@@ -3070,10 +3072,10 @@ begin
                                UNION ALL
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                                        inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                                        where SHIFR_SCHET=85 
                                                                            and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                            and DATA_OP>=dTermBeg  
@@ -3103,7 +3105,7 @@ begin
                               -- ритуалки и наследуемые пенсии
                                -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                     from DV_SR_LSPV ds
+                                     from dv_sr_lspv_v ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
@@ -3154,8 +3156,8 @@ begin
                     from (  -- изначально правильные, без исправлений
                             -- пенсии   (подзапрос проверен 1кв 2017 18-04-2017) 
                             Select nvl(sum(round(0.3*ds.SUMMA,0)),0) NALOG_ISCHISL 
-                            from DV_SR_LSPV ds
-                                 inner join DV_SR_LSPV n30 
+                            from dv_sr_lspv_v ds
+                                 inner join dv_sr_lspv_v n30 
                                         on n30.NOM_VKL=ds.NOM_VKL and n30.NOM_IPS=ds.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=1
                                        and n30.DATA_OP=ds.DATA_OP and n30.SSYLKA_DOC=ds.SSYLKA_DOC and n30.SERVICE_DOC=0               
                                 where ds.DATA_OP>=dTermBeg
@@ -3166,8 +3168,8 @@ begin
                             union all  
                             -- пособия   (подзапрос проверен 1кв 2017 18-04-2017) 
                             Select nvl(sum(round(0.3*ds.SUMMA,0)),0) NALOG_ISCHISL                 
-                            from DV_SR_LSPV ds
-                                 inner join DV_SR_LSPV n30 
+                            from dv_sr_lspv_v ds
+                                 inner join dv_sr_lspv_v n30 
                                         on n30.NOM_VKL=ds.NOM_VKL and n30.NOM_IPS=ds.NOM_IPS and n30.SHIFR_SCHET=86 and n30.SUB_SHIFR_SCHET=1
                                        and n30.DATA_OP=ds.DATA_OP and n30.SSYLKA_DOC=ds.SSYLKA_DOC and n30.SERVICE_DOC=0                   
                                 where ds.DATA_OP>=dTermBeg
@@ -3177,8 +3179,8 @@ begin
                             union all  
                             -- выкупные  (подзапрос нулевой 1кв 2017 18-04-2017, проверить когда окажется ненулевым!) 
                             Select nvl(sum(round(0.3*ds.SUMMA,0)),0) NALOG_ISCHISL
-                            from DV_SR_LSPV ds
-                                 inner join DV_SR_LSPV n30 
+                            from dv_sr_lspv_v ds
+                                 inner join dv_sr_lspv_v n30 
                                         on n30.NOM_VKL=ds.NOM_VKL and n30.NOM_IPS=ds.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=3
                                        and n30.DATA_OP=ds.DATA_OP and n30.SSYLKA_DOC=ds.SSYLKA_DOC and n30.SERVICE_DOC=0                   
                                 where ds.DATA_OP>=dTermBeg
@@ -3192,7 +3194,7 @@ begin
                             from
                                (Select * from (    
                                     Select ds.*        -- все исправления пенсии должны выполняться в текущем году
-                                    from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                                    from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                                         where  ds.SERVICE_DOC<>0
                                         start with   ds.SHIFR_SCHET= 60          -- пенсия
                                                  and ds.NOM_VKL<991              -- и пенсия не своя
@@ -3206,7 +3208,7 @@ begin
                                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
                                     ) where DATA_OP>=dTermBeg and DATA_OP<dTermKor               
                                 ) dox 
-                                inner join DV_SR_LSPV n30 
+                                inner join dv_sr_lspv_v n30 
                                           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=1
                                              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC                                           
                             union all                     
@@ -3215,7 +3217,7 @@ begin
                             from
                                (Select * from (    
                                     Select ds.*        -- все исправления пособий должны выполняться в текущем году
-                                    from DV_SR_LSPV ds -- т.к. программа расчета выплат иначе не может  
+                                    from dv_sr_lspv_v ds -- т.к. программа расчета выплат иначе не может  
                                         where  ds.SERVICE_DOC<>0
                                         start with   ds.SHIFR_SCHET= 62          -- пособие
                                                  and ds.SERVICE_DOC=-1           -- коррекция (начинаем поиск с -1)
@@ -3228,7 +3230,7 @@ begin
                                                  and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC   
                                     ) where DATA_OP>=dTermBeg and DATA_OP<dTermKor               
                                 ) dox 
-                                inner join DV_SR_LSPV n30 
+                                inner join dv_sr_lspv_v n30 
                                           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=86 and n30.SUB_SHIFR_SCHET=1
                                              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC                                   
                             union all                     
@@ -3237,7 +3239,7 @@ begin
                             from
                                (Select * from (    
                                     Select ds.*, min(DATA_OP) over(partition by ds.NOM_VKL, ds.NOM_IPS) MINDATOP
-                                    from DV_SR_LSPV ds
+                                    from dv_sr_lspv_v ds
                                         where  ds.SERVICE_DOC<>0
                                         start with   ds.SHIFR_SCHET= 55       -- выкупные
                                                  and ds.SERVICE_DOC=-1        -- коррекция (начинаем поиск с -1)
@@ -3250,14 +3252,14 @@ begin
                                     ) where MINDATOP>=dTermBeg                     -- исправление выкупных, полученных в текущем году 
                                         and DATA_OP>=dTermBeg and DATA_OP<dTermEnd -- исправления сделаны в текущем периоде             
                                 ) dox 
-                                inner join DV_SR_LSPV n30 
+                                inner join dv_sr_lspv_v n30 
                                           on n30.NOM_VKL=dox.NOM_VKL and n30.NOM_IPS=dox.NOM_IPS and n30.SHIFR_SCHET=85 and n30.SUB_SHIFR_SCHET=3
                                              and n30.DATA_OP=dox.DATA_OP and n30.SSYLKA_DOC=dox.SSYLKA_DOC and n30.SERVICE_DOC=dox.SERVICE_DOC                                
                            );               
 /* вариант, использованный до 1 кв 2017
                 with q as (-- пенсии и выкупные (УЧАСТНИКИ)
                                Select sfl.GF_PERSON, ds.*
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                  where  ds.DATA_OP>=dTermBeg    -- с начала года
@@ -3268,7 +3270,7 @@ begin
                                UNION    -- отсекает повторы в двух подзапросах                                           
                                -- ритаулки и наследуемые пенсии
                                Select vrp.GF_PERSON, ds.*
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                          inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                             from VYPLACH_POSOB 
@@ -3333,7 +3335,7 @@ begin
                              -- пенсии и выкупные
                              -- изначально правильные, не скорректированные позже удержания налога
                              Select  sum( ds.SUMMA ) SUMNAL
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                  where  ds.DATA_OP>=dTermBeg        -- с начала года
                                      and ds.DATA_OP < dTermEnd        -- до конца отчетного периода  
                                      and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений
@@ -3343,7 +3345,7 @@ begin
                                -- начисленные и скорректированные в текущем периоде
                                Select sum(SUMKORR) SUMNAL from (
                                             Select ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds                 
+                                            from  dv_sr_lspv_v ds                 
                                          --  where ds.DATA_OP>dTermBeg -- Учитываем операции только в текущем отчетном периоде                                       
                                              start with ds.SHIFR_SCHET=85  -- налог  с пенсий и выкупных 
                                                     and ds.SERVICE_DOC=-1             -- коррекция (начинаем поиск с -1)
@@ -3361,7 +3363,7 @@ begin
                           UNION ALL                                            
                               -- ритаулки и наследуемые пенсии
                               Select sum(ds.SUMMA) SUMNAL
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                          inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                             from VYPLACH_POSOB 
@@ -3430,7 +3432,7 @@ begin
            else  return Null;                
        end case;
        
-   Select sum(SUMMA) into fSUM83 from DV_SR_LSPV 
+   Select sum(SUMMA) into fSUM83 from dv_sr_lspv_v 
      where SHIFR_SCHET=83 and DATA_OP>=dTermBeg and DATA_OP<dTermEnd;
    
    return nvl(fSUM83,0);
@@ -3477,7 +3479,7 @@ begin
                 --       ,count(*)     over(partition by NOM_VKL, NOM_IPS order by DATA_OP rows unbounded preceding) CHK_ORD
                 from(
                      Select ds.*, CONNECT_BY_ISLEAF ISLEAF 
-                     from DV_SR_LSPV ds
+                     from dv_sr_lspv_v ds
                         start with ds.SHIFR_SCHET =85       -- удержание налогов
                                 and ds.SUB_SHIFR_SCHET > 1  -- только выкупные, пенсии исключаем
                                 and ds.SERVICE_DOC= -1      -- коррекция (начинаем с -1)
@@ -3489,7 +3491,7 @@ begin
                                and PRIOR ds.SSYLKA_DOC=ds.SERVICE_DOC 
                     UNION ALL           
                      Select ds.*, CONNECT_BY_ISLEAF ISLEAF 
-                     from DV_SR_LSPV ds
+                     from dv_sr_lspv_v ds
                         start with ds.SHIFR_SCHET =85       -- удержание налогов
                                 and ds.SUB_SHIFR_SCHET <2  -- только пенсии
                                 and ds.SERVICE_DOC= -1      -- коррекция (начинаем с -1)
@@ -3497,7 +3499,7 @@ begin
                                 and exists (
                                        -- по тому же договору и документу должна быть запись по шифру 83
                                        -- это признак не сторно, а возврата пенсии
-                                       Select * from DV_SR_LSPV vv
+                                       Select * from dv_sr_lspv_v vv
                                        where vv.NOM_VKL=ds.NOM_VKL and vv.NOM_IPS=ds.NOM_IPS and vv.SSYLKA_DOC=ds.SSYLKA_DOC
                                              and vv.SHIFR_SCHET=83 and vv.SERVICE_DOC=0
                                     )
@@ -3591,7 +3593,7 @@ END;
                      Select  DATA_OP, sum(SUMMA) SUMDOH
                      from(
                               Select ds.DATA_OP, ds.SUMMA
-                                     from DV_SR_LSPV ds                                   
+                                     from dv_sr_lspv_v ds                                   
                                      where  ds.DATA_OP >= dTermBeg        -- с начала года
                                         and ds.DATA_OP <  dTermEnd        -- до конца отчетного периода  
                                         and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений   
@@ -3605,7 +3607,7 @@ END;
                                -- (для пенсий здесь должны получиться все нули, потому что СТОРНО)
                                Select MINDATOP as DATA_OP, SUMKORR as SUMMA from (
                                             Select ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds                                           
+                                            from  dv_sr_lspv_v ds                                           
                                              start with ds.SHIFR_SCHET=60          -- пенсия
                                                     and ds.NOM_VKL<991             --  не из своих средств
                                                     and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
@@ -3627,7 +3629,7 @@ END;
                                                    ds.DATA_OP DATKORR,
                                                    ds.SUMMA   SUMKORR,
                                                    min(ds.DATA_OP) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) MINDATOP
-                                            from  DV_SR_LSPV ds                                    
+                                            from  dv_sr_lspv_v ds                                    
                                              start with ds.SHIFR_SCHET=55          -- выкупные
                                                     and ds.SERVICE_DOC=-1          -- коррекция (начинаем поиск с -1)
                                                     and ds.DATA_OP>=dTermBeg       -- исправление сделано                          
@@ -3650,7 +3652,7 @@ END;
                      Select  DATA_OP, sum(SUMMA) SUMNAL
                      from(
                              Select ds.DATA_OP, ds.SUMMA 
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                  where ds.DATA_OP >= dTermBeg  -- с начала года
                                    and ds.DATA_OP <  dTermEnd  -- до конца отчетного периода  
                                    and ds.SERVICE_DOC=0        -- выплаты без последующих исправлений
@@ -3661,7 +3663,7 @@ END;
                                -- (вообще то здесть может быть только СТОРНО, и сумма должна быть нулем!)
                                Select MINDATOP as DATA_OP, SUMKORR as SUMMA from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds 
+                                            from  dv_sr_lspv_v ds 
                                         ---    
                                         --   Учитываем операции только в текущем отчетном периоде
                                         ---                                                   
@@ -3685,7 +3687,7 @@ END;
                                Select DATA_OP, SUMMA 
                                from (
                                             Select  ds.DATA_OP, ds.SUMMA, CONNECT_BY_ISLEAF ISLEAF
-                                            from  DV_SR_LSPV ds                                                   
+                                            from  dv_sr_lspv_v ds                                                   
                                              start with ds.SHIFR_SCHET=85      --  налоги на доходы 
                                                     and ds.SUB_SHIFR_SCHET >1  --  выкупных сумм
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
@@ -3701,7 +3703,7 @@ END;
                            UNION ALL                                      
                                -- ритаулки и наследуемые пенсии
                                Select ds.DATA_OP, ds.SUMMA
-                                  from DV_SR_LSPV ds          
+                                  from dv_sr_lspv_v ds          
                                   where ds.SHIFR_SCHET=86 -- налог на ритуалки и наследуемые пенсии
                                       and ds.SERVICE_DOC=0  
                                       and ds.DATA_OP >= dTermBeg  
@@ -3771,11 +3773,11 @@ END;
                               -- изначально правильные, без исправлений
                               -- ПЕНСИИ 
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                          -- только те ЛСПВ, с которых перечислялся налог
-                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                         inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                              where SHIFR_SCHET=85
                                                                and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                and DATA_OP>=dTermBeg  
@@ -3791,11 +3793,11 @@ END;
                               -- ВЫКУПНЫЕ
                               UNION ALL
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                          -- только те ЛСПВ, с которых перечислялся налог
-                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                         inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                            where   SHIFR_SCHET=85
                                                                and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                and DATA_OP>=dTermBeg  
@@ -3818,10 +3820,10 @@ END;
                                -- ПЕНСИИ
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                                        inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                                      where SHIFR_SCHET=85 
                                                                        and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                        and DATA_OP>=dTermBeg  
@@ -3847,10 +3849,10 @@ END;
                                UNION ALL
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                                        inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                                        where SHIFR_SCHET=85 
                                                                            and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                            and DATA_OP>=dTermBeg  
@@ -3880,7 +3882,7 @@ END;
                               -- ритуалки и наследуемые пенсии
                                -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                     from DV_SR_LSPV ds
+                                     from dv_sr_lspv_v ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
@@ -3902,7 +3904,7 @@ END;
                               ),
        q30 as (-- пенсии и выкупные (УЧАСТНИКИ)
                Select sfl.GF_PERSON, ds.*
-                 from DV_SR_LSPV ds
+                 from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                  where  ds.DATA_OP>=dTermBeg    -- с начала года
@@ -3913,7 +3915,7 @@ END;
                UNION    -- отсекает повторы в двух подзапросах                                           
                -- ритаулки и наследуемые пенсии
                Select vrp.GF_PERSON, ds.*
-                 from DV_SR_LSPV ds
+                 from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                          inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                             from VYPLACH_POSOB 
@@ -3936,7 +3938,7 @@ END;
                      )cn
                    left join (
                         Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UDERZH_NAL from ( 
-                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                             where ds.SERVICE_DOC=0
@@ -3947,7 +3949,7 @@ END;
                               and ds.DATA_OP < dTermEnd 
                               and sfl.NAL_REZIDENT=2     
                           UNION ALL               
-                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                             where ds.SERVICE_DOC=0
@@ -3957,7 +3959,7 @@ END;
                               and ds.DATA_OP < dTermEnd
                               and sfl.NAL_REZIDENT=2  
                           UNION ALL      
-                          Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                          Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
                                             from VYPLACH_POSOB 
@@ -3997,7 +3999,7 @@ END;
                          on vyc.GF_PERSON=doh.GF_PERSON     
                 left join ( Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UD_NAL from (
                               -- правильные пенсии
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                 where ds.SERVICE_DOC=0
@@ -4020,7 +4022,7 @@ END;
 */                                  
                             UNION ALL         
                               -- правильные выкупные       
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                   inner join (Select distinct SSYLKA from VYPLACH_POSOB 
@@ -4039,7 +4041,7 @@ END;
                                -- начисленные и скорректированные в текущем периоде
                                Select sfl.GF_PERSON, kor.SUMKORR as SUMPOTIPU from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds
+                                            from  dv_sr_lspv_v ds
                                             where  ds.SUB_SHIFR_SCHET in (0,2) -- только 13%                                                   
                                              start with ds.SHIFR_SCHET=85    --  налоги на доходы пенсии и выкупные
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
@@ -4058,10 +4060,10 @@ END;
                                            and kor.MINDATOP < dTermEnd              -- в текущем отчетном периоде   
                             UNION ALL
                               -- возврат в предыдущие годы
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                  left join DV_SR_LSPV vv 
+                                  left join dv_sr_lspv_v vv 
                                          on vv.NOM_VKL=ds.NOM_VKL and vv.NOM_IPS=ds.NOM_IPS and vv.SSYLKA_DOC=ds.SSYLKA_DOC
                                             and vv.SHIFR_SCHET=85 and vv.SERVICE_DOC=-1
                                 where ds.SERVICE_DOC=0
@@ -4071,7 +4073,7 @@ END;
                                   and vv.NOM_VKL is Null
                             UNION ALL      
                               -- ритуалки
-                              Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
                                                         from VYPLACH_POSOB 
@@ -4139,12 +4141,12 @@ END;
                               
                               -- ПЕНСИИ 
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                          -- для определения ставки
                                          left join 
-                                             (Select * from DV_SR_LSPV
+                                             (Select * from dv_sr_lspv_v
                                                  where SHIFR_SCHET=85
                                                    and SUB_SHIFR_SCHET=1 -- пенсии НДФЛ по 30%
                                                    and DATA_OP >= dTermBeg  
@@ -4163,12 +4165,12 @@ END;
                               -- ВЫКУПНЫЕ
                               UNION ALL
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                          -- для определения ставки
                                          left join 
-                                             (Select * from DV_SR_LSPV
+                                             (Select * from dv_sr_lspv_v
                                                  where SHIFR_SCHET=85
                                                    and SUB_SHIFR_SCHET=3 -- пенсии НДФЛ по 30%
                                                    and DATA_OP >= dTermBeg  
@@ -4192,12 +4194,12 @@ END;
                     -- т.к. для пенсионеров здесь может быть только сторно по умершим           
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(ds.SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         -- для определения ставки
                                                         left join 
-                                                            (Select * from DV_SR_LSPV
+                                                            (Select * from dv_sr_lspv_v
                                                                 where SHIFR_SCHET=85
                                                                   and SUB_SHIFR_SCHET=1 -- пенсии НДФЛ по 30%
                                                                   and DATA_OP>=dTermBeg  
@@ -4227,12 +4229,12 @@ END;
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, sum(SUMKORR) SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA SUMKORR,
                                                    min(ds.DATA_OP) over(partition by sfl.GF_PERSON, ds.SHIFR_SCHET) MINDATOP
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         -- для определения ставки
                                                         left join 
-                                                            (Select * from DV_SR_LSPV
+                                                            (Select * from dv_sr_lspv_v
                                                                 where SHIFR_SCHET=85
                                                                   and SUB_SHIFR_SCHET=3 -- пенсии НДФЛ по 30%
                                                                   and DATA_OP >= dTermBeg  
@@ -4261,7 +4263,7 @@ END;
                               -- ритуалки и наследуемые пенсии
                                -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                     from DV_SR_LSPV ds
+                                     from dv_sr_lspv_v ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
@@ -4283,10 +4285,10 @@ END;
                               ),
        q30 as (-- пенсии и выкупные (УЧАСТНИКИ)
                Select sfl.GF_PERSON, ds.*
-                 from DV_SR_LSPV ds
+                 from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                         inner join (Select * from DV_SR_LSPV
+                         inner join (Select * from dv_sr_lspv_v
                                          where SHIFR_SCHET=85
                                            and SUB_SHIFR_SCHET=1 -- пенсии НДФЛ по 30%
                                            and DATA_OP >= dTermBeg  
@@ -4302,10 +4304,10 @@ END;
                      
                UNION ALL
                  Select sfl.GF_PERSON, ds.*
-                 from DV_SR_LSPV ds
+                 from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                         inner join (Select * from DV_SR_LSPV
+                         inner join (Select * from dv_sr_lspv_v
                                          where SHIFR_SCHET=85
                                            and SUB_SHIFR_SCHET=3 -- выкупные НДФЛ по 30%
                                            and DATA_OP >= dTermBeg  
@@ -4331,12 +4333,12 @@ UNION ALL
                                             Select sfl.GF_PERSON, ds.*, 
                                                 min(ds.DATA_OP) over(partition by sfl.GF_PERSON, ds.SHIFR_SCHET) MINDATOP, 
                                                 sum(ds.SUMMA)   over(partition by sfl.GF_PERSON, ds.SHIFR_SCHET) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         -- для определения ставки
                                                         inner join 
-                                                            (Select * from DV_SR_LSPV
+                                                            (Select * from dv_sr_lspv_v
                                                                 where SHIFR_SCHET=85
                                                                   and SUB_SHIFR_SCHET=1 -- пенсии НДФЛ по 30%
                                                                   and DATA_OP>=dTermBeg  
@@ -4367,12 +4369,12 @@ UNION ALL
                                from (
                                             Select sfl.GF_PERSON, ds.*,
                                                    min(ds.DATA_OP) over(partition by sfl.GF_PERSON, ds.SHIFR_SCHET) MINDATOP
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                                         -- для определения ставки
                                                         inner join 
-                                                            (Select * from DV_SR_LSPV
+                                                            (Select * from dv_sr_lspv_v
                                                                 where SHIFR_SCHET=85
                                                                   and SUB_SHIFR_SCHET=3 -- пенсии НДФЛ по 30%
                                                                   and DATA_OP >= dTermBeg  
@@ -4399,7 +4401,7 @@ UNION ALL
                UNION ALL                                         
                -- ритаулки и наследуемые пенсии
                Select vrp.GF_PERSON, ds.*
-                 from DV_SR_LSPV ds
+                 from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                          inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                             from VYPLACH_POSOB 
@@ -4422,7 +4424,7 @@ UNION ALL
                      )cn
                    left join (
                         Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UDERZH_NAL from ( 
-                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                             where ds.SERVICE_DOC=0
@@ -4433,7 +4435,7 @@ UNION ALL
                               and ds.DATA_OP < dTermEnd 
                               and sfl.NAL_REZIDENT=2     
                         UNION ALL               
-                        Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                        Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                             where ds.SERVICE_DOC=0
@@ -4443,7 +4445,7 @@ UNION ALL
                               and ds.DATA_OP < dTermEnd
                               and sfl.NAL_REZIDENT=2  
                         UNION ALL      
-                        Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                        Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
                                             from VYPLACH_POSOB 
@@ -4483,7 +4485,7 @@ UNION ALL
                          on vyc.GF_PERSON=doh.GF_PERSON     
                 left join ( Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UD_NAL from (
                               -- правильные пенсии
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                 where ds.SERVICE_DOC=0
@@ -4506,7 +4508,7 @@ UNION ALL
 */                                  
                             UNION ALL         
                               -- правильные выкупные       
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                   inner join (Select distinct SSYLKA from VYPLACH_POSOB 
@@ -4525,7 +4527,7 @@ UNION ALL
                                -- начисленные и скорректированные в текущем периоде
                                Select sfl.GF_PERSON, kor.SUMKORR as SUMPOTIPU from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds
+                                            from  dv_sr_lspv_v ds
                                             where  ds.SUB_SHIFR_SCHET in (0,2) -- только 13%                                                   
                                              start with ds.SHIFR_SCHET=85    --  налоги на доходы пенсии и выкупные
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
@@ -4544,7 +4546,7 @@ UNION ALL
                                            and kor.MINDATOP < dTermEnd              -- в текущем отчетном периоде   
                             UNION ALL
                               -- возврат в предыдущие годы
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                 where ds.SERVICE_DOC=0
@@ -4553,7 +4555,7 @@ UNION ALL
                                   and ds.DATA_OP <  dTermEnd                                                 
                             UNION ALL      
                               -- ритуалки
-                              Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
                                                         from VYPLACH_POSOB 
@@ -4618,7 +4620,7 @@ END;
                            PEN_SXEM, SUMNAL
                     from (       
                             Select ds.SUB_SHIFR_SCHET, sfl.PEN_SXEM, sum( ds.SUMMA ) SUMNAL
-                                from DV_SR_LSPV ds
+                                from dv_sr_lspv_v ds
                                     inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                     inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                 where  ds.DATA_OP>=dTermBeg        -- с начала года
@@ -4635,7 +4637,7 @@ END;
                            1 PEN_SXEM, SUMNAL
                     from(
                             Select ds.SUB_SHIFR_SCHET, sum(ds.SUMMA) SUMNAL
-                             from DV_SR_LSPV ds
+                             from dv_sr_lspv_v ds
                                      inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                      inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                         from VYPLACH_POSOB 
@@ -4664,7 +4666,7 @@ END;
                                            , min(ds.DATA_OP) over( partition by ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) MINDATOP 
                                            ,ds.SUMMA
                                            , sum(ds.SUMMA) over( partition by ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMKORR
-                                    from  DV_SR_LSPV ds            
+                                    from  dv_sr_lspv_v ds            
                                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                 inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                                      
                                      start with ds.SHIFR_SCHET=85  -- налог  с пенсий и выкупных 
@@ -4689,7 +4691,7 @@ END;
                                            , min(ds.DATA_OP) over( partition by ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) MINDATOP 
                                            ,ds.SUMMA
                                            , sum(ds.SUMMA) over( partition by ds.NOM_VKL,ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMKORR
-                                    from  DV_SR_LSPV ds            
+                                    from  dv_sr_lspv_v ds            
                                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                 inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL                                      
                                      start with ds.SHIFR_SCHET=85  -- налог  с пенсий и выкупных 
@@ -4767,7 +4769,7 @@ END;
                      Select  SSYLKA_DOC, SERVICE_DOC, DATA_OP, sum(SUMMA) SUMDOH
                      from(
                               Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA
-                                     from DV_SR_LSPV ds
+                                     from dv_sr_lspv_v ds
                                      where  ds.DATA_OP>=dTermBeg         -- с начала года
                                          and ds.DATA_OP < dTermEnd        -- до конца отчетного периода  
                                          and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений   
@@ -4782,7 +4784,7 @@ END;
                                                      , first_value(SSYLKA_DOC) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET order by level)   DOCF
                                                      , last_value(SSYLKA_DOC) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET order by level)    DOCL       
                                                      , sum(SUMMA)   over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUM_ISPRAV                                            
-                                            from  DV_SR_LSPV ds                                                    
+                                            from  dv_sr_lspv_v ds                                                    
                                              start with  ( ds.SHIFR_SCHET= 55 -- выкупные
                                                               or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  или пенсия не своя
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
@@ -4802,7 +4804,7 @@ END;
                                -- начисленные и скорректированные в текущем периоде
                                Select MINDATOP as DATA_OP, SUMKORR as SUMMA from (
                                             Select ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, ds.SSYLKA_DOC, ds.SERVICE_DOC , min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds                                                    
+                                            from  dv_sr_lspv_v ds                                                    
                                              start with  ( ds.SHIFR_SCHET= 55 -- выкупные
                                                               or ( ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 )) --  или пенсия не своя
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
@@ -4819,7 +4821,7 @@ END;
                  */          UNION ALL                                      
                                -- ритаулки и наследуемые пенсии
                                Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                          inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                             from VYPLACH_POSOB 
@@ -4837,7 +4839,7 @@ END;
                              Select  SSYLKA_DOC, SERVICE_DOC, DATA_OP, sum(SUMMA) SUMNAL
                              from(
                                      Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA 
-                                         from DV_SR_LSPV ds
+                                         from dv_sr_lspv_v ds
                                          where  ds.DATA_OP>=dTermBeg         -- с начала года
                                              and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
                                              and ds.SERVICE_DOC=0              -- выплаты без последующих исправлений
@@ -4851,7 +4853,7 @@ END;
                                                      , first_value(SSYLKA_DOC) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET order by level)   DOCF
                                                      , last_value(SSYLKA_DOC) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET order by level)    DOCL       
                                                      , sum(SUMMA)   over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUM_ISPRAV                                            
-                                            from  DV_SR_LSPV ds                                                    
+                                            from  dv_sr_lspv_v ds                                                    
                                              start with  ds.SHIFR_SCHET= 85  --  налоги на доходы пенсии и выкупные
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
                                                     and ds.DATA_OP>=dTermBeg        -- исправление сделано                          
@@ -4870,7 +4872,7 @@ END;
                                -- начисленные и скорректированные в текущем периоде
                                Select MINDATOP as DATA_OP, SUMKORR as SUMMA from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds                                                
+                                            from  dv_sr_lspv_v ds                                                
                                              start with ds.SHIFR_SCHET=85    --  налоги на доходы пенсии и выкупные
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
                                                     and ds.DATA_OP>=dTermBeg        -- исправление сделано                         
@@ -4886,7 +4888,7 @@ END;
                  */          UNION ALL                                      
                                -- ритаулки и наследуемые пенсии
                                Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA
-                                  from DV_SR_LSPV ds          
+                                  from dv_sr_lspv_v ds          
                                   where ds.SHIFR_SCHET=86 -- налог на ритуалки и наследуемые пенсии
                                       and ds.SERVICE_DOC=0  
                                       and ds.DATA_OP>=dTermBeg   
@@ -4943,9 +4945,9 @@ null;
                    from (
                              -- пенсии правильные, без исправлений
                              Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, nvl(dv.SUM85,0) DV_SUMMA
-                             from DV_SR_LSPV ds
+                             from dv_sr_lspv_v ds
                                                  inner join (Select NOM_VKL, NOM_IPS, DATA_OP, sum( case when SHIFR_SCHET= 85 then SUMMA else 0 end ) SUM85
-                                                                  from DV_SR_LSPV where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
+                                                                  from dv_sr_lspv_v where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                                                       
                              where  ds.DATA_OP>=dTermBeg          -- с начала года
@@ -4963,9 +4965,9 @@ null;
                                                      , count(*) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET)   CNTT                                                      
                                                      , sum(ds.SUMMA)     over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMDOH_ISPRAV    
                                                      , sum(dv.SUM85) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMNAL_ISPRAV                  
-                                            from  DV_SR_LSPV ds                 
+                                            from  dv_sr_lspv_v ds                 
                                                  inner join (Select NOM_VKL, NOM_IPS, DATA_OP, sum(case when SHIFR_SCHET= 85 then SUMMA else 0 end) SUM85
-                                                                  from DV_SR_LSPV where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
+                                                                  from dv_sr_lspv_v where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                            
                                              start with ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 --  пенсия не из своих средств
@@ -4986,9 +4988,9 @@ null;
                            -- выкупные правильные, без исправлений                                        
                            Union ALL     
                            Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUM85 DV_SUMMA
-                             from DV_SR_LSPV ds
+                             from dv_sr_lspv_v ds
                                                  inner join (Select NOM_VKL, NOM_IPS, DATA_OP, sum( case when SHIFR_SCHET= 85 then SUMMA else 0 end ) SUM85
-                                                                  from DV_SR_LSPV where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=2) or (SHIFR_SCHET>1000)
+                                                                  from dv_sr_lspv_v where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=2) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP  
                              where  ds.DATA_OP>=dTermBeg          -- с начала года
@@ -5006,9 +5008,9 @@ null;
                                                      , count(*) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET)   CNTT
                                                      , sum(ds.SUMMA)     over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMDOH_ISPRAV    
                                                      , sum(dv.SUM85) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMNAL_ISPRAV                  
-                                            from  DV_SR_LSPV ds                 
+                                            from  dv_sr_lspv_v ds                 
                                                  inner join (Select NOM_VKL, NOM_IPS, DATA_OP, sum( case when SHIFR_SCHET= 85 then SUMMA else 0 end ) SUM85
-                                                                  from DV_SR_LSPV where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=2) or (SHIFR_SCHET>1000)
+                                                                  from dv_sr_lspv_v where (SHIFR_SCHET= 85 and SUB_SHIFR_SCHET=2) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                                                                 
                                              start with ds.SHIFR_SCHET=55          --  выкупные 
@@ -5028,9 +5030,9 @@ null;
                                  
                            Union ALL     
                            Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUM85 DV_SUMMA
-                             from DV_SR_LSPV ds
+                             from dv_sr_lspv_v ds
                                                  inner join (Select NOM_VKL, NOM_IPS, DATA_OP, sum( case when SHIFR_SCHET= 86 then SUMMA else 0 end ) SUM85
-                                                                  from DV_SR_LSPV where (SHIFR_SCHET= 86 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
+                                                                  from dv_sr_lspv_v where (SHIFR_SCHET= 86 and SUB_SHIFR_SCHET=0) or (SHIFR_SCHET>1000)
                                                                   group by NOM_VKL, NOM_IPS, DATA_OP ) dv 
                                                      on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP    
                              where  ds.DATA_OP>=dTermBeg          -- с начала года
@@ -5052,8 +5054,8 @@ null;
                    Select SSYLKA_DOC, SERVICE_DOC, DATA_OP, sum(SUMMA) SUM_DOH, sum(DV_SUMMA) SUM_NAL
                    from (
                              Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUMMA DV_SUMMA
-                             from DV_SR_LSPV ds
-                                     inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
+                             from dv_sr_lspv_v ds
+                                     inner join (Select * from dv_sr_lspv_v where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
                              where  ds.DATA_OP>=dTermBeg          -- с начала года
                                  and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
                                  and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
@@ -5071,8 +5073,8 @@ null;
                                                      , count(*) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET)   CNTT                                                     
                                                      , sum(ds.SUMMA)     over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMDOH_ISPRAV    
                                                      , sum(dv.SUMMA) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMNAL_ISPRAV                  
-                                            from  DV_SR_LSPV ds                 
-                                                    inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                    
+                                            from  dv_sr_lspv_v ds                 
+                                                    inner join (Select * from dv_sr_lspv_v where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                    
                                              start with ds.SHIFR_SCHET=60 and ds.NOM_VKL<991 --  пенсия не из своих средств
                                                     and dv.SUB_SHIFR_SCHET=1    -- налог 30%
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
@@ -5090,8 +5092,8 @@ null;
                                  
                            Union ALL     
                            Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUMMA DV_SUMMA
-                             from DV_SR_LSPV ds
-                                     inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
+                             from dv_sr_lspv_v ds
+                                     inner join (Select * from dv_sr_lspv_v where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
                              where  ds.DATA_OP>=dTermBeg          -- с начала года
                                  and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
                                  and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
@@ -5108,8 +5110,8 @@ null;
                                                      , count(*) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET)   CNTT                                                      
                                                      , sum(ds.SUMMA) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMDOH_ISPRAV    
                                                      , sum(dv.SUMMA) over(partition by ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET) SUMNAL_ISPRAV                  
-                                            from  DV_SR_LSPV ds                 
-                                                    inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                    
+                                            from  dv_sr_lspv_v ds                 
+                                                    inner join (Select * from dv_sr_lspv_v where SHIFR_SCHET= 85) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP                                    
                                              start with ds.SHIFR_SCHET=55          --  выкупные 
                                                     and dv.SUB_SHIFR_SCHET=3    -- налог 30%
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
@@ -5127,8 +5129,8 @@ null;
                                  
                            Union ALL     
                            Select ds.SSYLKA_DOC, ds.SERVICE_DOC, ds.DATA_OP, ds.SUMMA, dv.SUMMA DV_SUMMA
-                             from DV_SR_LSPV ds
-                                     inner join (Select * from DV_SR_LSPV where SHIFR_SCHET= 86) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
+                             from dv_sr_lspv_v ds
+                                     inner join (Select * from dv_sr_lspv_v where SHIFR_SCHET= 86) dv on ds.NOM_VKL=dv.NOM_VKL and ds.NOM_IPS=dv.NOM_IPS and ds.DATA_OP=dv.DATA_OP
                              where  ds.DATA_OP>=dTermBeg          -- с начала года
                                  and ds.DATA_OP < dTermEnd         -- до конца отчетного периода  
                                  and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений   
@@ -5292,11 +5294,11 @@ with  q13 as (
                               -- изначально правильные, без исправлений
                               -- ПЕНСИИ 
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                          -- только те ЛСПВ, с которых перечислялся налог
-                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                         inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                              where SHIFR_SCHET=85
                                                                and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
@@ -5312,11 +5314,11 @@ with  q13 as (
                               -- ВЫКУПНЫЕ
                               UNION ALL
                               Select  sfl.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL 
                                          -- только те ЛСПВ, с которых перечислялся налог
-                                         inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                         inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                            where   SHIFR_SCHET=85
                                                                and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
@@ -5339,10 +5341,10 @@ with  q13 as (
                                -- ПЕНСИИ
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                                        inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                                      where SHIFR_SCHET=85 
                                                                        and SUB_SHIFR_SCHET in (0,1)  -- пенсии
                                                                        and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
@@ -5368,10 +5370,10 @@ with  q13 as (
                                UNION ALL
                                Select GF_PERSON, SHIFR_SCHET, MINDATOP DATA_OP, SUMKORR SUMMA from (
                                             Select sfl.GF_PERSON, ds.SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds            
+                                            from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
                                                         inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
-                                                        inner join (Select distinct NOM_VKL, NOM_IPS from DV_SR_LSPV
+                                                        inner join (Select distinct NOM_VKL, NOM_IPS from dv_sr_lspv_v
                                                                        where SHIFR_SCHET=85 
                                                                            and SUB_SHIFR_SCHET in (2,3)  -- выкупные
                                                                            and DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')   
@@ -5401,7 +5403,7 @@ with  q13 as (
                               -- ритуалки и наследуемые пенсии
                                -- изначально правильные, без исправлений
                                Select vrp.GF_PERSON, ds.SHIFR_SCHET, ds.DATA_OP, ds.SUMMA
-                                     from DV_SR_LSPV ds
+                                     from dv_sr_lspv_v ds
                                              inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                              inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                                                 from VYPLACH_POSOB 
@@ -5423,7 +5425,7 @@ with  q13 as (
                               ),
        q30 as (-- пенсии и выкупные (УЧАСТНИКИ)
                Select sfl.GF_PERSON, ds.*
-                 from DV_SR_LSPV ds
+                 from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                  where  ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')     -- с начала года
@@ -5434,7 +5436,7 @@ with  q13 as (
                UNION    -- отсекает повторы в двух подзапросах                                           
                -- ритаулки и наследуемые пенсии
                Select vrp.GF_PERSON, ds.*
-                 from DV_SR_LSPV ds
+                 from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                          inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
                                             from VYPLACH_POSOB 
@@ -5458,7 +5460,7 @@ with  q13 as (
                      )cn
                    left join (
                         Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UDERZH_NAL from ( 
-                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                             where ds.SERVICE_DOC=0
@@ -5469,7 +5471,7 @@ with  q13 as (
                               and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')  
                               and sfl.NAL_REZIDENT=2     
                           UNION ALL               
-                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                          Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                             where ds.SERVICE_DOC=0
@@ -5479,7 +5481,7 @@ with  q13 as (
                               and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy') 
                               and sfl.NAL_REZIDENT=2  
                           UNION ALL      
-                          Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                          Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                               inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                               inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
                                             from VYPLACH_POSOB 
@@ -5524,7 +5526,7 @@ with  q13 as (
                          on vyc.GF_PERSON=doh.GF_PERSON     
                 left join ( Select  GF_PERSON, nvl(sum(SUMPOTIPU),0) UD_NAL from (
                               -- правильные пенсии
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                 where ds.SERVICE_DOC=0
@@ -5536,7 +5538,7 @@ with  q13 as (
                                   and sfl.NAL_REZIDENT=1     
                             UNION ALL         
                               -- правильные выкупные       
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                   inner join (Select distinct SSYLKA from VYPLACH_POSOB 
@@ -5555,7 +5557,7 @@ with  q13 as (
                                -- начисленные и скорректированные в текущем периоде
                                Select sfl.GF_PERSON, kor.SUMKORR as SUMPOTIPU from (
                                             Select  ds.NOM_VKL, ds.NOM_IPS, ds.SHIFR_SCHET, ds.SUB_SHIFR_SCHET, min(ds.DATA_OP) MINDATOP, sum(SUMMA) SUMKORR
-                                            from  DV_SR_LSPV ds
+                                            from  dv_sr_lspv_v ds
                                             where  ds.SUB_SHIFR_SCHET in (0,2) -- только 13%                                                   
                                              start with ds.SHIFR_SCHET=85    --  налоги на доходы пенсии и выкупные
                                                     and ds.SERVICE_DOC=-1            -- коррекция (начинаем поиск с -1)
@@ -5574,7 +5576,7 @@ with  q13 as (
                                            and kor.MINDATOP < to_date('01.07.2016','dd.mm.yyyy')               -- в текущем отчетном периоде   
                             UNION ALL
                               -- возврат в предыдущие годы
-                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select sfl.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
                                 where ds.SERVICE_DOC=0
@@ -5583,7 +5585,7 @@ with  q13 as (
                                   and ds.DATA_OP < to_date('01.07.2016','dd.mm.yyyy')                                                  
                             UNION ALL      
                               -- ритуалки
-                              Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from DV_SR_LSPV ds
+                              Select vrp.GF_PERSON, ds.SUMMA SUMPOTIPU from dv_sr_lspv_v ds
                                   inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                                   inner join (Select SSYLKA, SSYLKA_DOC, GF_PERSON   
                                                         from VYPLACH_POSOB 
@@ -5610,7 +5612,7 @@ with  q13 as (
  
  -- П Р А В И Л О
  -- ============================================================== --
- --  в DV_SR_LSPV                                                  --
+ --  в dv_sr_lspv_v                                                  --
  --  поле SERVICE_DOC                                              --
  --  = 0  - сумма в движении актуальная                            --
  --  > 0  - ссылка на SSYLKA_DOC записи с коррекцией суммы         --
@@ -5624,7 +5626,7 @@ with  q13 as (
                              Select ds.DATA_OP, 
                                     ds.SHIFR_SCHET,
                                     ds.SUMMA 
-                                 from DV_SR_LSPV ds
+                                 from dv_sr_lspv_v ds
                                  where  ds.DATA_OP>=to_date( '01.01.2016','dd.mm.yyyy' )    -- с начала года
                                     and ds.DATA_OP <to_date( '01.10.2016','dd.mm.yyyy' )    -- до конца отчетного периода  
                                     and ds.SHIFR_SCHET in (85,86)                           -- налоги на доходы пенсии и выкупные         
@@ -5642,7 +5644,7 @@ with  q13 as (
                        count(*)     over(partition by NOM_VKL, NOM_IPS) CHK_CNT,   -- число записей: первичной и исправлений
                        count(*)     over(partition by NOM_VKL, NOM_IPS order by DATA_OP rows unbounded preceding) CHK_ORD
                 from(
-                     Select ds.* from DV_SR_LSPV ds
+                     Select ds.* from dv_sr_lspv_v ds
                         start with ds.SHIFR_SCHET in (85,86)      -- удержание налогов
                                 and ds.SERVICE_DOC= -1            -- коррекция (начинаем с -1)
                                 and ds.DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')  -- последняя коррекция внутри 
@@ -5662,12 +5664,12 @@ with  q13 as (
   -- проверка
   -- УГМ забыл поставить -1 в сервис-док     
   cursor C3 is           
-    Select * from DV_SR_LSPV
+    Select * from dv_sr_lspv_v
     where DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')
     and SERVICE_DOC = 0 
     and (SSYLKA_DOC, SHIFR_SCHET, NOM_IPS, NOM_VKL) 
          in (Select distinct SERVICE_DOC, SHIFR_SCHET, NOM_IPS, NOM_VKL
-                  from DV_SR_LSPV
+                  from dv_sr_lspv_v
                   where DATA_OP>=to_date('01.01.2016','dd.mm.yyyy')
                     and SERVICE_DOC >0
             );             
@@ -5755,7 +5757,7 @@ cursor cPBS is
         left join SP_INN_FIZ_LITS ifl on ifl.SSYLKA=sfl.SSYLKA
     where (lspv.NOM_VKL, lspv.NOM_IPS) 
        in (Select ds.NOM_VKL, ds.NOM_IPS
-            from DV_SR_LSPV ds                                   
+            from dv_sr_lspv_v ds                                   
             where  ds.DATA_OP >= dTermBeg
                and ds.DATA_OP <  dTermEnd
                and ds.SHIFR_SCHET=60  -- пенсии
@@ -5829,11 +5831,11 @@ cursor cPBS is
            sum(ds.SUMMA) STORNO_DOXPRAV       
     from SP_FIZ_LITS sfl
                     inner join SP_LSPV lspv on lspv.SSYLKA_FL=sfl.SSYLKA
-                    inner join DV_SR_LSPV ds on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
+                    inner join dv_sr_lspv_v ds on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS
                     left join SP_INN_FIZ_LITS ifl on ifl.SSYLKA=sfl.SSYLKA                                    
                 where  ds.SERVICE_DOC<>0
-                start with   ds.SHIFR_SCHET= 60      -- пенсия
-                         and ds.NOM_VKL<991          -- и пенсия не своя
+                start with   ds.SHIFR_SCHET = 60      -- пенсия
+                         and ds.NOM_VKL < 991          -- и пенсия не своя
                          and ds.nom_vkl = nvl(gl_NOMVKL, ds.nom_vkl)
                          and ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
                          and ds.SERVICE_DOC = -1       -- коррекция (начинаем поиск с -1)
@@ -5844,7 +5846,8 @@ cursor cPBS is
                          and PRIOR ds.SHIFR_SCHET = ds.SHIFR_SCHET
                          and PRIOR ds.SUB_SHIFR_SCHET = ds.SUB_SHIFR_SCHET
                          and PRIOR ds.SSYLKA_DOC = ds.SERVICE_DOC                    
- group by sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, sfl.DATA_ROGD, sfl.DOC_TIP, sfl.DOC_SER1||' '||sfl.DOC_SER2||' '||sfl.DOC_NOM
+ group by sfl.SSYLKA, ifl.INN, sfl.NAL_REZIDENT, sfl.GRAZHDAN, sfl.FAMILIYA, sfl.IMYA, sfl.OTCHESTVO, sfl.DATA_ROGD, sfl.DOC_TIP, 
+          sfl.DOC_SER1, sfl.DOC_SER2, sfl.DOC_NOM
  having  min(ds.DATA_OP) > dTermBeg ; -- исправлена выплата, первоначально сделанная в отчетном периоде
 
 type tPBS is table of cPBS%rowtype;
@@ -5923,7 +5926,7 @@ cursor cPBS is
     where  (lspv.nom_vkl, lspv.nom_ips) in
            (select ds.nom_vkl,
                    ds.nom_ips
-            from   dv_sr_lspv ds
+            from   dv_sr_lspv_v ds
             where  ds.data_op >= dtermbeg
             and    ds.data_op < dtermend
             and    ds.shifr_schet = 55 -- выкупные
@@ -6004,7 +6007,7 @@ cursor cPBS is
  from   sp_fiz_lits sfl
    inner  join sp_lspv lspv
      on     lspv.ssylka_fl = sfl.ssylka
-   inner  join dv_sr_lspv ds
+   inner  join dv_sr_lspv_v ds
      on     lspv.nom_vkl = ds.nom_vkl
      and    lspv.nom_ips = ds.nom_ips
    left   join sp_inn_fiz_lits ifl
@@ -6030,7 +6033,9 @@ cursor cPBS is
            sfl.otchestvo,
            sfl.data_rogd,
            sfl.doc_tip,
-           sfl.doc_ser1 || ' ' || sfl.doc_ser2 || ' ' || sfl.doc_nom
+           sfl.DOC_SER1, 
+           sfl.DOC_SER2, 
+           sfl.DOC_NOM
  having min(ds.data_op) between dtermbeg and (dtermend - .00001); -- исправлена выплата, первоначально сделанная в этом году
 
 type tPBS is table of cPBS%rowtype;
@@ -6105,7 +6110,7 @@ cursor cPBS is
                        vrp.gf_person,
                        vrp.nal_rezident
                 from   sp_lspv lspv
-                 inner join dv_sr_lspv ds
+                 inner join dv_sr_lspv_v ds
                   on   ds.nom_vkl = lspv.nom_vkl
                   and  ds.nom_ips = lspv.nom_ips
                  inner join (select vp.data_vypl,
@@ -6209,7 +6214,7 @@ cursor cPBS is
             from 
                 (Select vrp.SSYLKA, vrp.SSYLKA_POLUCH, vrp.GF_PERSON, vrp.NAL_REZIDENT, sum(ds.SUMMA) SUMPOS
                     from SP_LSPV lspv 
-                        inner join DV_SR_LSPV ds on ds.NOM_VKL=lspv.NOM_VKL and ds.NOM_IPS=lspv.NOM_IPS 
+                        inner join dv_sr_lspv_v ds on ds.NOM_VKL=lspv.NOM_VKL and ds.NOM_IPS=lspv.NOM_IPS 
                         inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, NOM_VIPL, SSYLKA_POLUCH, GF_PERSON, NAL_REZIDENT   
                                         from VYPLACH_POSOB vp
                                         where TIP_VYPL=1010
@@ -6290,7 +6295,7 @@ cursor cPBS( pNPStatus in number ) is
         select ls.ssylka,
                extract(month from ds.data_op) mes,
                sum(ds.summa) doh_sum
-        from   dv_sr_lspv ds
+        from   dv_sr_lspv_v ds
         inner  join sp_lspv sp
           on   sp.nom_vkl = ds.nom_vkl
           and  sp.nom_ips = ds.nom_ips
@@ -6385,7 +6390,7 @@ cursor cPBS( pNPStatus in number ) is
         select ls.ssylka,
                extract(month from ds.data_op) mes,
                sum(ds.summa) doh_sum
-        from   dv_sr_lspv ds
+        from   dv_sr_lspv_v ds
           inner  join sp_lspv lspv
             on     lspv.nom_vkl = ds.nom_vkl
             and    lspv.nom_ips = ds.nom_ips
@@ -6426,7 +6431,7 @@ begin
     from(
          Select dvsr.SSYLKA_FL
             from( Select lspv.SSYLKA_FL, ds.*
-                    from DV_SR_LSPV ds 
+                    from dv_sr_lspv_v ds 
                     inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                         start with   ds.SHIFR_SCHET= 60      -- пенсия
                                  and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
@@ -6515,7 +6520,7 @@ cursor cPBS( pNPStatus in number ) is
                extract(month from ds.data_op) mes,
                ds.sub_shifr_schet,
                sum(ds.summa) doh_sum
-        from   dv_sr_lspv ds
+        from   dv_sr_lspv_v ds
          inner  join sp_lspv sp
           on   sp.nom_vkl = ds.nom_vkl
           and  sp.nom_ips = ds.nom_ips
@@ -6618,7 +6623,7 @@ begin
     
     -- проверка, были ли признаки исправления в выплатах пособий
     Select count(*) into nCorrQnt
-        from DV_SR_LSPV ds   
+        from dv_sr_lspv_v ds   
         where ds.SHIFR_SCHET=62 and ds.DATA_OP>=dTermBeg and ds.DATA_OP<dTermEnd 
           and ( ds.SUMMA<0 or ds.SERVICE_DOC<>0 )
         and    ds.nom_ips = nvl(gl_NOMIPS, ds.nom_ips)
@@ -6645,7 +6650,7 @@ cursor cPBS( pNPStatus in number ) is
                extract(month from ds.data_op) mes,
                ds.sub_shifr_schet,
                sum(ds.summa) doh_sum
-        from   dv_sr_lspv ds
+        from   dv_sr_lspv_v ds
          inner join sp_lspv sp
           on   sp.nom_vkl = ds.nom_vkl
           and  sp.nom_ips = ds.nom_ips
@@ -6749,7 +6754,7 @@ cursor cPBS( pNPStatus in number ) is
         Select * 
         from(   -- часть без исправлений
                 Select ls.SSYLKA, extract(MONTH from ds.DATA_OP) MES, ds.SUB_SHIFR_SCHET, sum(ds.SUMMA) DOH_SUM
-                    from DV_SR_LSPV ds 
+                    from dv_sr_lspv_v ds 
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                          inner join F2NDFL_LOAD_SPRAVKI ls on lspv.SSYLKA_FL=ls.SSYLKA 
                     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STORNO_FLAG<>0 and ls.STATUS_NP=pNPStatus    
@@ -6767,7 +6772,7 @@ cursor cPBS( pNPStatus in number ) is
                 from( Select SSYLKA_FL SSYLKA, extract(MONTH from PERVDATA) MES, SUB_SHIFR_SCHET, sum(NOVSUM) DOH_SUM 
                       from( 
                             Select lspv.SSYLKA_FL, ds.SUB_SHIFR_SCHET, sum(SUMMA) NOVSUM, min(ds.DATA_OP) PERVDATA
-                                from DV_SR_LSPV ds 
+                                from dv_sr_lspv_v ds 
                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                     start with   ds.SHIFR_SCHET= 55      -- выкупная
                                              and ds.SERVICE_DOC=-1       -- коррекция (начинаем поиск с -1)
@@ -6887,7 +6892,7 @@ begin
       from   f2ndfl_load_spravki ls
         inner  join sp_lspv sp
           on     sp.ssylka_fl = ls.ssylka
-        inner  join dv_sr_lspv ds
+        inner  join dv_sr_lspv_v ds
           on     ds.nom_vkl = sp.nom_vkl
           and    ds.nom_ips = sp.nom_ips
         left   join taxdeductions_v td
@@ -6901,7 +6906,7 @@ begin
                         when 55 then 3
                         else 1
                       end)
-               from   dv_sr_lspv ds2
+               from   dv_sr_lspv_v ds2
                where  ds2.nom_vkl = ds.nom_vkl
                and    ds2.nom_ips = ds.nom_ips
                and    ds2.shifr_schet in (55, 60)
@@ -6962,7 +6967,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
         left join( 
             Select SSYLKA_FL, sum(SGD_SUMPRED) SGD_SUM from (
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.DATA_OP >= dTermBeg 
                           and ds.DATA_OP <  dTermEnd
@@ -6973,7 +6978,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                                or
                                 (ds.service_doc <> 0 and exists( --если это коррекция и есть 83 счет на эту сумму по этому же документу - это возврат по заявлению в прошлый период- учитываем!
                                     select 1
-                                    from   dv_sr_lspv ds83
+                                    from   dv_sr_lspv_v ds83
                                     where  1=1
                                     and    ds83.nom_vkl = ds.nom_vkl
                                     and    ds83.nom_ips = ds.nom_ips
@@ -6985,7 +6990,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                         group by sp.SSYLKA_FL
                 union all  -- исправления ошибок расчета налога предыдущих периодов  
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED 
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.DATA_OP >= dTermBeg
                           and ds.DATA_OP <  dTermEnd 
@@ -6994,7 +6999,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                         group by sp.SSYLKA_FL 
                 union all  -- исправление ошибок, сделанных в 2016 году, за счет удержаний в 2017   
                     Select sp.SSYLKA_FL, -sum(SUMMA) SGD_SUMPRED 
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where 1 = 1--RFC_3779 gl_GOD=2016 -- коррекция только для 2016 года
                           and ds.DATA_OP >= dTermEnd  --RFC_3779 = to_date('01.01.2017', 'dd.mm.yyyy') 
@@ -7107,7 +7112,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
             ) vyc on  ls.SSYLKA=vyc.SSYLKA 
         left join( 
             Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUM -- SGD_SUMPRED  
-                from DV_SR_LSPV ds 
+                from dv_sr_lspv_v ds 
                      inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                 where ds.DATA_OP >= dTermBeg 
                   and ds.DATA_OP <  dTermEnd 
@@ -7238,7 +7243,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                       sum(sgd_sumpred) sgd_sum
                from   (select sp.ssylka_fl,
                               sum(summa) sgd_sumpred
-                       from   dv_sr_lspv ds
+                       from   dv_sr_lspv_v ds
                         inner join sp_lspv sp
                          on   sp.nom_vkl = ds.nom_vkl
                          and  sp.nom_ips = ds.nom_ips
@@ -7362,7 +7367,7 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
             Select SSYLKA_FL, sum(SGD_SUMPRED) SGD_SUM from (
                     -- неисправленная часть
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.DATA_OP >= dTermBeg 
                           and ds.DATA_OP <  dTermEnd 
@@ -7373,7 +7378,7 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
                     -- исправления
                     union all
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.SHIFR_SCHET=85 
                           and ds.SUB_SHIFR_SCHET=(pNPStatus+1) -- для выкупных: 2-резиденты, 3-нерезиденты 
@@ -7512,7 +7517,7 @@ begin
             Select sum(SGD_SUMPRED) into fGodUdNal
             from(
                 Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where sp.SSYLKA_FL=pSSYLKA
                           and ds.DATA_OP >= dTermBeg 
@@ -7523,7 +7528,7 @@ begin
                         group by sp.SSYLKA_FL
                 union all  -- исправления ошибок расчета налога предыдущих периодов  
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED 
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where sp.SSYLKA_FL=pSSYLKA
                           and ds.DATA_OP >= dTermBeg
@@ -7533,7 +7538,7 @@ begin
                         group by sp.SSYLKA_FL 
                 union all  -- исправление ошибок, сделанных в 2016 году, за счет удержаний в 2017   
                     Select sp.SSYLKA_FL, -sum(SUMMA) SGD_SUMPRED 
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where pGOD=2016 -- коррекция только для 2016 года
                           and sp.SSYLKA_FL=pSSYLKA
@@ -7543,7 +7548,7 @@ begin
                 );            
         when 2 then
             Select sum(SUMMA) into fGodUdNal
-                from DV_SR_LSPV ds 
+                from dv_sr_lspv_v ds 
                      inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                 where sp.SSYLKA_FL=pSSYLKA
                   and ds.DATA_OP >= dTermBeg 
@@ -7555,7 +7560,7 @@ begin
             Select sum(SGD_SUMPRED) into fGodUdNal
             from(        
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where sp.SSYLKA_FL=pSSYLKA
                           and ds.DATA_OP >= dTermBeg 
@@ -7567,7 +7572,7 @@ begin
                     -- исправления
                     union all
                     Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
-                        from DV_SR_LSPV ds 
+                        from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where sp.SSYLKA_FL=pSSYLKA
                           and ds.SHIFR_SCHET=85 
@@ -8439,7 +8444,7 @@ end Parse_xml_izBuh;
                       select sum(case when d.shifr_schet in (60, 55, 62) then d.summa end) revenue,
                              sum(case when d.shifr_schet > 1000 then d.summa end) benefit
                       from   sp_lspv    lspv,
-                             dv_sr_lspv d
+                             dv_sr_lspv_v d
                       where  1=1
                       and    (d.shifr_schet in (60, 55, 62) or d.shifr_schet > 1000)
                       and    d.data_op between l_from_date and l_end_date
@@ -8796,7 +8801,7 @@ end Parse_xml_izBuh;
                       sfl.gf_person,
                       sfl.nal_rezident,
                       p_period
-      from   dv_sr_lspv ds
+      from   dv_sr_lspv_v ds
       inner  join sp_lspv lspv
       on     lspv.nom_vkl = ds.nom_vkl
       and    lspv.nom_ips = ds.nom_ips
@@ -8839,7 +8844,7 @@ end Parse_xml_izBuh;
                       sfl.gf_person,
                       sfl.nal_rezident,
                       p_period
-      from   dv_sr_lspv ds
+      from   dv_sr_lspv_v ds
       inner  join sp_lspv lspv
       on     lspv.nom_vkl = ds.nom_vkl
       and    lspv.nom_ips = ds.nom_ips
@@ -8883,7 +8888,7 @@ end Parse_xml_izBuh;
                       vrp.gf_person,
                       vrp.nal_rezident,
                       p_period
-      from   dv_sr_lspv ds
+      from   dv_sr_lspv_v ds
       inner  join sp_lspv lspv
       on     lspv.nom_vkl = ds.nom_vkl
       and    lspv.nom_ips = ds.nom_ips
@@ -8951,7 +8956,7 @@ end Parse_xml_izBuh;
                              sfl.nal_rezident,
                              connect_by_isleaf isleaf,
                              ds.data_op
-                      from   dv_sr_lspv ds
+                      from   dv_sr_lspv_v ds
                       inner  join sp_lspv lspv
                       on     lspv.nom_vkl = ds.nom_vkl
                       and    lspv.nom_ips = ds.nom_ips
@@ -9017,7 +9022,7 @@ end Parse_xml_izBuh;
                              min(ds.ssylka_doc) ssdoc, -- первый документ в цепочке, исправляемый 
                              min(ds.data_op) data_osh_doh, -- дата дохода по первому документу
                              sum(summa) doh_poluch
-                      from   dv_sr_lspv ds
+                      from   dv_sr_lspv_v ds
                       left   join (select nom_vkl,
                                          nom_ips
                                   from   f_ndfl_load_nalplat
@@ -9191,10 +9196,10 @@ end Parse_xml_izBuh;
            (select ds.nom_vkl,
                     ds.nom_ips,
                     0 sstyp
-             from   dv_sr_lspv ds
+             from   dv_sr_lspv_v ds
              inner  join (select distinct nom_vkl,
                                          nom_ips
-                         from   dv_sr_lspv
+                         from   dv_sr_lspv_v
                          where  nom_vkl < 991 -- не из своих средств    
                          and    shifr_schet = 60 -- пенсия    
                          and    data_op >= p_from_date -- за весь  
@@ -9220,14 +9225,14 @@ end Parse_xml_izBuh;
            (select ds.nom_vkl,
                     ds.nom_ips,
                     0 sstyp
-             from   dv_sr_lspv ds
+             from   dv_sr_lspv_v ds
              where  (ds.nom_vkl, ds.nom_ips, ds.shifr_schet) in
                     (select nom_vkl,
                             nom_ips,
                             shifr_schet
                      from   (select ds.*,
                                     connect_by_isleaf isleaf
-                             from   dv_sr_lspv ds
+                             from   dv_sr_lspv_v ds
                              where  ds.nom_vkl <> 1001 -- не ОПС                  
                              start  with ds.shifr_schet = 55 -- выкупные
                                   and    ds.service_doc = -1 -- коррекция (начинаем поиск с -1)
@@ -9249,7 +9254,7 @@ end Parse_xml_izBuh;
     -- для ритуалок и наследства (ссылки умерших участников, а не получателей дохода)
     select count(*)
     into   l_corr_rit
-    from   dv_sr_lspv
+    from   dv_sr_lspv_v
     where  shifr_schet = 62
     and    (service_doc <> 0 or summa < 0)
     and    data_op >= p_from_date
@@ -9278,9 +9283,9 @@ end Parse_xml_izBuh;
                                   end) ssdoc,
                               min(ds.data_op) data_osh_doh,
                               sum(summa) doh_poluch
-                       from   dv_sr_lspv ds
+                       from   dv_sr_lspv_v ds
                        where  not exists (select *
-                               from   dv_sr_lspv dsz
+                               from   dv_sr_lspv_v dsz
                                where  dsz.data_op >= p_from_date
                                and    dsz.data_op < p_end_date
                                and    dsz.nom_vkl = ds.nom_vkl
@@ -9469,6 +9474,7 @@ end Parse_xml_izBuh;
                   t.god,
                   t.ui_person,
                   t.nom_spr,
+                  t.nom_korr,
                   ns.tip_dox,
                   ns.ssylka
            from   f2ndfl_arh_spravki t,
@@ -9480,7 +9486,7 @@ end Parse_xml_izBuh;
            and    t.kod_na = p_code_na
            and    t.god = p_year
           ) u
-    on    (s.kod_na = u.kod_na and s.god = u.god and s.ssylka = u.ssylka and s.tip_dox = u.tip_dox)
+    on    (s.kod_na = u.kod_na and s.god = u.god and s.ssylka = u.ssylka and s.tip_dox = u.tip_dox and s.nom_korr = u.nom_korr)
     when matched then
       update set
         s.nom_spr = u.nom_spr,

@@ -198,7 +198,7 @@ create or replace package body dv_sr_lspv_docs_api is
     l_process_row.start_date := G_START_DATE;
     l_process_row.end_date   := G_END_DATE;
     --
-    dv_sr_lspv_prc_api.set_process_state(
+    dv_sr_lspv_prc_api.create_process(
       p_process_row => l_process_row
     );
     --
@@ -669,8 +669,7 @@ create or replace package body dv_sr_lspv_docs_api is
                and    inn.ssylka = gp.ssylka
              )
       where  gp.gf_person_new is null
-      and    gp.contragent_type = 'PENSIONER'
-      and    gp.process_id = p_process_id;
+      and    gp.contragent_type = 'PENSIONER';
     exception
       when others then
         fix_exception($$plsql_line, 'update_gf_person_inn_(' || p_process_id || ')');
@@ -701,8 +700,7 @@ create or replace package body dv_sr_lspv_docs_api is
                where  p.cnt = 1
              )
       where  gp.gf_person_new is null
-      and    gp.contragent_type = 'PENSIONER'
-      and    gp.process_id = p_process_id;
+      and    gp.contragent_type = 'PENSIONER';
       --
       update dv_sr_gf_persons_t  gp
       set    gp.gf_person_new = (
@@ -724,8 +722,7 @@ create or replace package body dv_sr_lspv_docs_api is
                where  p.cnt = 1
              )
       where  gp.gf_person_new is null
-      and    gp.contragent_type = 'SUCCESSOR'
-      and    gp.process_id = p_process_id;
+      and    gp.contragent_type = 'SUCCESSOR';
     exception
       when others then
         fix_exception($$plsql_line, 'update_gf_person_inn_(' || p_process_id || ')');
