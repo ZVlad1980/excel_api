@@ -10,7 +10,7 @@ begin
               select 2, 'ГРАЖДАНСТВО РФ не соответствует УЛ', 'Error' from dual union all
               select 3, 'ГРАЖДАНСТВО неРФ не соответствует УЛ РФ', 'Error' from dual union all
               select 4, 'Тип УЛ запрещенное значение', 'Error' from dual union all
-              select 5, 'Неправильный шаблон Паспорта РФ', 'Error' from dual union all
+              select 5, 'Некорректный номер паспорта РФ', 'Error' from dual union all
               select 6, 'Неправильный шаблон Вида на жительство в РФ', 'Error' from dual union all
               select 7, 'Не задано УЛ', 'Error' from dual union all
               select 8, 'Налоговый резидент и ГРАЖДАНСТВО или УЛ не РФ', 'Warning' from dual union all
@@ -23,6 +23,7 @@ begin
               select 15, 'Некорректный ИНН', 'Error' from dual union all
               select 16, 'Не соотвутствие ставки и статуса резидента', 'Error' from dual union all
               select 17, 'Недействительный паспорт РФ', 'Error' from dual
+              select 18, 'Неправильный шаблон паспорта РФ', 'Error' from dual
              ) u
   on         (se.error_id = u.error_id)
   when matched then
