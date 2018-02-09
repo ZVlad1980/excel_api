@@ -22,7 +22,7 @@ begin
               select 14, 'Пустой ИНН', 'Warning' from dual union all
               select 15, 'Некорректный ИНН', 'Error' from dual union all
               select 16, 'Не соотвутствие ставки и статуса резидента', 'Error' from dual union all
-              select 17, 'Недействительный паспорт РФ', 'Error' from dual
+              select 17, 'Недействительный паспорт РФ', 'Error' from dual union all
               select 18, 'Неправильный шаблон паспорта РФ', 'Error' from dual
              ) u
   on         (se.error_id = u.error_id)

@@ -6935,55 +6935,9 @@ begin
                 ls.ssylka,
                 ls.tip_dox,
                 ls.nom_korr,
-                ds.month, --extract(month from ds.data_op),
+                ds.month,
                 td.benefit_code,
                 ds.shifr_schet;
-      /*select ls.kod_na,
-             ls.god,
-             ls.ssylka,
-             ls.tip_dox,
-             ls.nom_korr,
-             extract(month from ds.data_op),
-             coalesce(td.benefit_code, to_char(-1 * ds.shifr_schet)),
-             sum(coalesce((td.amount/td.amount_all * ds.summa), ds.summa)) amount_new,
-             13
-      from   f2ndfl_load_spravki ls
-        inner  join sp_lspv sp
-          on     sp.ssylka_fl = ls.ssylka
-        inner  join dv_sr_lspv_v ds
-          on     ds.nom_vkl = sp.nom_vkl
-          and    ds.nom_ips = sp.nom_ips
-        left   join taxdeductions_v td
-          on     td.nom_vkl = ds.nom_vkl
-          and    td.nom_ips = ds.nom_ips
-          and    td.shifr_schet = ds.shifr_schet
-      where  ls.kod_na = gl_kodna
-      and    ls.god = gl_god
-      and    ls.tip_dox = (
-               select max(case ds2.shifr_schet
-                        when 55 then 3
-                        else 1
-                      end)
-               from   dv_sr_lspv_v ds2
-               where  ds2.nom_vkl = ds.nom_vkl
-               and    ds2.nom_ips = ds.nom_ips
-               and    ds2.shifr_schet in (55, 60)
-               and    ds2.ssylka_doc = ds.ssylka_doc
-             )
-      and    ls.nom_korr = gl_nomkor
-      and    case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1
-      and    ls.status_np = 1 -- резиденты
-      and    ds.shifr_schet > 1000 -- вычеты
-      and    ds.data_op >= dtermbeg --to_date(20170101, 'yyyymmdd')--dtermbeg -- за год
-      and    ds.data_op <  dtermend --to_date(20180101, 'yyyymmdd')--dtermend
-      group  by ls.kod_na,
-                ls.god,
-                ls.ssylka,
-                ls.tip_dox,
-                ls.nom_korr,
-                extract(month from ds.data_op),
-                td.benefit_code,
-                ds.shifr_schet;*/
           --
     if gl_COMMIT then Commit; end if;
     
