@@ -59,6 +59,11 @@ show error
 prompt install f2ndfl_arh_nomspr.sql
 @@Tables\f2ndfl_arh_nomspr.sql
 show error
+
+prompt install f2ndfl_load_vych_man.sql
+@@Tables\f2ndfl_load_vych_man.sql
+show error
+
 */
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
@@ -332,8 +337,24 @@ prompt install ndfl2_corr_spr_rep_v.sql
 @@Views\ndfl2_corr_spr_rep_v.sql
 show error
 
-prompt install taxdeductions_v.sql
-@@Views\taxdeductions_v.sql
+prompt install payments_taxdeductions_v.sql
+@@Views\payments_taxdeductions_v.sql
+show error
+
+prompt install sp_ogr_pv_v.sql
+@@Views\sp_ogr_pv_v.sql
+show error
+
+prompt install sp_ogr_benefits_v.sql
+@@Views\sp_ogr_benefits_v.sql
+show error
+
+prompt install dv_sr_lspv_benefits_v.sql
+@@Views\dv_sr_lspv_benefits_v.sql
+show error
+
+prompt install dv_sr_lspv_benefits_det_v.sql
+@@Views\dv_sr_lspv_benefits_det_v.sql
 show error
 
 prompt install contragent_merge_log_v.sql
