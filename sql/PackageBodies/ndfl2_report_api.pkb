@@ -37,6 +37,33 @@ create or replace package body ndfl2_report_api is
     );
     --
     case l_report_code
+      when 'f2_load_vych_errors' then
+        open l_result for
+          select vm.ssylka,
+                 sfl.nom_vkl,
+                 sfl.nom_ips,
+                 sfl.full_name,
+                 case vm.tip_dox
+                   when 1 then 'Пенсия'
+                   when 3 then 'Выкуп.сумма'
+                   else to_char(vm.tip_dox)
+                 end                 tip_dox,
+                 lpad(vm.mes, 2, '0') month,
+                 vm.vych_kod_gni     shifr_schet,
+                 vm.vych_kod_gni_new,
+                 vm.vych_sum         benefit_amount
+          from   f2ndfl_load_vych_man vm,
+                 sp_fiz_litz_lspv_v   sfl
+          where  1=1
+          and    sfl.ssylka = vm.ssylka
+          --
+          and    vm.god = p_year
+          and    vm.kod_na = 1
+          order by sfl.full_name,
+                   vm.mes,
+                   tip_dox,
+                   vm.vych_kod_gni,
+                   vm.vych_kod_gni_new;
       when 'f2_enumarate_error' then
         open l_result for
           select 'LOAD_SPRAVKI' table_name,

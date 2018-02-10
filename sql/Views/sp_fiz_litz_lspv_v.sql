@@ -12,7 +12,10 @@ create or replace view sp_fiz_litz_lspv_v as
          end                     resident,
          s.kod_ps                pen_scheme_code,
          fz.gf_person            gf_person,
-         s.kr_nazv               pen_scheme
+         s.kr_nazv               pen_scheme,
+         fz.familiya || ' ' || 
+           fz.imya   || ' ' ||
+           fz.otchestvo          full_name
   from   fnd.sp_lspv        lspv, 
          fnd.sp_pen_dog     dog,
          fnd.sp_fiz_lits    fz,
