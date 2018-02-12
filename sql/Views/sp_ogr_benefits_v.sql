@@ -5,7 +5,7 @@ create or replace view sp_ogr_benefits_v as
          op.nom_ips,
          op.ssylka_fl,
          op.shifr_schet,
-         to_number(pt.benefit_code) benefit_code,
+         coalesce(to_number(pt.benefit_code), op.shifr_schet) benefit_code,
          pt.amount                  benefit_amount,
          op.start_date,
          op.end_date,
@@ -18,6 +18,6 @@ create or replace view sp_ogr_benefits_v as
   from   sp_ogr_pv_v              op,
          payments_taxdeductions_v pt
   where  1=1
-  and    pt.tdappid = op.tdappid
-  and    pt.rid = op.pt_rid
+  and    pt.tdappid(+) = op.tdappid
+  and    pt.rid(+) = op.pt_rid
 /

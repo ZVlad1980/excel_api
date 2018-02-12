@@ -112,6 +112,33 @@ create or replace package gateway_pkg is
     p_year              number
   );
   
+  /**
+   * Сброс ранее установленных параметров
+   */
+  procedure purge_parameters;
+  
+  /**
+   * Временное решение для передачи произвольного набора параметров
+   */
+  procedure set_parameter(
+    p_name  varchar2,
+    p_value varchar2
+  );
+  
+  /**
+   * Временное решение для передачи произвольного набора параметров
+   */
+  function get_parameter(
+    p_name  varchar2
+  ) return varchar2 deterministic;
+  
+  /**
+   * Временное решение для передачи произвольного набора параметров
+   */
+  function get_parameter_num(
+    p_name  varchar2
+  ) return number deterministic;
+  
   /** JSON не поддержвается в 12.1.0.1!!! Нужна своя реализация!
    * Процедура request - единая точка входа
    *

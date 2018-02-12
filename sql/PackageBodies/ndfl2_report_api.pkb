@@ -37,6 +37,101 @@ create or replace package body ndfl2_report_api is
     );
     --
     case l_report_code
+      when 'f2_pers_info' then
+        if gateway_pkg.get_parameter_num('ssylka_fl') is not null then
+          open l_result for
+            select sfl.gf_person,
+                   sfl.ssylka,
+                   sfl.nom_vkl,
+                   sfl.nom_ips,
+                   sfl.full_name,
+                   to_char(sfl.birth_date, 'dd.mm.yyyy') birth_date,
+                   case sfl.resident
+                     when 1 then 'Y'
+                     when 2 then 'N'
+                     else 'U'
+                   end is_resident
+            from   sp_fiz_litz_lspv_v sfl
+            where  sfl.ssylka = gateway_pkg.get_parameter_num('ssylka_fl');
+        end if;
+      --
+      when 'f2_vych_bit' then
+        if gateway_pkg.get_parameter_num('ssylka_fl') is not null then
+          open l_result for
+            select to_char(pt.start_date, 'dd.mm.yyyy') start_date,
+                   to_char(pt.end_date, 'dd.mm.yyyy')   end_date,
+                   pt.benefit_code, 
+                   pt.amount,
+                   pt.name, 
+                   pt.upper_income,
+                   pt.tdappid,
+                   pt.rid
+            from   payments_taxdeductions_v pt
+            where  1=1
+            and    p_year between pt.start_year and pt.end_year
+            and    pt.ssylka_fl = gateway_pkg.get_parameter_num('ssylka_fl') --in(802273)--= 1649305
+            order by pt.rid, pt.start_date;
+        end if;
+      --
+      when 'f2_vych_ogr' then
+        if gateway_pkg.get_parameter_num('ssylka_fl') is not null then
+          open l_result for
+            select to_char(t.start_date, 'dd.mm.yyyy') start_date,
+                   to_char(t.end_date, 'dd.mm.yyyy')   end_date,
+                   t.shifr_schet,
+                   null,
+                   o.soderg_ogr,
+                   null,
+                   t.tdappid,
+                   t.pt_rid
+            from   sp_ogr_pv_v t,
+                   kod_ogr_pv  o
+            where  1=1
+            and    o.kod_ogr_pv = t.shifr_schet
+            and    p_year between t.start_year and t.end_year
+            and    t.ssylka_fl = gateway_pkg.get_parameter_num('ssylka_fl')
+            order by t.pt_rid, t.shifr_schet, t.start_date;
+        end if;
+      --
+      when 'f2_vych_dv_sr' then
+        if gateway_pkg.get_parameter_num('ssylka_fl') is not null then
+          open l_result for
+            select to_char(a.date_op, 'dd.mm.yyyy') date_op,
+                   a.charge_type,
+                   a.shifr_schet,
+                   a.amount,
+                   a.ssylka_doc,
+                   case when a.service_doc <> 0 then a.service_doc end service_doc,
+                   a.sub_shifr_schet
+            from   dv_sr_lspv_acc_v a,
+                   sp_lspv          sp
+            where  a.nom_vkl = sp.nom_vkl
+            and    a.nom_ips = sp.nom_ips
+            and    a.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
+            and    sp.ssylka_fl = gateway_pkg.get_parameter_num('ssylka_fl')
+            order by a.date_op, a.charge_type;
+        end if;
+      --
+      when 'f2_vych_load' then
+        if gateway_pkg.get_parameter_num('ssylka_fl') is not null then
+          open l_result for
+            select case v.tip_dox
+                     when 1 then 'Пенсия'
+                     when 3 then 'Выкупн.сумма'
+                     else to_char(v.tip_dox)
+                   end  tip_dox,
+                   lpad(to_char(v.mes), 2, '0') mes,
+                   v.vych_kod_gni,
+                   v.vych_sum,
+                   v.nom_korr
+            from   f2ndfl_load_vych v
+            where  1=1
+            and    v.ssylka = gateway_pkg.get_parameter_num('ssylka_fl')
+            and    v.god = p_year
+            and    v.kod_na = 1
+            order by v.vych_kod_gni, v.mes;
+        end if;
+      --
       when 'f2_load_vych_errors' then
         open l_result for
           select vm.ssylka,
