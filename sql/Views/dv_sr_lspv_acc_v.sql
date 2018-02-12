@@ -11,7 +11,7 @@ create or replace view dv_sr_lspv_acc_v as
          d.sub_shifr_schet  ,
          d.summa            amount,
          d.kod_oper         ,
-         a.sub_shifr_grp
+         a.sub_shifr_grp    
   from   dv_sr_lspv_v  d,
          ndfl_accounts_t a
   where  1 = 1

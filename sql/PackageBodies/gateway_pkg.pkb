@@ -7,6 +7,10 @@ create or replace package body gateway_pkg is
   C_SRC_CHR  constant varchar2(200) := 'AOPEHBCXMK';
   C_DEST_CHR constant varchar2(200) := 'АОРЕНВСХМК';
   
+  --Тип для хранения параметров запуска
+  type g_parameters_type is table of varchar2(512) index by varchar2(40);
+  g_parameters g_parameters_type;
+  
   -- Private type declarations
    /**
    * Обвертки обработки ошибок
@@ -372,7 +376,52 @@ create or replace package body gateway_pkg is
       x_err_msg := utl_error_api.get_error_msg;
   end f2_ndfl_api;
   
+  /**
+   * Сброс ранее установленных параметров
+   */
+  procedure purge_parameters is
+  begin
+    g_parameters.delete();
+  end purge_parameters;
   
+  /**
+   * Временное решение для передачи произвольного набора параметров
+   */
+  procedure set_parameter(
+    p_name  varchar2,
+    p_value varchar2
+  ) is
+  begin
+    if p_name is not null and length(p_name) < 20 
+        and lengthb(p_value) <= 512
+      then
+      if g_parameters.exists(p_name) then
+        fix_exception('gateway_pkg.set_parameter: parameter ' || p_name || ' is already determined');
+        raise DUP_VAL_ON_INDEX;
+      end if;
+      g_parameters(lower(p_name)) := p_value;
+    end if;
+  end set_parameter;
+  
+  /**
+   * Временное решение для передачи произвольного набора параметров
+   */
+  function get_parameter(
+    p_name  varchar2
+  ) return varchar2 deterministic is
+  begin
+    return g_parameters(p_name);
+  end get_parameter;
+  
+  /**
+   * Временное решение для передачи произвольного набора параметров
+   */
+  function get_parameter_num(
+    p_name  varchar2
+  ) return number deterministic is
+  begin
+    return to_number(g_parameters(p_name));
+  end get_parameter_num;
   
   /**
    * Процедура request - единая точка входа

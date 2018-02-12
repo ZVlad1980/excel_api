@@ -55,8 +55,13 @@ create or replace view f2ndfl_arh_spravki_errors_v as
                      when kod_ud_lichn not in (3, 7, 8, 10, 11, 12, 13, 14, 15, 19, 21, 23, 24, 91) then 4   --Тип УЛ запрещенное значение
                    end || ' ' ||
                    case
-                     when kod_ud_lichn = 21
-                       and not regexp_like(ser_nom_doc, '^\d{2}\s\d{2}\s\d{6}$')                    then 5   --Неправильный шаблон Паспорта РФ
+                     when kod_ud_lichn = 21 
+                       and not regexp_like(ser_nom_doc, '^\d{2}\s\d{2}\s\d{6}$') 
+                       then
+                       case
+                         when length(regexp_replace(ser_nom_doc, '[^[[:digit:]]]*')) = 10           then 18   --Неправильный шаблон паспорта РФ
+                         else                                                                            5    --Некорректный номер паспорта РФ
+                       end
                    end || ' ' ||
                    case
                      when kod_ud_lichn = 12
