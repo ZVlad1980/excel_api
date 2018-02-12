@@ -1029,7 +1029,7 @@ create or replace package body f2ndfl_load_api is
       l_result := true;
     end if;
     --
-    if p_action_code in (C_ACT_INIT_XML, C_ACT_LOAD_ALL) then
+    if p_action_code in (C_ACT_INIT_XML) then
       --
       init_xml(
         p_globals => l_globals

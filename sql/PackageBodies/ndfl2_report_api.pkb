@@ -51,7 +51,28 @@ create or replace package body ndfl2_report_api is
                  lpad(vm.mes, 2, '0') month,
                  vm.vych_kod_gni     shifr_schet,
                  vm.vych_kod_gni_new,
-                 vm.vych_sum         benefit_amount
+                 vm.vych_sum         benefit_amount,
+                 case 
+                   when exists (
+                     select 1
+                     from   sp_ogr_pv_v p
+                     where  p.nom_vkl = sfl.nom_vkl
+                     and    p.nom_ips = sfl.nom_ips
+                     and    p.start_year = vm.god
+                     and    p.shifr_schet = -1 * vm.vych_kod_gni
+                   ) then 'Y'
+                   else 'N'
+                 end                 is_ogr_exists,
+                 case
+                   when exists(
+                     select 1
+                     from   payments_taxdeductions_v pt
+                     where  pt.ssylka_fl = vm.ssylka
+                     and    vm.god between pt.start_year and
+                                           pt.end_year
+                   ) then 'Y'
+                   else 'N'
+                 end                  is_payments_exists
           from   f2ndfl_load_vych_man vm,
                  sp_fiz_litz_lspv_v   sfl
           where  1=1
