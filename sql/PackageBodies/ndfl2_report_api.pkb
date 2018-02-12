@@ -37,6 +37,122 @@ create or replace package body ndfl2_report_api is
     );
     --
     case l_report_code
+      when 'f2_vych_diff_periods' then
+        open l_result for
+          select t.ssylka_fl,
+                 t.nom_vkl,
+                 t.nom_ips,
+                 sfl.full_name,
+                 t.shifr_schet,
+                 t.benefit_code,
+                 to_char(t.start_date, 'dd.mm.yyyy') start_date,
+                 to_char(t.end_date, 'dd.mm.yyyy') end_date,
+                 to_char(t.bit_start_date, 'dd.mm.yyyy') bit_start_date,
+                 to_char(t.bit_end_date, 'dd.mm.yyyy')   bit_end_date,
+                 t.benefit_amount,
+                 case
+                   when exists(
+                       select 1
+                       from   dv_sr_lspv_acc_v a
+                       where  a.nom_vkl = t.nom_vkl
+                       and    a.nom_ips = t.nom_ips
+                       and    a.shifr_schet = t.shifr_schet
+                       and    a.date_op between least(t.start_date, t.bit_start_date) and greatest(t.start_date, t.bit_start_date)
+                     ) then 'Y' else 'N'
+                 end apply_benefits
+          from   (
+                    select b.ssylka_fl,
+                           b.shifr_schet,
+                           b.nom_vkl,
+                           b.nom_ips,
+                           b.benefit_code,
+                           b.benefit_amount,
+                           b.start_date,
+                           b.end_date,
+                           greatest(b.bit_start_date, dv_sr_lspv_docs_api.get_start_date) bit_start_date,
+                           least(b.bit_end_date, dv_sr_lspv_docs_api.get_end_date)   bit_end_date
+                    from   sp_ogr_benefits_v        b
+                    where  1 = 1
+                    and    p_year between b.start_year and b.end_year
+                 ) t,
+                 sp_fiz_litz_lspv_v sfl
+          where  1=1
+          and    sfl.ssylka = t.ssylka_fl
+          and    t.start_date <> t.bit_start_date
+          and    trunc(t.start_date, 'MM') <> t.bit_start_date;
+      --
+      when 'f2_vych_diff_amounts' then
+        open l_result for
+          with w_dv_sr_lspv as (
+            select a.nom_vkl,
+                   a.nom_ips,
+                   a.shifr_schet,
+                   sum(a.amount) amount
+            from   dv_sr_lspv_acc_v a
+            where  1=1
+            and    a.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
+            and    a.charge_type = 'BENEFIT'
+            group by a.nom_vkl,
+                   a.nom_ips,
+                   a.shifr_schet
+            having sum(a.amount) <> 0
+          ), w_cmp_benefits as (
+          select d.nom_vkl,
+                 d.nom_ips,
+                 b.ssylka_fl,
+                 d.shifr_schet,
+                 b.benefit_code,
+                 greatest(b.bit_start_date, dv_sr_lspv_docs_api.get_start_date) start_date,
+                 least(b.bit_end_date, dv_sr_lspv_docs_api.get_end_date)   end_date,
+                 sum(b.benefit_amount * (extract(month from least(b.bit_end_date, dv_sr_lspv_docs_api.get_end_date))
+                   - extract(month from greatest(b.bit_start_date, dv_sr_lspv_docs_api.get_start_date)) + 1)) amount_bit,
+                 max(d.amount) amount_dv
+          from   w_dv_sr_lspv                d,
+                 sp_ogr_benefits_v           b
+          where  1=1
+          and    b.pt_rid(+) <> 0
+          and    p_year between b.start_year(+) and b.end_year(+)
+          and    b.nom_ips(+) = d.nom_ips
+          and    b.nom_vkl(+) = d.nom_vkl
+          group by d.nom_vkl,
+                 d.nom_ips,
+                 b.ssylka_fl,
+                 d.shifr_schet,
+                 b.benefit_code,
+                 greatest(b.bit_start_date, dv_sr_lspv_docs_api.get_start_date),
+                 least(b.bit_end_date, dv_sr_lspv_docs_api.get_end_date)   
+          ), w_cmp_benefits2 as (
+          select cb.nom_vkl,
+                 cb.nom_ips,
+                 cb.ssylka_fl,
+                 cb.shifr_schet,
+                 cb.benefit_code,
+                 cb.start_date,
+                 cb.end_date,
+                 cb.amount_bit,
+                 cb.amount_dv,
+                 sum(cb.amount_bit)over(partition by cb.ssylka_fl, cb.shifr_schet) amount_bit_schet
+          from   w_cmp_benefits cb
+          )
+          select cb.ssylka_fl,
+                 cb.nom_vkl,
+                 cb.nom_ips,
+                 sfl.full_name,
+                 cb.shifr_schet,
+                 cb.benefit_code,
+                 cb.start_date,
+                 cb.end_date,
+                 cb.amount_bit,
+                 cb.amount_dv,
+                 cb.amount_bit_schet
+          from   w_cmp_benefits2    cb,
+                 sp_fiz_litz_lspv_v sfl
+          where  1=1
+          and    sfl.ssylka = cb.ssylka_fl
+          and    cb.amount_dv > cb.amount_bit_schet
+          order by cb.ssylka_fl,
+                   cb.shifr_schet;
+      --
       when 'f2_pers_info' then
         if gateway_pkg.get_parameter_num('ssylka_fl') is not null then
           open l_result for
