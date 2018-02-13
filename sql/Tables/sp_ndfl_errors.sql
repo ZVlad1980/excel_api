@@ -6,7 +6,8 @@ create table sp_ndfl_errors(
 /
 begin
   merge into sp_ndfl_errors se
-  using      (select 1 error_id, 'ГРАЖДАНСТВО не задано' error_msg, 'Error' error_type from dual union all
+  using      (select 0 error_id, 'Ошибка программы' error_msg, 'Error' error_type from dual union all
+              select 1 error_id, 'ГРАЖДАНСТВО не задано' error_msg, 'Error' error_type from dual union all
               select 2, 'ГРАЖДАНСТВО РФ не соответствует УЛ', 'Error' from dual union all
               select 3, 'ГРАЖДАНСТВО неРФ не соответствует УЛ РФ', 'Error' from dual union all
               select 4, 'Тип УЛ запрещенное значение', 'Error' from dual union all

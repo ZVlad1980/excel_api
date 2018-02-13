@@ -863,6 +863,105 @@ create or replace package body f2ndfl_arh_spravki_api is
       fix_exception($$PLSQL_LINE);
       raise;
   end synhonize_load;
+  
+  /**
+   * Функция validate_pers_info - проверяет перс.данные
+   *
+   * @param p_fk_contragent - 
+   * @param p_last_name     - 
+   * @param p_first_name    - 
+   * @param p_middle_name   - 
+   * @param p_birth_date    - 
+   * @param p_doc_code      - код УЛ
+   * @param p_doc_num       - серия и номер УЛ
+   * @param p_inn           - ИНН
+   * @param p_citizenship   - гражданство (код страны)
+   * @param p_resident      - резидент (1/2 - да/нет)
+   * @param p_inn_dbl       - количество записей с одинаковым ИНН  count(distinct case when s.inn_fl is not null then s.ui_person end) over(partition by s.kod_na, s.god, s.inn_fl)
+   * @param p_fiod_dbl      - количество записей с одинаковым ФИОД count(distinct s.ui_person) over(partition by s.kod_na, s.god, s.ser_nom_doc)
+   * @param p_doc_dbl       - количество записей с одинаковым УЛ   count(distinct s.ui_person) over(partition by s.kod_na, s.god, s.familiya, s.imya, s.otchestvo, s.data_rozhd)
+   *
+   * @return varchar2- строка со списком ошибок ч/з пробел (см. спр. sp_ndfl_errors)
+   *
+   */
+  function validate_pers_info(
+    p_code_na        int,  
+    p_year           int,
+    p_nom_spr        varchar2,
+    p_fk_contragent  int,
+    p_doc_code       int,
+    p_doc_num        varchar2,
+    p_inn            varchar2,
+    p_citizenship    varchar2,
+    p_resident       int,
+    p_inn_dbl        int,
+    p_fiod_dbl       int,
+    p_doc_dbl        int,
+    p_invalid_doc    varchar2
+  ) return varchar2 is
+    l_result varchar2(4000);
+    procedure append_code_(p_error_code int) is
+    begin
+      l_result := l_result || case when l_result is not null then ' ' end || to_char(p_error_code);
+    end append_code_;
+  begin
+    --
+    if p_citizenship is null                                           then append_code_(1); end if;   --ГРАЖДАНСТВО не задано
+    --
+    if p_citizenship = 643 and p_doc_code 
+      in (10, 11, 12, 13, 15, 19)                                      then append_code_(2); end if;   --ГРАЖДАНСТВО РФ не соответствует УЛ
+    --
+    if p_citizenship = '643' and p_doc_code 
+      in (10, 11, 12, 13, 15, 19)                                      then append_code_(3); end if;   --ГРАЖДАНСТВО неРФ не соответствует УЛ РФ
+    --
+    if p_doc_code not in (3, 7, 8, 10, 11, 12, 
+      13, 14, 15, 19, 21, 23, 24, 91)                                  then append_code_(4); end if;   --Тип УЛ запрещенное значение
+    --
+    if p_doc_code = 21 and not 
+        regexp_like(p_doc_num, '^\d{2}\s\d{2}\s\d{6}$') then 
+      if length(regexp_replace(p_doc_num, '[^[[:digit:]]]*')) = 10     then append_code_(18);          --Неправильный шаблон паспорта РФ
+      else                                                                  append_code_(5);           --Некорректный номер паспорта РФ
+      end if;
+    end if;
+    --
+    if p_doc_code = 12 and not 
+      regexp_like(p_doc_num, '^\d{2}\s\d{7}$')                         then append_code_(6);  end if;  --Неправильный шаблон Вида на жительство в РФ
+    --
+    if p_doc_code is null or p_doc_num is null                         then append_code_(7);  end if;  --Не задано УЛ
+    --
+    if p_resident = 1 and coalesce(p_citizenship, 'NULL') <> '643' 
+      and p_doc_code in (10, 11, 13, 15, 19)                           then append_code_(8);  end if;  --Налоговый резидент и ГРАЖДАНСТВО или УЛ не РФ
+    --
+    if p_resident = 1 and coalesce(p_citizenship, 'NULL') <> '643'
+      and p_doc_code = 12                                              then append_code_(9);  end if;  --Налоговый резидент и вид на жительство РФ
+    --
+    if p_doc_code <> 21 and p_citizenship = '643'
+      and regexp_like(p_doc_num, '^\d{2}\s\d{2}\s\d{6}$')              then append_code_(10); end if; --Значения ГРАЖДАНСТВО и ШАБЛОН УДОСТОВЕРЕНИЯ соответствуют коду ПАСПОРТА РФ
+    --
+    if p_inn_dbl  > 1                                                  then append_code_(11); end if; --Дублирование ИНН
+    if p_doc_dbl  > 1                                                  then append_code_(12); end if; --Дублирование УЛ
+    if p_fiod_dbl > 1                                                  then append_code_(13); end if; --Дублирование ФИОД
+    --
+    if p_inn is null                                                then append_code_(14); end if; --ИНН не заполнен
+    --
+    if p_inn is not null and
+      fxndfl_util.Check_INN(p_inn) <> 0                             then append_code_(15); end if; --Некорректный ИНН
+    --
+    if p_nom_spr is not null and fxndfl_util.Check_ResidentTaxRate(
+         p_code_na, 
+         p_year, 
+         p_nom_spr, 
+         p_resident) <> 0                                           then append_code_(16); end if; --Не соотвутствие ставки и статуса резидента
+    --
+    if p_invalid_doc = 'Y'                                          then append_code_(17); end if; --Недействительный паспорт РФ
+    --
+    return l_result;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      return '0';
+  end validate_pers_info;
   --
 end f2ndfl_arh_spravki_api;
 /

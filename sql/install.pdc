@@ -381,6 +381,10 @@ prompt install f2ndfl_arh_spravki_errors_v.sql
 @@Views\f2ndfl_arh_spravki_errors_v.sql
 show error
 
+prompt install f2ndfl_arh_spr_src_errors_v.sql
+@@Views\f2ndfl_arh_spr_src_errors_v.sql
+show error
+
 prompt install f2ndfl_arh_spravki_v.sql
 @@Views\f2ndfl_arh_spravki_v.sql
 show error
