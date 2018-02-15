@@ -9478,10 +9478,10 @@ end Parse_xml_izBuh;
     ) select F_NDFL_SPRID_SEQ.Nextval,
              p.kod_na,
              trunc(sysdate),
-             to_char(
+             trim(to_char(
                100 + row_number()over(order by nlssort(upper(p.lastname), 'NLS_SORT=RUSSIAN'), upper(p.firstname), upper(p.secondname), to_char(p.birthdate, 'yyyymmdd'), p.ui_person),
                '000000'
-             ) nom_spr,
+             )) nom_spr,
              p.god,
              0,
              p.ui_person,
@@ -9493,8 +9493,21 @@ end Parse_xml_izBuh;
              p.firstname,
              p.secondname,
              p.birthdate,
-             p.fk_idcard_type,
-             p.ser_nom_doc,
+             case
+               when p.fk_idcard_type not in (3, 7, 8, 10, 11, 12, 13, 14, 15, 19, 21, 23, 24, 91) then
+                 91
+               else p.fk_idcard_type 
+             end fk_idcard_type,
+             case
+               when p.fk_idcard_type = 21 and 
+                 not regexp_like(p.ser_nom_doc, '^\d{2}\s\d{2}\s\d{6}$') and
+                 length(ser_nom_doc_prep) = 10
+                 then
+                 substr(ser_nom_doc_prep, 1, 2) || ' ' || 
+                 substr(ser_nom_doc_prep, 3, 2) || ' ' || 
+                 substr(ser_nom_doc_prep, 4, 6)
+               else p.ser_nom_doc
+             end ser_nom_doc,
              1
       from   f2ndfl_arh_spravki_src_v p
       where  p.kod_na = p_code_na
@@ -9557,6 +9570,7 @@ end Parse_xml_izBuh;
     from   f2ndfl_arh_nomspr ns,
            f2ndfl_load_itogi li
     where  1 = 1
+    and    li.tip_dox = ns.tip_dox
     and    li.ssylka = ns.ssylka
     and    li.god = ns.god
     and    li.kod_na = ns.kod_na
@@ -9566,7 +9580,16 @@ end Parse_xml_izBuh;
     group  by ns.kod_na,
               ns.god,
               ns.nom_spr;
-    return case when p_resident = case  when l_tax_rate = 13 then 1 when l_tax_rate = 30 then 2 else 3 end then 0 else 2 end;
+    return 
+      case 
+        when p_resident = 
+          case
+            when l_tax_rate = 13 then 1 
+            when l_tax_rate = 30 then 2 
+            else p_resident end 
+         then 0 
+        else  2
+      end;
   end check_residenttaxrate;
   
   /**

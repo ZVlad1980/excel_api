@@ -400,7 +400,7 @@ create or replace package body ndfl2_report_api is
                    )                            error_list
             from   f2ndfl_arh_spravki_errors_v e
             where  1=1
-            and    e.god = p_year
+            and    e.god = 2017
             and    e.kod_na = 1
           )
           select coalesce(ed.error_type, 'ErrorUnknown') error_type, 
@@ -423,7 +423,7 @@ create or replace package body ndfl2_report_api is
                  s_prev.grazhd          prev_grazhd         ,
                  s_prev.status_np       prev_status_np      ,
                  s_prev.kod_ud_lichn    prev_kod_ud_lichn   ,
-                 s_prev.ser_nom_doc     prev_ser_nom_doc
+                 s_prev.ser_nom_doc     prev_ser_nom_doc --*/
           from   w_errors e,
                  lateral(
                    select level lvl,
@@ -441,13 +441,21 @@ create or replace package body ndfl2_report_api is
                             ord_value
                    from   sp_ndfl_errors ed
                    where  ed.error_id = p.error_id
-                 )(+) ed,
-                 f2ndfl_arh_spravki s_prev
+                 ) ed,
+                 lateral(
+                   select max(s_prev.nom_spr     ) keep(dense_rank last order by s_prev.nom_korr) nom_spr     ,
+                          max(s_prev.inn_fl      ) keep(dense_rank last order by s_prev.nom_korr) inn_fl      ,
+                          max(s_prev.grazhd      ) keep(dense_rank last order by s_prev.nom_korr) grazhd      ,
+                          max(s_prev.status_np   ) keep(dense_rank last order by s_prev.nom_korr) status_np   ,
+                          max(s_prev.kod_ud_lichn) keep(dense_rank last order by s_prev.nom_korr) kod_ud_lichn,
+                          max(s_prev.ser_nom_doc ) keep(dense_rank last order by s_prev.nom_korr) ser_nom_doc 
+                   from   f2ndfl_arh_spravki s_prev
+                   where  1=1
+                   and    s_prev.ui_person(+) = e.ui_person
+                   and    s_prev.god(+) = e.god - 1
+                   and    s_prev.kod_na(+) = e.kod_na
+                 ) s_prev --*/
           where  1=1
-          and    s_prev.nom_korr(+) = 0 --Пока шо так
-          and    s_prev.ui_person(+) = e.ui_person
-          and    s_prev.god(+) = e.god - 1
-          and    s_prev.kod_na(+) = e.kod_na
           and    e.error_list is not null
           order by ed.error_id, ed.ord_value;
       --
@@ -525,16 +533,24 @@ create or replace package body ndfl2_report_api is
                             ord_value
                    from   sp_ndfl_errors ed
                    where  ed.error_id = p.error_id
-                 )(+) ed,
-                 f2ndfl_arh_spravki s_prev
+                 ) ed,
+                 lateral(
+                   select max(s_prev.nom_spr     ) keep(dense_rank last order by s_prev.nom_korr) nom_spr     ,
+                          max(s_prev.inn_fl      ) keep(dense_rank last order by s_prev.nom_korr) inn_fl      ,
+                          max(s_prev.grazhd      ) keep(dense_rank last order by s_prev.nom_korr) grazhd      ,
+                          max(s_prev.status_np   ) keep(dense_rank last order by s_prev.nom_korr) status_np   ,
+                          max(s_prev.kod_ud_lichn) keep(dense_rank last order by s_prev.nom_korr) kod_ud_lichn,
+                          max(s_prev.ser_nom_doc ) keep(dense_rank last order by s_prev.nom_korr) ser_nom_doc 
+                   from   f2ndfl_arh_spravki s_prev
+                   where  1=1
+                   and    s_prev.ui_person(+) = e.ui_person
+                   and    s_prev.god(+) = e.god - 1
+                   and    s_prev.kod_na(+) = e.kod_na
+                 ) s_prev
           where  1=1
-          and    s_prev.nom_korr(+) = 0 --Пока шо так
-          and    s_prev.ui_person(+) = e.ui_person
-          and    s_prev.god(+) = e.god - 1
-          and    s_prev.kod_na(+) = e.kod_na
           and    e.error_list is not null
           order by ed.error_id, ed.ord_value;
-        --
+      --
       when 'f2_full_namesake' then
         --источник запроса: fxndfl_util.SovpDan_Kontragentov
         open l_result for

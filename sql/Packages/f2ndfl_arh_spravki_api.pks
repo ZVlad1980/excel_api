@@ -121,5 +121,22 @@ create or replace package f2ndfl_arh_spravki_api is
     p_invalid_doc    varchar2
   ) return varchar2;
   
+  /**
+   * Процедура fill_spravki_errors заполняет таблицу ошибок перс.данных - f2ndfl_arh_srpavki_err
+   */
+  procedure fill_spravki_errors(
+    p_code_na int,
+    p_year    int
+  );
+  
+  /**
+   * Процедура fix_citizenship - заполняет гражданства в F2NDFL_ARH_SPRAVKI по адресу контрагента
+   * !!! Ручной вызов, по необходимости.
+   */
+  procedure fix_cityzenship(
+    p_code_na int,
+    p_year    int
+  );
+  
 end f2ndfl_arh_spravki_api;
 /

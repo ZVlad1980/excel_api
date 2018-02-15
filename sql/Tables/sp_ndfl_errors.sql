@@ -1,13 +1,14 @@
 create table sp_ndfl_errors(
   error_id int constraint sp_ndfl_errors_pk primary key,
   error_msg varchar2(4000),
-  error_type varchar2(10) constraint sp_ndfl_errors_chk check (error_type in ('Error', 'Warning'))
+  error_type varchar2(10) constraint sp_ndfl_errors_chk check (error_type in ('Error', 'Warning')),
+  program_name varchar2(150)
 )
 /
 begin
   merge into sp_ndfl_errors se
   using      (select 0 error_id, 'Ошибка программы' error_msg, 'Error' error_type from dual union all
-              select 1 error_id, 'ГРАЖДАНСТВО не задано' error_msg, 'Error' error_type from dual union all
+              select 1 , 'ГРАЖДАНСТВО не задано', 'Error' from dual union all
               select 2, 'ГРАЖДАНСТВО РФ не соответствует УЛ', 'Error' from dual union all
               select 3, 'ГРАЖДАНСТВО неРФ не соответствует УЛ РФ', 'Error' from dual union all
               select 4, 'Тип УЛ запрещенное значение', 'Error' from dual union all
@@ -22,8 +23,8 @@ begin
               select 13, 'Дублирование ФИОД', 'Error' from dual union all
               select 14, 'Пустой ИНН', 'Warning' from dual union all
               select 15, 'Некорректный ИНН', 'Error' from dual union all
-              select 16, 'Не соотвутствие ставки и статуса резидента', 'Error' from dual union all
-              select 17, 'Недействительный паспорт РФ', 'Error' from dual union all
+              select 16, 'Не соотвeтствие ставки и статуса резидента', 'Error' from dual union all
+              select 17, 'Недействительный паспорт РФ', 'Warning' from dual union all
               select 18, 'Неправильный шаблон паспорта РФ', 'Error' from dual
              ) u
   on         (se.error_id = u.error_id)

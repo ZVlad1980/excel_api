@@ -4,7 +4,7 @@ create or replace view dv_sr_lspv_v as
          d.shifr_schet,
          d.data_op,
          case
-           when sysdate <= to_date(20180210, 'yyyymmdd')
+           when sysdate <= to_date(20180228, 'yyyymmdd')
              and d.ssylka_doc = 420315 and d.shifr_schet = 85 then
                case
                  when d.nom_vkl = 37 and d.nom_ips = 921   then -2184
