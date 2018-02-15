@@ -1972,7 +1972,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
       priznak_f
     ) values (
       nxmlid,
-      'NO_NDFL' || trim(to_char(pforma)) || '_' || rnalag.ifns || '_' ||
+      'NO_NDFL' || trim(to_char(pforma)) || '_' || rnalag.ifns_a || '_' ||
       rnalag.ifns || '_' || rnalag.inn || rnalag.kpp || '_' ||
       to_char(sysdate, 'YYYYMMDD') || '_' ||
       trim(to_char(nxmlid, '0000000000')),

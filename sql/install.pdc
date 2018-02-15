@@ -64,6 +64,12 @@ prompt install f2ndfl_load_vych_man.sql
 @@Tables\f2ndfl_load_vych_man.sql
 show error
 
+prompt install f2ndfl_spr_nal_agent.sql
+@@Tables\f2ndfl_spr_nal_agent.sql
+show error
+
+
+
 */
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
