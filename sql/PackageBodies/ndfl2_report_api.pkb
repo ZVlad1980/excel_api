@@ -370,8 +370,7 @@ create or replace package body ndfl2_report_api is
       when 'f2_arh_spravki_errors' then
         open l_result for
           with w_errors as (
-            select /*+ materialized*/
-                   e.kod_na, 
+            select  e.kod_na, 
                    e.god, 
                    e.ui_person, 
                    e.inn_fl, 
@@ -383,11 +382,116 @@ create or replace package body ndfl2_report_api is
                    e.kod_ud_lichn, 
                    e.ser_nom_doc, 
                    e.status_np, 
-                   e.is_participant,         
-                   e.error_list
+                   e.is_participant,  
+                    f2ndfl_arh_spravki_api.validate_pers_info(
+                      e.kod_na          ,
+                      e.god             ,
+                      e.nom_spr         ,
+                      e.ui_person       ,
+                      e.kod_ud_lichn    ,
+                      e.ser_nom_doc     ,
+                      e.inn_fl          ,
+                      e.grazhd          ,
+                      e.status_np       ,
+                      e.inn_dbl         ,
+                      e.fiod_dbl        ,
+                      e.doc_dbl         ,
+                      e.is_invalid_doc
+                   )                            error_list
             from   f2ndfl_arh_spravki_errors_v e
             where  1=1
-            and    e.error_list is not null
+            and    e.god = 2017
+            and    e.kod_na = 1
+          )
+          select coalesce(ed.error_type, 'ErrorUnknown') error_type, 
+                 coalesce(ed.error_msg, to_char(p.error_id)) error_msg, 
+                 e.ui_person, 
+                 e.familiya, 
+                 e.imya, 
+                 e.otchestvo, 
+                 to_char(e.data_rozhd, 'dd.mm.yyyy') data_rozhd,
+                 e.inn_fl, 
+                 e.grazhd, 
+                 case e.status_np
+                   when 1 then 'Y'
+                   when 2 then 'N'
+                 end status_np, 
+                 e.kod_ud_lichn, 
+                 e.ser_nom_doc,
+                 s_prev.nom_spr         prev_nom_spr        ,
+                 s_prev.inn_fl          prev_inn_fl         ,
+                 s_prev.grazhd          prev_grazhd         ,
+                 s_prev.status_np       prev_status_np      ,
+                 s_prev.kod_ud_lichn    prev_kod_ud_lichn   ,
+                 s_prev.ser_nom_doc     prev_ser_nom_doc --*/
+          from   w_errors e,
+                 lateral(
+                   select level lvl,
+                          to_number(regexp_substr(e.error_list, '[^ ]+', 1, level)) error_id
+                   from   dual
+                   connect by level <= regexp_count(e.error_list, ' +?') + 1
+                 ) p,
+                 lateral(
+                   select ed.error_msg,
+                          ed.error_type,
+                          case ed.error_id
+                            when 11 then e.inn_fl
+                            when 12 then e.ser_nom_doc
+                          end || '#' || e.familiya || '#' || e.imya || '#' || e.otchestvo || '#' || e.data_rozhd || '#' || e.ui_person
+                            ord_value
+                   from   sp_ndfl_errors ed
+                   where  ed.error_id = p.error_id
+                 ) ed,
+                 lateral(
+                   select max(s_prev.nom_spr     ) keep(dense_rank last order by s_prev.nom_korr) nom_spr     ,
+                          max(s_prev.inn_fl      ) keep(dense_rank last order by s_prev.nom_korr) inn_fl      ,
+                          max(s_prev.grazhd      ) keep(dense_rank last order by s_prev.nom_korr) grazhd      ,
+                          max(s_prev.status_np   ) keep(dense_rank last order by s_prev.nom_korr) status_np   ,
+                          max(s_prev.kod_ud_lichn) keep(dense_rank last order by s_prev.nom_korr) kod_ud_lichn,
+                          max(s_prev.ser_nom_doc ) keep(dense_rank last order by s_prev.nom_korr) ser_nom_doc 
+                   from   f2ndfl_arh_spravki s_prev
+                   where  1=1
+                   and    s_prev.ui_person(+) = e.ui_person
+                   and    s_prev.god(+) = e.god - 1
+                   and    s_prev.kod_na(+) = e.kod_na
+                 ) s_prev --*/
+          where  1=1
+          and    e.error_list is not null
+          order by ed.error_id, ed.ord_value;
+      --
+      when 'f2_arh_spr_src_errors' then
+        open l_result for
+          with w_errors as (
+            select  e.kod_na, 
+                   e.god, 
+                   e.ui_person, 
+                   e.inn_fl, 
+                   e.grazhd, 
+                   e.familiya, 
+                   e.imya, 
+                   e.otchestvo, 
+                   e.data_rozhd, 
+                   e.kod_ud_lichn, 
+                   e.ser_nom_doc, 
+                   e.status_np, 
+                   e.is_participant,  
+                    f2ndfl_arh_spravki_api.validate_pers_info(
+                      e.kod_na          ,
+                      e.god             ,
+                      e.nom_spr         ,
+                      e.ui_person       ,
+                      e.kod_ud_lichn    ,
+                      e.ser_nom_doc     ,
+                      e.inn_fl          ,
+                      e.grazhd          ,
+                      e.status_np       ,
+                      e.inn_dbl         ,
+                      e.fiod_dbl        ,
+                      e.doc_dbl         ,
+                      e.is_invalid_doc
+                   )                            error_list
+            from   f2ndfl_arh_spr_src_errors_v e
+            where  1=1
             and    e.god = p_year
             and    e.kod_na = 1
           )
@@ -429,14 +533,24 @@ create or replace package body ndfl2_report_api is
                             ord_value
                    from   sp_ndfl_errors ed
                    where  ed.error_id = p.error_id
-                 )(+) ed,
-                 f2ndfl_arh_spravki s_prev
+                 ) ed,
+                 lateral(
+                   select max(s_prev.nom_spr     ) keep(dense_rank last order by s_prev.nom_korr) nom_spr     ,
+                          max(s_prev.inn_fl      ) keep(dense_rank last order by s_prev.nom_korr) inn_fl      ,
+                          max(s_prev.grazhd      ) keep(dense_rank last order by s_prev.nom_korr) grazhd      ,
+                          max(s_prev.status_np   ) keep(dense_rank last order by s_prev.nom_korr) status_np   ,
+                          max(s_prev.kod_ud_lichn) keep(dense_rank last order by s_prev.nom_korr) kod_ud_lichn,
+                          max(s_prev.ser_nom_doc ) keep(dense_rank last order by s_prev.nom_korr) ser_nom_doc 
+                   from   f2ndfl_arh_spravki s_prev
+                   where  1=1
+                   and    s_prev.ui_person(+) = e.ui_person
+                   and    s_prev.god(+) = e.god - 1
+                   and    s_prev.kod_na(+) = e.kod_na
+                 ) s_prev
           where  1=1
-          and    s_prev.nom_korr(+) = 0 --Пока шо так
-          and    s_prev.ui_person(+) = e.ui_person
-          and    s_prev.god(+) = e.god - 1
-          and    s_prev.kod_na(+) = e.kod_na
+          and    e.error_list is not null
           order by ed.error_id, ed.ord_value;
+      --
       when 'f2_full_namesake' then
         --источник запроса: fxndfl_util.SovpDan_Kontragentov
         open l_result for

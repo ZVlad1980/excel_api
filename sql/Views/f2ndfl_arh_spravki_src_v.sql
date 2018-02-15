@@ -17,6 +17,7 @@ create or replace view f2ndfl_arh_spravki_src_v as
     from   f2ndfl_arh_nomspr   ns,
            f2ndfl_load_spravki ls
     where  1=1
+    and    ls.tip_dox = ns.tip_dox
     and    ls.ssylka = ns.ssylka
     and    ls.god = ns.god
     and    ls.kod_na = ns.kod_na
@@ -37,7 +38,8 @@ create or replace view f2ndfl_arh_spravki_src_v as
          gfp.secondname,
          gfp.birthdate,
          gfi.fk_idcard_type,
-         gfi.series || case when gfi.series is not null and gfi.nbr is not null then ' ' end || gfi.nbr ser_nom_doc
+         gfi.series || case when gfi.series is not null and gfi.nbr is not null then ' ' end || gfi.nbr ser_nom_doc,
+         regexp_replace(gfi.series || gfi.nbr, '[^[[:digit:]]]*') ser_nom_doc_prep
   from   w_persons p,
          gf_people_v  gfp,
          gf_idcards_v gfi,
@@ -61,7 +63,8 @@ create or replace view f2ndfl_arh_spravki_src_v as
          ls.otchestvo,
          ls.data_rozhd,
          ls.kod_ud_lichn,
-         ls.ser_nom_doc
+         ls.ser_nom_doc,
+         regexp_replace(ls.ser_nom_doc, '[^[[:digit:]]]*') ser_nom_doc_prep
   from   w_persons p,
          f2ndfl_load_spravki ls
   where  1=1

@@ -863,6 +863,236 @@ create or replace package body f2ndfl_arh_spravki_api is
       fix_exception($$PLSQL_LINE);
       raise;
   end synhonize_load;
+  
+  /**
+   * Функция validate_pers_info - проверяет перс.данные
+   *
+   * @param p_fk_contragent - 
+   * @param p_last_name     - 
+   * @param p_first_name    - 
+   * @param p_middle_name   - 
+   * @param p_birth_date    - 
+   * @param p_doc_code      - код УЛ
+   * @param p_doc_num       - серия и номер УЛ
+   * @param p_inn           - ИНН
+   * @param p_citizenship   - гражданство (код страны)
+   * @param p_resident      - резидент (1/2 - да/нет)
+   * @param p_inn_dbl       - количество записей с одинаковым ИНН  count(distinct case when s.inn_fl is not null then s.ui_person end) over(partition by s.kod_na, s.god, s.inn_fl)
+   * @param p_fiod_dbl      - количество записей с одинаковым ФИОД count(distinct s.ui_person) over(partition by s.kod_na, s.god, s.ser_nom_doc)
+   * @param p_doc_dbl       - количество записей с одинаковым УЛ   count(distinct s.ui_person) over(partition by s.kod_na, s.god, s.familiya, s.imya, s.otchestvo, s.data_rozhd)
+   *
+   * @return varchar2- строка со списком ошибок ч/з пробел (см. спр. sp_ndfl_errors)
+   *
+   */
+  function validate_pers_info(
+    p_code_na        int,  
+    p_year           int,
+    p_nom_spr        varchar2,
+    p_fk_contragent  int,
+    p_doc_code       int,
+    p_doc_num        varchar2,
+    p_inn            varchar2,
+    p_citizenship    varchar2,
+    p_resident       int,
+    p_inn_dbl        int,
+    p_fiod_dbl       int,
+    p_doc_dbl        int,
+    p_invalid_doc    varchar2
+  ) return varchar2 is
+    l_result varchar2(4000);
+    procedure append_code_(p_error_code int) is
+    begin
+      l_result := l_result || case when l_result is not null then ' ' end || to_char(p_error_code);
+    end append_code_;
+  begin
+    --
+    if p_citizenship is null                                           then append_code_(1); end if;   --ГРАЖДАНСТВО не задано
+    --
+    if p_citizenship = 643 and p_doc_code 
+      in (10, 11, 12, 13, 15, 19)                                      then append_code_(2); end if;   --ГРАЖДАНСТВО РФ не соответствует УЛ
+    --
+    if p_citizenship = '643' and p_doc_code 
+      in (10, 11, 12, 13, 15, 19)                                      then append_code_(3); end if;   --ГРАЖДАНСТВО неРФ не соответствует УЛ РФ
+    --
+    if p_doc_code not in (3, 7, 8, 10, 11, 12, 
+      13, 14, 15, 19, 21, 23, 24, 91)                                  then append_code_(4); end if;   --Тип УЛ запрещенное значение
+    --
+    if p_doc_code = 21 and not 
+        regexp_like(p_doc_num, '^\d{2}\s\d{2}\s\d{6}$') then 
+      if length(regexp_replace(p_doc_num, '[^[[:digit:]]]*')) = 10     then append_code_(18);          --Неправильный шаблон паспорта РФ
+      else                                                                  append_code_(5);           --Некорректный номер паспорта РФ
+      end if;
+    end if;
+    --
+    if p_doc_code = 12 and not 
+      regexp_like(p_doc_num, '^\d{2}\s\d{7}$')                         then append_code_(6);  end if;  --Неправильный шаблон Вида на жительство в РФ
+    --
+    if p_doc_code is null or p_doc_num is null                         then append_code_(7);  end if;  --Не задано УЛ
+    --
+    if p_resident = 1 and coalesce(p_citizenship, 'NULL') <> '643' 
+      and p_doc_code in (10, 11, 13, 15, 19)                           then append_code_(8);  end if;  --Налоговый резидент и ГРАЖДАНСТВО или УЛ не РФ
+    --
+    if p_resident = 1 and coalesce(p_citizenship, 'NULL') <> '643'
+      and p_doc_code = 12                                              then append_code_(9);  end if;  --Налоговый резидент и вид на жительство РФ
+    --
+    if p_doc_code <> 21 and p_citizenship = '643'
+      and regexp_like(p_doc_num, '^\d{2}\s\d{2}\s\d{6}$')              then append_code_(10); end if; --Значения ГРАЖДАНСТВО и ШАБЛОН УДОСТОВЕРЕНИЯ соответствуют коду ПАСПОРТА РФ
+    --
+    if p_inn_dbl  > 1                                                  then append_code_(11); end if; --Дублирование ИНН
+    if p_doc_dbl  > 1                                                  then append_code_(12); end if; --Дублирование УЛ
+    if p_fiod_dbl > 1                                                  then append_code_(13); end if; --Дублирование ФИОД
+    --
+    if p_inn is null                                                then append_code_(14); end if; --ИНН не заполнен
+    --
+    if p_inn is not null and
+      fxndfl_util.Check_INN(p_inn) <> 0                             then append_code_(15); end if; --Некорректный ИНН
+    --
+    if p_nom_spr is not null and fxndfl_util.Check_ResidentTaxRate(
+         p_code_na, 
+         p_year, 
+         p_nom_spr, 
+         p_resident) <> 0                                           then append_code_(16); end if; --Не соотвeтствие ставки и статуса резидента
+    --
+    if p_invalid_doc = 'Y'                                          then append_code_(17); end if; --Недействительный паспорт РФ
+    --
+    return l_result;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      return '0';
+  end validate_pers_info;
+  
+  /**
+   * 
+   */
+  procedure fill_spravki_errors(
+    p_code_na int,
+    p_year    int
+  ) is
+  begin
+    --
+    merge into f2ndfl_arh_spravki_err ase
+    using (with w_errors as (
+             select  e.kod_na, 
+                     e.god,
+                     e.r_sprid,
+                     e.ui_person,
+                     f2ndfl_arh_spravki_api.validate_pers_info(
+                       e.kod_na          ,
+                       e.god             ,
+                       e.nom_spr         ,
+                       e.ui_person       ,
+                       e.kod_ud_lichn    ,
+                       e.ser_nom_doc     ,
+                       e.inn_fl          ,
+                       e.grazhd          ,
+                       e.status_np       ,
+                       e.inn_dbl         ,
+                       e.fiod_dbl        ,
+                       e.doc_dbl         ,
+                       e.is_invalid_doc
+                     )                            error_list
+             from   f2ndfl_arh_spravki_errors_v e
+             where  1=1
+             and    e.god = p_year
+             and    e.kod_na = p_code_na
+           )
+           select e.kod_na code_na,
+                  e.god year,
+                  e.r_sprid,
+                  s_prev.id r_sprid_prev,
+                  p.error_id
+           from   w_errors e,
+                  lateral(
+                    select level lvl,
+                           to_number(regexp_substr(e.error_list, '[^ ]+', 1, level)) error_id
+                    from   dual
+                    connect by level <= regexp_count(e.error_list, ' +?') + 1
+                  ) p,
+                  lateral(
+                    select 1
+                    from   sp_ndfl_errors     se
+                    where  se.error_type <> 'Warning'
+                    and    se.error_id = p.error_id
+                  ) se,
+                  lateral(
+                    select max(s_prev.id) keep(dense_rank last order by s_prev.nom_korr) id
+                    from   f2ndfl_arh_spravki s_prev
+                    where  s_prev.ui_person(+) = e.ui_person
+                    and    s_prev.god(+) = e.god - 1
+                    and    s_prev.kod_na(+) = e.kod_na
+                  ) s_prev
+           where  1=1
+           and    e.error_list is not null
+          ) u
+    on    (ase.code_na = u.code_na and ase.year = u.year and ase.r_sprid = u.r_sprid)
+    when not matched then
+      insert (code_na, year, r_sprid, r_spr_id_prev, error_id)
+        values (u.code_na, u.year, u.r_sprid, u.r_sprid_prev, u.error_id);
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end fill_spravki_errors;
+  
+  /**
+   * Процедура fix_citizenship - заполняет гражданства в F2NDFL_ARH_SPRAVKI по адресу контрагента
+   * !!! Ручной вызов, по необходимости.
+   */
+  procedure fix_cityzenship(
+    p_code_na int,
+    p_year    int
+  ) is
+  begin
+    merge into f2ndfl_arh_spravki sa
+    using ( select t.id,
+                   t.status,
+                   s.id r_sprid,
+                   max(a.fk_country_code)keep(dense_rank first order by a.fk_address_type) fk_country_code
+            from   F2NDFL_ARH_SPRAVKI_ERR t,
+                   f2ndfl_arh_spravki     s,
+                   gazfond.addresses      a
+            where  1=1
+            and    a.fk_contragent = s.ui_person
+            and    s.is_participant = 'Y'
+            and    s.id = t.r_sprid
+            and    t.status = 'New'
+            and    t.error_id = 1
+            and    t.year = p_year
+            and    t.code_na = p_code_na
+            group by t.id,
+                   t.status,
+                   s.id
+            having max(a.fk_country_code)keep(dense_rank first order by a.fk_address_type) is not null
+          ) u
+    on    (sa.id = u.r_sprid)
+    when matched then
+      update set
+        sa.grazhd = u.fk_country_code;
+    --
+    update (select t.status
+            from   F2NDFL_ARH_SPRAVKI_ERR t
+            where  1=1
+            and    exists(
+                     select 1
+                     from   f2ndfl_arh_spravki s
+                     where  s.id = t.r_sprid
+                     and    s.grazhd is not null
+                   )
+            and    t.status = 'New'
+            and    t.error_id = 1
+            and    t.year = p_year
+            and    t.code_na = p_code_na
+           ) u
+    set    u.status = 'Fix';
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end;
   --
 end f2ndfl_arh_spravki_api;
 /

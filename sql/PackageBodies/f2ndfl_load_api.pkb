@@ -314,6 +314,22 @@ create or replace package body f2ndfl_load_api is
     end if;
     --
     if p_action_code in (C_PRG_ARH_SPRAVKI, C_PRG_LOAD_TOTAL, C_PRG_LOAD_SPRAVKI, C_PRG_LOAD_ALL) then
+      update f2ndfl_arh_spravki_err t
+      set    t.r_spr_id_prev = null
+      where  1=1
+      and    t.r_spr_id_prev in (
+               select tt.id
+               from   f2ndfl_arh_spravki tt
+               where  tt.god = p_year
+               and    tt.kod_na = p_code_na
+             )
+      and    t.year > p_year
+      and    t.code_na = p_code_na;
+      --
+      delete from f2ndfl_arh_spravki_err t
+      where  t.code_na = p_code_na
+      and    t.year = p_year;
+      --
       delete from f2ndfl_arh_spravki t
       where  t.kod_na = p_code_na
       and    t.god = p_year;
@@ -396,10 +412,8 @@ create or replace package body f2ndfl_load_api is
     function check_forbidden_action_ return boolean is
       l_result boolean := false;
     begin
-      if not check_legacy_action(p_action_code, p_code_na, p_year, C_ACT_TYPE_PURGE) then
-        if not (p_force and p_action_code in (C_PRG_LOAD_ALL, C_PRG_XML)) then
+      if not p_force and not check_legacy_action(p_action_code, p_code_na, p_year, C_ACT_TYPE_PURGE) then
           l_result := true;
-        end if;
       end if;
       return l_result;
     end;
@@ -832,7 +846,11 @@ create or replace package body f2ndfl_load_api is
       p_code_na => p_globals.KODNA,
       p_year    => p_globals.GOD
     );
-    -- 
+    --
+    f2ndfl_arh_spravki_api.fill_spravki_errors(
+      p_code_na => p_globals.KODNA,
+      p_year    => p_globals.GOD
+    );
   exception
     when others then
       fix_exception;
