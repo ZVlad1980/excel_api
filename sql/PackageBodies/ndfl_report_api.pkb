@@ -123,6 +123,81 @@ create or replace package body ndfl_report_api is
     end if;
     --
     case l_report_code
+      when 'gf_person_info' then
+        if gateway_pkg.get_parameter_num('gf_person') is not null then
+          open l_result for
+            select 'FIO'     key, 
+                   p.fullname || ' (' || to_char(p.birthdate, 'dd.mm.yyyy') || ')'       value
+            from   gf_people_v p
+            where  p.fk_contragent = gateway_pkg.get_parameter_num('gf_person')
+            union all
+            select 'GF_PERSON'     key, 
+                   gateway_pkg.get_parameter('gf_person') value 
+            from   dual;
+        end if;
+      when 'dv_sr_lspv_detail' then
+        if gateway_pkg.get_parameter_num('gf_person') is not null then
+          open l_result for
+            with w_dv_sr_lspv_docs as(
+              select /*+ materialize*/
+                     dd.gf_person,
+                     dd.ssylka_fl,
+                     dd.det_charge_type,
+                     dd.nom_vkl,
+                     dd.nom_ips,
+                     min(dd.date_doc) from_date,
+                     max(dd.date_doc) to_date
+              from   dv_sr_lspv_docs_t dd
+              where  dd.gf_person = gateway_pkg.get_parameter_num('gf_person')
+              and    (dd.year_op > (l_year - 2) or dd.year_doc = l_year)
+              group by dd.gf_person,
+                       dd.ssylka_fl,
+                       dd.det_charge_type,
+                       dd.nom_vkl,
+                       dd.nom_ips
+            )
+            select dd.ssylka_fl,
+                   a.nom_vkl,
+                   a.nom_ips,
+                   to_char(a.date_op, 'dd.mm.yyyy') date_op,
+                   a.det_charge_type,
+                   a.charge_type,
+                   a.shifr_schet,
+                   a.sub_shifr_schet,
+                   a.amount,
+                   a.ssylka_doc,
+                   a.service_doc,
+                   a.tax_rate
+            from   w_dv_sr_lspv_docs dd,
+                   dv_sr_lspv_acc_v  a
+            where  1=1
+            and    a.date_op between dd.from_date and dd.to_date
+            and    case when dd.det_charge_type = 'RITUAL' and a.det_charge_type = dd.det_charge_type then 1 else 1 end = 1
+            and    a.nom_ips = dd.nom_ips
+            and    a.nom_vkl = dd.nom_vkl
+            order by a.date_op, dd.ssylka_fl, a.det_charge_type, a.charge_type;
+        end if;
+      when 'dv_sr_lspv_docs_detail' then
+        if gateway_pkg.get_parameter_num('gf_person') is not null then
+          open l_result for
+            select dd.ssylka_fl,
+                   dd.nom_vkl,
+                   dd.nom_ips,
+                   to_char(dd.date_op, 'dd.mm.yyyy') date_op,
+                   to_char(dd.date_doc, 'dd.mm.yyyy') date_doc,
+                   dd.det_charge_type,
+                   dd.benefit,
+                   dd.revenue,
+                   dd.tax,
+                   dd.ssylka_doc_op,
+                   dd.ssylka_doc,
+                   dd.tax_rate
+            from   dv_sr_lspv_docs_t dd
+            where  1=1
+            and    (dd.year_op > (l_year - 2) or dd.year_doc = l_year)
+            and    dd.gf_person = gateway_pkg.get_parameter_num('gf_person')
+            order by dd.date_op, dd.ssylka_fl, dd.det_charge_type;
+        end if;
       when 'synch_error_report' then
         open l_result for
           select case when e.type_op = -1 then 'Коррекция' end type_op,

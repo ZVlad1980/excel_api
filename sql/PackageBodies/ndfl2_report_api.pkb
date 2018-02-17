@@ -37,6 +37,65 @@ create or replace package body ndfl2_report_api is
     );
     --
     case l_report_code
+      when 'f2_arh_itogi' then
+        if gateway_pkg.get_parameter_num('gf_person') is not null then
+          open l_result for
+            select s.nom_spr,
+                   s.nom_korr,
+                   ai.kod_stavki,
+                   ai.sgd_sum,
+                   ai.sum_obl,
+                   ai.sum_obl_ni,
+                   ai.sum_obl_nu,
+                   ai.dolg_na,
+                   ai.vzysk_ifns
+            from   f2ndfl_arh_spravki s,
+                   f2ndfl_arh_itogi   ai
+            where  1=1
+            and    ai.r_sprid = s.id
+            and    s.ui_person = gateway_pkg.get_parameter_num('gf_person')
+            and    s.god = p_year
+            and    s.kod_na = 1
+            order by s.nom_spr, s.nom_korr, ai.kod_stavki;
+        end if;
+      when 'f2_arh_vych' then
+        if gateway_pkg.get_parameter_num('gf_person') is not null then
+          open l_result for
+            select s.nom_spr,
+                   s.nom_korr,
+                   av.kod_stavki,
+                   av.vych_kod_gni,
+                   av.vych_sum_predost,
+                   av.vych_sum_ispolz
+            from   f2ndfl_arh_spravki s,
+                   f2ndfl_arh_vych    av
+            where  1=1
+            and    av.r_sprid = s.id
+            and    s.ui_person = gateway_pkg.get_parameter_num('gf_person')
+            and    s.god = p_year
+            and    s.kod_na = 1
+            order by s.nom_spr, s.nom_korr, av.kod_stavki, av.vych_kod_gni;
+        end if;
+      when 'f2_arh_mes' then
+        if gateway_pkg.get_parameter_num('gf_person') is not null then
+          open l_result for
+            select s.nom_spr,
+                   s.nom_korr,
+                   am.kod_stavki,
+                   am.mes,
+                   am.doh_kod_gni,
+                   am.doh_sum,
+                   am.vych_kod_gni,
+                   am.vych_sum
+            from   f2ndfl_arh_spravki s,
+                   f2ndfl_arh_mes     am
+            where  1=1
+            and    am.r_sprid = s.id
+            and    s.ui_person = gateway_pkg.get_parameter_num('gf_person')
+            and    s.god = p_year
+            and    s.kod_na = 1
+            order by s.nom_spr, s.nom_korr, am.mes, am.kod_stavki, am.doh_kod_gni;
+        end if;
       when 'f2_vych_diff_periods' then
         open l_result for
           select t.ssylka_fl,
