@@ -222,6 +222,8 @@ create or replace package body f2ndfl_load_api is
       return not exists_arh_spravki_;
     elsif p_action_code in (C_ACT_LOAD_TOTAL, C_PRG_LOAD_TOTAL, C_ACT_ENUMERATION, C_PRG_ARH_SPRAVKI) then
       return not exists_arh_totals_;
+    elsif p_action_code in (C_ACT_INIT_XML) then
+      return exists_arh_totals_; --если сформированы ARH_TOTALS
     else
       return not exists_xml_; --запустить purge_loads с флагом force
     end if;

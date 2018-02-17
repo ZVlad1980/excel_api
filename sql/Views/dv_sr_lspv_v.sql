@@ -3,17 +3,15 @@ create or replace view dv_sr_lspv_v as
          d.nom_ips,
          d.shifr_schet,
          d.data_op,
-         case
-           when sysdate <= to_date(20180228, 'yyyymmdd')
-             and d.ssylka_doc = 420315 and d.shifr_schet = 85 then
-               case
-                 when d.nom_vkl = 37 and d.nom_ips = 921   then -2184
-                 when d.nom_vkl = 12 and d.nom_ips = 14651 then -728
-                 when d.nom_vkl = 12 and d.nom_ips = 15355 then -728
-                 else d.summa
-               end
-           else d.summa
-         end summa,
+         /*case
+           when sysdate <= to_date(20180331, 'yyyymmdd')
+                and d.ssylka_doc = 420328 and d.shifr_schet = 85 then
+             case
+               when d.nom_vkl = 5 and d.nom_ips = 10223 then -728
+               else d.summa
+             end
+           else d.summa--*/
+         d.summa summa,
          d.ssylka_doc,
          d.kod_oper,
          d.sub_shifr_schet,
