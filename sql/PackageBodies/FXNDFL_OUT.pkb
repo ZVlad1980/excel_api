@@ -452,8 +452,8 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
     pNomSpravki in varchar2, 
     pNomKorr in number, 
     pCurrentPersData in number default 0  ,
-    pFormDate date default sysdate,
-    pFormVersion number default 5.04
+    pFormVersion     number default 5.04  ,
+    pFormDate date default sysdate
   ) return clob is
   nSprId  number;
   nFileId  number;
@@ -514,8 +514,8 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
     pContragentID in number, 
     pYear in number, 
     pCurrentPersData in number default 0,
-    pFormDate date default sysdate,
-    pFormVersion number default 5.04
+    pFormVersion     number default 5.04,
+    pFormDate        date default sysdate
   ) return clob as
   vNOMKOR F2NDFL_ARH_SPRAVKI.NOM_KORR%type;
   rSPR    F2NDFL_ARH_SPRAVKI%rowtype;
@@ -562,7 +562,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
      if  rSPR.ID is Null 
          then vRES:= 'ERR Не найдено актуальных справок для заданых контрагента и года'; 
          else gContragentID:=pContragentID;
-                vRES:= GetXML_SpravkaF2(  1, pYear, rSPR.NOM_SPR, rSPR.NOM_KORR, pCurrentPersData, pFormDate, pFormVersion); 
+                vRES:= GetXML_SpravkaF2(  1, pYear, rSPR.NOM_SPR, rSPR.NOM_KORR, pCurrentPersData, pFormVersion, pFormDate ); 
          end if;       
             
      return vRES;

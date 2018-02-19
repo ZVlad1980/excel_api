@@ -65,8 +65,8 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
     pNomSpravki in varchar2, 
     pNomKorr in number, 
     pCurrentPersData in number default 0  ,
-    pFormDate date default sysdate,
-    pFormVersion number default 5.04
+    pFormVersion     number default 5.04  ,
+    pFormDate date default sysdate
   ) return clob;
   
   -- test:   Select FXNDFL_OUT.GetXML_SpravkaF2(  1, 2015, '000186', 0  ) from dual;
@@ -81,8 +81,8 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
     pContragentID in number, 
     pYear in number, 
     pCurrentPersData in number default 0,
-    pFormDate date default sysdate,
-    pFormVersion number default 5.04
+    pFormVersion     number default 5.04,
+    pFormDate date default sysdate
   ) return clob;
   
   -- получить за 2015 год список пенсионеров без ИНН
