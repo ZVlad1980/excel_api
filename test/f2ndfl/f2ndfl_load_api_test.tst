@@ -15,21 +15,21 @@ begin
     p_force       => true
   );--*/
   --
-  /*
+  --/*
   f2ndfl_load_api.create_2ndfl_refs(
     p_action_code => f2ndfl_load_api.C_ACT_ENUMERATION, --C_ACT_ENUMERATION,--
     p_code_na     => 1,
     p_year        => C_YEAR
   );
   --*/
-  /*
+  --/*
   f2ndfl_load_api.create_2ndfl_refs(
     p_action_code => f2ndfl_load_api.C_ACT_COPY2ARH, --C_ACT_ENUMERATION,--
     p_code_na     => 1,
     p_year        => C_YEAR
   );
   --*/
-  /*
+  --/*
   f2ndfl_arh_spravki_api.fix_cityzenship(
     p_code_na => 1,
     p_year    => C_YEAR

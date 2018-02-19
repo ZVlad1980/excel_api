@@ -39,6 +39,24 @@ create or replace package f2ndfl_arh_spravki_api is
   ) return f2ndfl_arh_spravki.id%type;
   
   /**
+   * Процедура create_reference_corr созданет справку 2НДФЛ
+   *   Если справка уже есть в f2ndfl_arh_spravki - создание корректирующей справки
+   *   Если справки еще нет - создание новой справки, с 0 коррекцией
+   *
+   * @param p_code_na       - код налогоплательщика (НПФ=1)
+   * @param p_year          - год, за который надо сформировать корректировку
+   * @param p_contragent_id - ID контрагента, по которому формируется справка (CDM.CONTRAGENTS.ID)
+   * @param p_ref_num       - номер справки (необязательный)
+   *
+   */
+  procedure create_reference(
+    p_code_na        f2ndfl_arh_spravki.kod_na%type,
+    p_year           f2ndfl_arh_spravki.god%type,
+    p_contragent_id  f2ndfl_arh_spravki.ui_person%type,
+    p_ref_num        f2ndfl_arh_spravki.nom_spr%type default null
+  );
+  
+  /**
    * Процедура create_reference_corr создания корректирующей справки 2НДФЛ
    *
    * @param p_code_na       - код налогоплательщика (НПФ=1)
@@ -51,6 +69,20 @@ create or replace package f2ndfl_arh_spravki_api is
     p_year           f2ndfl_arh_spravki.god%type,
     p_contragent_id  f2ndfl_arh_nomspr.fk_contragent%type
   );
+  
+  /**
+   * Процедура recalc_reference - пересчет суммовых показателей справки
+   *   По заданному контрагенту удаляются суммовые показатели (F2NDFL_LOAD_MES, F2NDFL_LOAD_VYCH, F2NDFL_LOAD_ITOGI, 
+   *     F2NDFL_ARH_MES, F2NDFL_ARH_VYCH, F2NDFL_ARH_ITOGI) по всем типам дохода, кроме ЗП (9),
+   *     и выполняется повторный расчет
+   *
+   * @param p_ref_id       - F2NDFL_ARH_SPRAVKI.ID
+   *
+   */
+  procedure recalc_reference(
+    p_ref_id  f2ndfl_arh_spravki.id%type,
+    p_commit  boolean default false
+  );
 
   /**
    * Процедура delete_reference удаляет данные справки из таблиц F2NDFL_, кроме F2NDFL_ARH_NOMSPR
@@ -59,13 +91,15 @@ create or replace package f2ndfl_arh_spravki_api is
    *   Т.е. если справка относится к сотруднику фонда, не являющемуся контрагентом - она не будет удалена, 
    *        если сотрудник является контрагентом - будут удалены данные по всем типам дохода, кроме 9 (зп)
    *
-   * @param p_ref_id - ID удаляемой справки
-   * @param p_commit - флаг фиксации транзакции
+   * @param p_ref_id      - ID удаляемой справки
+   * @param p_commit      - флаг фиксации транзакции
+   * @param p_only_amount - флаг удаления только суммовых показателей
    *
    */
   procedure delete_reference(
-    p_ref_id f2ndfl_arh_spravki.id%type,
-    p_commit boolean default false
+    p_ref_id        f2ndfl_arh_spravki.id%type,
+    p_commit        boolean default false,
+    p_only_amount   boolean default false
   );
   
   /*
@@ -135,7 +169,8 @@ create or replace package f2ndfl_arh_spravki_api is
    */
   procedure fix_cityzenship(
     p_code_na int,
-    p_year    int
+    p_year    int,
+    p_ref_id  f2ndfl_arh_spravki.id%type
   );
   
 end f2ndfl_arh_spravki_api;

@@ -79,27 +79,37 @@ create or replace package body f2ndfl_arh_spravki_api is
    */
   procedure create_load_refs(
     p_rev_type f2ndfl_arh_nomspr.tip_dox%type,
-    p_globals  in out nocopy g_util_par_type
+    p_globals  in out nocopy g_util_par_type,
+    p_only_amount in boolean
   ) is
     procedure init_ is begin set_globals_util_pkg(p_globals); end init_;
   begin
     --
     case p_rev_type
       when 1 then
-        init_; fxndfl_util.Load_Pensionery_bez_Storno;
-        init_; fxndfl_util.Load_Pensionery_so_Storno;
+        if not p_only_amount then
+          init_; fxndfl_util.Load_Pensionery_bez_Storno;
+          init_; fxndfl_util.Load_Pensionery_so_Storno;
+        end if;
         init_; fxndfl_util.Load_MesDoh_Pensia_bezIspr;
         init_; fxndfl_util.Load_MesDoh_Pensia_sIspravl;
+        init_; fxndfl_util.Load_Vychety;
       when 2 then
-        init_; fxndfl_util.Load_Posobiya_bez_Pravok;
-        init_; fxndfl_util.Load_Posobiya_s_Ipravlen;
+        if not p_only_amount then
+          init_; fxndfl_util.Load_Posobiya_bez_Pravok;
+          init_; fxndfl_util.Load_Posobiya_s_Ipravlen;
+        end if;
         init_; fxndfl_util.Load_MesDoh_Posob_bezIspr;
         init_; fxndfl_util.Load_MesDoh_Posob_sIspravl;
+        init_; fxndfl_util.Load_Vychety;
       when 3 then
-        init_; fxndfl_util.Load_Vykupnye_bez_Pravok;
-        init_; fxndfl_util.Load_Vykupnye_s_Ipravlen;
+        if not p_only_amount then
+          init_; fxndfl_util.Load_Vykupnye_bez_Pravok;
+          init_; fxndfl_util.Load_Vykupnye_s_Ipravlen;
+        end if;
         init_; fxndfl_util.Load_MesDoh_Vykup_bezIspr;
         init_; fxndfl_util.Load_MesDoh_Vykup_sIspravl;
+        init_; fxndfl_util.Load_Vychety;
       when 9 then
         fxndfl_util.copy_load_employees(
           p_src_ref_id  => p_globals.SRC_SPRID,
@@ -124,18 +134,22 @@ create or replace package body f2ndfl_arh_spravki_api is
    *
    */
   procedure create_load_total(
-    p_globals  in out nocopy g_util_par_type
+    p_globals  in out nocopy g_util_par_type,
+    p_only_amount in boolean
   ) is
     l_dummy int;
     procedure init_ is begin set_globals_util_pkg(p_globals); end init_;
   begin
     --
-    l_dummy := fxndfl_util.ZapolnGRAZHD_poUdLichn(pGod => p_globals.GOD);
-    fxndfl_util.copy_load_address(
-      p_src_ref_id => p_globals.SRC_SPRID,
-      p_nom_corr   => p_globals.NOMKOR
-    );
-    init_; fxndfl_util.Load_Vychety;
+    --Отключил, т.к. с 17 года данные берутся из GAZFOND --l_dummy := fxndfl_util.ZapolnGRAZHD_poUdLichn(pGod => p_globals.GOD);
+    --
+    if not p_only_amount then
+      fxndfl_util.copy_load_address(
+        p_src_ref_id => p_globals.SRC_SPRID,
+        p_nom_corr   => p_globals.NOMKOR
+      );
+    end if;
+    --
     init_; fxndfl_util.Load_Itogi_Pensia;
     init_; fxndfl_util.Load_Itogi_Posob_bezIspr;
     init_; fxndfl_util.Load_Itogi_Vykup_bezIspr;
@@ -173,15 +187,18 @@ create or replace package body f2ndfl_arh_spravki_api is
   /**
    * Процедура calc_reference расчет новой справки
    *
-   * @param p_ref_row    - справка f2ndfl_arh_spravki%rowtype
-   * @param p_src_ref_id - ID предыдущей справки
-   * @param p_wo_arh     - без пересчета итогов в ARH (def: FALSE)
+   * @param p_ref_row     - справка f2ndfl_arh_spravki%rowtype
+   * @param p_src_ref_id  - ID предыдущей справки
+   * @param p_wo_arh      - без пересчета итогов в ARH (def: FALSE)
+   * @param p_only_amount - флаг заполнения только суммовых показателей справки (вызывается из recalc_reference)
+   *                      !!! при установленном флаге - не обрабатываются данные по ЗП (9)
    *
    */
   procedure calc_reference(
     p_ref_row     in out nocopy f2ndfl_arh_spravki%rowtype,
     p_src_ref_id  in f2ndfl_arh_spravki.id%type,
-    p_wo_arh      in boolean default false
+    p_wo_arh      in boolean default false,
+    p_only_amount in boolean default false
   ) is
   cursor l_revenue_types_cur is
       select an.tip_dox       rev_type      ,
@@ -213,6 +230,8 @@ create or replace package body f2ndfl_arh_spravki_api is
     --
     for r in l_revenue_types_cur loop
       --
+      continue when p_only_amount and r.rev_type = 9;
+      --
       l_globals.TIPDOX := r.rev_type;
       l_globals.NOMVKL := r.nom_vkl;
       l_globals.NOMIPS := r.nom_ips;
@@ -220,7 +239,8 @@ create or replace package body f2ndfl_arh_spravki_api is
       --
       create_load_refs(
         p_rev_type      => r.rev_type,
-        p_globals       => l_globals
+        p_globals       => l_globals,
+        p_only_amount   => p_only_amount
       );
       --
     end loop;
@@ -230,10 +250,15 @@ create or replace package body f2ndfl_arh_spravki_api is
     l_globals.NOMIPS := null;
     l_globals.CAID   := null;
     --
-    create_load_total(l_globals);
+    create_load_total(
+      p_globals       => l_globals,
+      p_only_amount   => p_only_amount
+    );
     --
     if not p_wo_arh then
-      create_arh_total(l_globals);
+      create_arh_total(
+        p_globals       => l_globals
+      );
     end if;
     --
   exception
@@ -254,10 +279,12 @@ create or replace package body f2ndfl_arh_spravki_api is
     l_result f2ndfl_arh_spravki%rowtype;
   begin
     --
-    select *
-    into   l_result
-    from   f2ndfl_arh_spravki s
-    where  s.id = p_ref_id;
+    if p_ref_id is not null then
+      select *
+      into   l_result
+      from   f2ndfl_arh_spravki s
+      where  s.id = p_ref_id;
+    end if;
     --
     return l_result;
     --
@@ -292,7 +319,8 @@ create or replace package body f2ndfl_arh_spravki_api is
     and    an.fk_contragent = p_contragent_id
     and    an.god           = p_year
     and    an.kod_na        = p_code_na       
-    group by an.nom_spr;
+    --group by an.nom_spr
+    ;
     --
     return l_result;
     --
@@ -330,6 +358,10 @@ create or replace package body f2ndfl_arh_spravki_api is
   ) return f2ndfl_arh_spravki.id%type is
     l_result f2ndfl_arh_spravki.id%type;
   begin
+    --
+    if p_ref_num is null then
+      return null;
+    end if;
     --
     select max(sp.id)keep(dense_rank last order by sp.nom_korr)
     into   l_result
@@ -400,14 +432,14 @@ create or replace package body f2ndfl_arh_spravki_api is
   end get_reference_last;
   
   /**
-   * Функция copy_reference создает корректирующую справку
+   * Функция create_reference создает корректирующую справку
    *
    * @param p_ref_src - строка с исходной справкой 
    *
    * @return - f2ndfl_arh_spravki%rowtype созданной справки
    *
    */
-  function copy_reference(
+  function create_reference(
     p_ref_src in out nocopy f2ndfl_arh_spravki%rowtype
   ) return f2ndfl_arh_spravki%rowtype is
     --
@@ -419,9 +451,32 @@ create or replace package body f2ndfl_arh_spravki_api is
     l_result.nom_korr := p_ref_src.nom_korr + 1;
     l_result.data_dok := trunc(sysdate);
     --
-    l_result.id := fxndfl_util.copy_ref_2ndfl(
-      p_ref_row => l_result
+    fxndfl_util.create_f2ndfl_arh_spravki(
+      p_code_na       => p_ref_src.kod_na,
+      p_year          => p_ref_src.god,
+      p_contragent_id => p_ref_src.ui_person,
+      p_nom_spr       => p_ref_src.nom_spr,
+      p_nom_korr      => p_ref_src.nom_korr
     );
+    --
+    l_result.id := get_reference_last_id(
+      p_code_na     => p_ref_src.kod_na,
+      p_year        => p_ref_src.god,
+      p_ref_num     => p_ref_src.nom_spr,
+      p_load_exists => 'N'
+    );
+    --
+    if p_ref_src.id is not null then
+      fix_cityzenship(
+        p_code_na => p_ref_src.kod_na,
+        p_year    => p_ref_src.god,
+        p_ref_id  => l_result.id
+      );
+      fxndfl_util.copy_adr(
+        p_src_ref_id => p_ref_src.id,
+        p_trg_ref_id => l_result.id
+      );
+    end if;
     --
     return l_result;
     --
@@ -429,7 +484,7 @@ create or replace package body f2ndfl_arh_spravki_api is
     when others then
       fix_exception($$PLSQL_LINE);
       raise;
-  end copy_reference;
+  end create_reference;
   
   /**
    * Процедура check_synchr_load проверяет синхронизацию данных в таблицах F2NDFL_LOAD и F2NDFL_ARH
@@ -467,17 +522,21 @@ create or replace package body f2ndfl_arh_spravki_api is
   end check_synch_load;
   
   /**
-   * Процедура create_reference_corr создания корректирующей справки 2НДФЛ
+   * Процедура create_reference_corr созданет справку 2НДФЛ
+   *   Если справка уже есть в f2ndfl_arh_spravki - создание корректирующей справки
+   *   Если справки еще нет - создание новой справки, с 0 коррекцией
    *
    * @param p_code_na       - код налогоплательщика (НПФ=1)
    * @param p_year          - год, за который надо сформировать корректировку
    * @param p_contragent_id - ID контрагента, по которому формируется справка (CDM.CONTRAGENTS.ID)
+   * @param p_ref_num       - номер справки (необязательный)
    *
    */
-  procedure create_reference_corr(
+  procedure create_reference(
     p_code_na        f2ndfl_arh_spravki.kod_na%type,
     p_year           f2ndfl_arh_spravki.god%type,
-    p_contragent_id  f2ndfl_arh_nomspr.fk_contragent%type
+    p_contragent_id  f2ndfl_arh_spravki.ui_person%type,
+    p_ref_num        f2ndfl_arh_spravki.nom_spr%type default null
   ) is
     l_ref_curr f2ndfl_arh_spravki%rowtype;
     l_ref_new  f2ndfl_arh_spravki%rowtype;
@@ -502,11 +561,31 @@ create or replace package body f2ndfl_arh_spravki_api is
       p_contragent_id => p_contragent_id 
     );
     --
-    plog('Current spr_id = ' || l_ref_curr.id || ', nom_spr = ' || l_ref_curr.nom_spr || ', nom_korr = ' || l_ref_curr.nom_korr);
+    if l_ref_curr.id is null then
+      --
+      if p_ref_num is null then
+        fix_exception(
+          $$PLSQL_LINE, 
+          'f2ndfl_arh_spravki_api.create_reference(' ||
+            p_code_na       || ', ' ||
+            p_year          || ', ' ||
+            p_contragent_id || ', ' ||
+            p_ref_num       || '): по контрагенту нет исходной справки и не задан номер новой справки!'
+        );
+        raise no_data_found;
+      end if;
+      --
+      l_ref_curr.kod_na  := p_code_na;
+      l_ref_curr.god     := p_year   ;
+      l_ref_curr.nom_spr := p_ref_num;
+    else
+      plog('Current spr_id = ' || l_ref_curr.id || ', nom_spr = ' || l_ref_curr.nom_spr || ', nom_korr = ' || l_ref_curr.nom_korr);
+      check_synch_load(p_ref_arh => l_ref_curr);
+    end if;
     --
-    check_synch_load(p_ref_arh => l_ref_curr);
+    l_ref_curr.ui_person := p_contragent_id;
     --
-    l_ref_new := copy_reference(
+    l_ref_new := create_reference(
       p_ref_src => l_ref_curr
     );
     --
@@ -521,7 +600,79 @@ create or replace package body f2ndfl_arh_spravki_api is
     when others then
       fix_exception($$PLSQL_LINE);
       raise;
+  end create_reference;
+  
+  /**
+   * Процедура create_reference_corr создания корректирующей справки 2НДФЛ
+   *  !!!Обвертка для совместимости
+   *
+   * @param p_code_na       - код налогоплательщика (НПФ=1)
+   * @param p_year          - год, за который надо сформировать корректировку
+   * @param p_contragent_id - ID контрагента, по которому формируется справка (CDM.CONTRAGENTS.ID)
+   *
+   */
+  procedure create_reference_corr(
+    p_code_na        f2ndfl_arh_spravki.kod_na%type,
+    p_year           f2ndfl_arh_spravki.god%type,
+    p_contragent_id  f2ndfl_arh_nomspr.fk_contragent%type
+  ) is
+  begin
+    --
+    create_reference(
+      p_code_na       => p_code_na      ,
+      p_year          => p_year         ,
+      p_contragent_id => p_contragent_id
+    );
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE);
+      raise;
   end create_reference_corr;
+  
+  /**
+   * Процедура recalc_reference - пересчет суммовых показателей справки
+   *   По заданному контрагенту удаляются суммовые показатели (F2NDFL_LOAD_MES, F2NDFL_LOAD_VYCH, F2NDFL_LOAD_ITOGI, 
+   *     F2NDFL_ARH_MES, F2NDFL_ARH_VYCH, F2NDFL_ARH_ITOGI) по всем типам дохода, кроме ЗП (9),
+   *     и выполняется повторный расчет
+   *
+   * @param p_ref_id       - F2NDFL_ARH_SPRAVKI.ID
+   *
+   */
+  procedure recalc_reference(
+    p_ref_id  f2ndfl_arh_spravki.id%type,
+    p_commit  boolean default false
+  ) is
+    l_ref_row f2ndfl_arh_spravki%rowtype;
+  begin
+    --
+    delete_reference(
+      p_ref_id      => p_ref_id,
+      p_commit      => p_commit,
+      p_only_amount => true
+    );
+    --
+    l_ref_row := get_reference_row(p_ref_id);
+    --
+    calc_reference(
+      p_ref_row     => l_ref_row,
+      p_src_ref_id  => null,
+      p_wo_arh      => false,
+      p_only_amount => true
+    );
+    --
+    if p_commit then
+      commit;
+    end if;
+    --
+  exception
+    when others then
+      if p_commit then
+        rollback;
+      end if;
+      fix_exception($$PLSQL_LINE);
+      raise;
+  end recalc_reference;
 
   /**
    * Функция is_employee_ref проверят принадлежность справки сотруднику фонда, 
@@ -570,7 +721,8 @@ create or replace package body f2ndfl_arh_spravki_api is
    *
    */
   procedure purge_load_tbl(
-    p_ref_row f2ndfl_arh_spravki%rowtype
+    p_ref_row f2ndfl_arh_spravki%rowtype,
+    p_only_amount   boolean default false
   ) is
     cursor l_revenue_types_cur is
       select an.tip_dox       rev_type      ,
@@ -587,16 +739,6 @@ create or replace package body f2ndfl_arh_spravki_api is
       p_row l_revenue_types_cur%rowtype
     ) is
     begin
-      --
-      delete from f2ndfl_load_adr t
-      where  1 = 1
-      and    t.nom_korr = p_ref_row.nom_korr
-      and    t.tip_dox = p_row.rev_type
-      and    t.ssylka = p_row.ssylka_fl
-      and    t.god = p_ref_row.god
-      and    t.kod_na = p_ref_row.kod_na;
-      --
-      plog('  f2ndfl_load_adr deleted     ' || sql%rowcount || ' row(s)');
       --
       delete from f2ndfl_load_itogi t
       where  1 = 1
@@ -628,26 +770,38 @@ create or replace package body f2ndfl_arh_spravki_api is
       --
       plog('  f2ndfl_load_vych deleted    ' || sql%rowcount || ' row(s)');
       --
-      delete from f2ndfl_load_uved t
-      where  1 = 1
-      and    t.nom_korr = p_ref_row.nom_korr
-      and    t.tip_dox = p_row.rev_type
-      and    t.ssylka = p_row.ssylka_fl
-      and    t.god = p_ref_row.god
-      and    t.kod_na = p_ref_row.kod_na;
-      --
-      plog('  f2ndfl_load_uved deleted    ' || sql%rowcount || ' row(s)');
-      --
-      delete from f2ndfl_load_spravki t
-      where  1 = 1
-      and    t.nom_korr = p_ref_row.nom_korr
-      and    t.tip_dox = p_row.rev_type
-      and    t.ssylka = p_row.ssylka_fl
-      and    t.god = p_ref_row.god
-      and    t.kod_na = p_ref_row.kod_na;
-      --
-      plog('  f2ndfl_load_spravki deleted ' || sql%rowcount || ' row(s)');
-      --
+      if not p_only_amount then
+        delete from f2ndfl_load_adr t
+        where  1 = 1
+        and    t.nom_korr = p_ref_row.nom_korr
+        and    t.tip_dox = p_row.rev_type
+        and    t.ssylka = p_row.ssylka_fl
+        and    t.god = p_ref_row.god
+        and    t.kod_na = p_ref_row.kod_na;
+        --
+        plog('  f2ndfl_load_adr deleted     ' || sql%rowcount || ' row(s)');
+        --
+        delete from f2ndfl_load_uved t
+        where  1 = 1
+        and    t.nom_korr = p_ref_row.nom_korr
+        and    t.tip_dox = p_row.rev_type
+        and    t.ssylka = p_row.ssylka_fl
+        and    t.god = p_ref_row.god
+        and    t.kod_na = p_ref_row.kod_na;
+        --
+        plog('  f2ndfl_load_uved deleted    ' || sql%rowcount || ' row(s)');
+        --
+        delete from f2ndfl_load_spravki t
+        where  1 = 1
+        and    t.nom_korr = p_ref_row.nom_korr
+        and    t.tip_dox = p_row.rev_type
+        and    t.ssylka = p_row.ssylka_fl
+        and    t.god = p_ref_row.god
+        and    t.kod_na = p_ref_row.kod_na;
+        --
+        plog('  f2ndfl_load_spravki deleted ' || sql%rowcount || ' row(s)');
+        --
+      end if;
     end purge_load_tbl_;
     --
   begin
@@ -669,14 +823,10 @@ create or replace package body f2ndfl_arh_spravki_api is
    *
    */
   procedure purge_arh_tbl(
-    p_ref_id f2ndfl_arh_spravki.id%type
+    p_ref_id f2ndfl_arh_spravki.id%type,
+    p_only_amount   boolean default false
   ) is
   begin
-    --
-    delete from f2ndfl_arh_adr a
-    where  a.r_sprid = p_ref_id;
-    --
-    plog('  f2ndfl_arh_adr deleted      ' || sql%rowcount || ' row(s)');
     --
     delete from f2ndfl_arh_mes a
     where  a.r_sprid = p_ref_id;
@@ -693,15 +843,22 @@ create or replace package body f2ndfl_arh_spravki_api is
     --
     plog('  f2ndfl_arh_itogi deleted    ' || sql%rowcount || ' row(s)');
     --
-    delete from f2ndfl_arh_uved a
-    where  a.r_sprid = p_ref_id;
-    --
-    plog('  f2ndfl_arh_uved deleted     ' || sql%rowcount || ' row(s)');
-    --
-    delete from f2ndfl_arh_spravki a
-    where  a.id = p_ref_id;
-    --
-    plog('  f2ndfl_arh_spravki deleted  ' || sql%rowcount || ' row(s)');
+    if not p_only_amount then
+      delete from f2ndfl_arh_adr a
+      where  a.r_sprid = p_ref_id;
+      --
+      plog('  f2ndfl_arh_adr deleted      ' || sql%rowcount || ' row(s)');
+      --
+      delete from f2ndfl_arh_uved a
+      where  a.r_sprid = p_ref_id;
+      --
+      plog('  f2ndfl_arh_uved deleted     ' || sql%rowcount || ' row(s)');
+      --
+      delete from f2ndfl_arh_spravki a
+      where  a.id = p_ref_id;
+      --
+      plog('  f2ndfl_arh_spravki deleted  ' || sql%rowcount || ' row(s)');
+    end if;
     --
   exception
     when others then
@@ -716,13 +873,15 @@ create or replace package body f2ndfl_arh_spravki_api is
    *   Т.е. если справка относится к сотруднику фонда, не являющемуся контрагентом - она не будет удалена, 
    *        если сотрудник является контрагентом - будут удалены данные по всем типам дохода, кроме 9 (зп)
    *
-   * @param p_ref_id     - ID удаляемой справки
-   * @param p_commit     - флаг фиксации транзакции
+   * @param p_ref_id      - ID удаляемой справки
+   * @param p_commit      - флаг фиксации транзакции
+   * @param p_only_amount - флаг удаления только суммовых показателей
    *
    */
   procedure delete_reference(
-    p_ref_id f2ndfl_arh_spravki.id%type,
-    p_commit boolean default false
+    p_ref_id        f2ndfl_arh_spravki.id%type,
+    p_commit        boolean default false,
+    p_only_amount   boolean default false
   ) is
     l_ref_row f2ndfl_arh_spravki%rowtype;
   begin
@@ -746,9 +905,9 @@ create or replace package body f2ndfl_arh_spravki_api is
       l_ref_row.familiya || ' ' || l_ref_row.imya || ' ' || l_ref_row.otchestvo
     );
     --
-    purge_load_tbl(l_ref_row);
+    purge_load_tbl(l_ref_row, p_only_amount);
     --
-    purge_arh_tbl(l_ref_row.id);
+    purge_arh_tbl(l_ref_row.id, p_only_amount);
     --
     if p_commit then 
       commit;
@@ -1043,7 +1202,8 @@ create or replace package body f2ndfl_arh_spravki_api is
    */
   procedure fix_cityzenship(
     p_code_na int,
-    p_year    int
+    p_year    int,
+    p_ref_id  f2ndfl_arh_spravki.id%type
   ) is
   begin
     merge into f2ndfl_arh_spravki sa
@@ -1060,6 +1220,7 @@ create or replace package body f2ndfl_arh_spravki_api is
             and    s.id = t.r_sprid
             and    t.status = 'New'
             and    t.error_id = 1
+            and    t.r_sprid = nvl(p_ref_id, t.r_sprid)
             and    t.year = p_year
             and    t.code_na = p_code_na
             group by t.id,
@@ -1083,6 +1244,7 @@ create or replace package body f2ndfl_arh_spravki_api is
                    )
             and    t.status = 'New'
             and    t.error_id = 1
+            and    t.r_sprid = nvl(p_ref_id, t.r_sprid)
             and    t.year = p_year
             and    t.code_na = p_code_na
            ) u
@@ -1092,7 +1254,7 @@ create or replace package body f2ndfl_arh_spravki_api is
     when others then
       fix_exception($$PLSQL_LINE);
       raise;
-  end;
+  end fix_cityzenship;
   --
 end f2ndfl_arh_spravki_api;
 /

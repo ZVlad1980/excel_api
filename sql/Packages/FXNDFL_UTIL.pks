@@ -341,6 +341,13 @@ procedure Parse_xml_izBuh(
 -- ---------------------------------- ====  6-НДФЛ ==== ----------------------------------
 
 
+
+  /**
+   */
+  procedure copy_adr(
+    p_src_ref_id    f2ndfl_arh_spravki.id%type,
+    p_trg_ref_id    f2ndfl_arh_spravki.id%type
+  );
 --
 -- RFC_3779: выделил копирование справки и адреса в отдельную функцию
 --
@@ -407,6 +414,24 @@ procedure Parse_xml_izBuh(
   function get_quarter_row(
     p_date date
   ) return sp_quarters_v%rowtype;
+  
+  /**
+   * Процедура create_f2ndfl_arh_spravki заполняет таблицу в f2ndfl_arh_spravki
+   *
+   * @param p_code_na       - 
+   * @param p_year          - 
+   * @param p_contragent_id - CDM.CONTRAGENTS.ID
+   * @param p_nom_spr       - номер справки (обязателен, если задан контрагент)
+   * @param p_nom_korr      - номер корректировки
+   * 
+   */
+  procedure create_f2ndfl_arh_spravki(
+    p_code_na       int,
+    p_year          int,
+    p_contragent_id f2ndfl_arh_spravki.ui_person%type default null,
+    p_nom_spr       f2ndfl_arh_spravki.nom_spr%type   default null,
+    p_nom_korr      f2ndfl_arh_spravki.nom_korr%type  default 0
+  );
     
   /**
    * Процедура enum_refs - нумерация справок 2НДФЛ

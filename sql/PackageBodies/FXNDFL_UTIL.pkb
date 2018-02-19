@@ -6921,7 +6921,7 @@ begin
             and    vm.ssylka = v.ssylka
             and    vm.god = v.god
             and    vm.kod_na = v.kod_na
-            --    
+            --
             and    v.kod_na = gl_KODNA
             and    v.god = gl_GOD
             and    v.vych_kod_gni < 0
@@ -8324,9 +8324,45 @@ exception
     x_err_info := l_err_info;
 end Parse_xml_izBuh;
 
---
--- 03.11.2017 RFC_3779 - выделил копирование справки и адреса в отдельную функцию
---
+  /**
+   */
+  procedure copy_adr(
+    p_src_ref_id    f2ndfl_arh_spravki.id%type,
+    p_trg_ref_id    f2ndfl_arh_spravki.id%type
+  ) is
+  begin
+    --
+    insert into fnd.f2ndfl_arh_adr
+      (r_sprid,
+       kod_str,
+       adr_ino,
+       pindex,
+       kod_reg,
+       rayon,
+       gorod,
+       punkt,
+       ulitsa,
+       dom,
+       kor,
+       kv)
+      select p_trg_ref_id,
+             a.kod_str,
+             a.adr_ino,
+             a.pindex,
+             a.kod_reg,
+             a.rayon,
+             a.gorod,
+             a.punkt,
+             a.ulitsa,
+             a.dom,
+             a.kor,
+             a.kv
+      from   fnd.f2ndfl_arh_adr a
+      where  a.r_sprid = p_src_ref_id;
+  end copy_adr;
+  --
+  -- 03.11.2017 RFC_3779 - выделил копирование справки и адреса в отдельную функцию
+  --
   function copy_ref_2ndfl(
     p_ref_row in out nocopy f2ndfl_arh_spravki%rowtype
   ) return f2ndfl_arh_spravki.id%type is
@@ -8371,35 +8407,10 @@ end Parse_xml_izBuh;
        p_ref_row.ser_nom_doc)
     returning id into l_result;
     --
-    -- Копируем адрес
-    --
-    insert into fnd.f2ndfl_arh_adr
-      (r_sprid,
-       kod_str,
-       adr_ino,
-       pindex,
-       kod_reg,
-       rayon,
-       gorod,
-       punkt,
-       ulitsa,
-       dom,
-       kor,
-       kv)
-      select l_result,
-             a.kod_str,
-             a.adr_ino,
-             a.pindex,
-             a.kod_reg,
-             a.rayon,
-             a.gorod,
-             a.punkt,
-             a.ulitsa,
-             a.dom,
-             a.kor,
-             a.kv
-      from   fnd.f2ndfl_arh_adr a
-      where  a.r_sprid = p_ref_row.id;
+    copy_adr(
+      p_src_ref_id => p_ref_row.id,
+      p_trg_ref_id => l_result
+    );
     --
     return l_result;
     --
@@ -9441,20 +9452,37 @@ end Parse_xml_izBuh;
   end get_quarter_row;
   
   /**
-   * Процедура enum_refs - нумерация справок 2НДФЛ
-   *  Вызывается только после полного формирования Loads и NOMSPR до заполнения f2ndfl_arh_spravki
-   * Только с 0, при полной базе!
+   * Процедура create_f2ndfl_arh_spravki заполняет таблицу в f2ndfl_arh_spravki
+   *
+   * @param p_code_na       - 
+   * @param p_year          - 
+   * @param p_contragent_id - CDM.CONTRAGENTS.ID
+   * @param p_nom_spr       - номер справки (обязателен, если задан контрагент)
+   * @param p_nom_korr      - номер корректировки
+   * 
    */
-   /*
-   TODO: owner="V.Zhuravov" created="01.02.2018"
-   text="Добавить возможность повторного запуска, добавить защиту целостности данных"
-   */
-  procedure enum_refs(
-    p_code_na int,
-    p_year    int
+  procedure create_f2ndfl_arh_spravki(
+    p_code_na       int,
+    p_year          int,
+    p_contragent_id f2ndfl_arh_spravki.ui_person%type default null,
+    p_nom_spr       f2ndfl_arh_spravki.nom_spr%type   default null,
+    p_nom_korr      f2ndfl_arh_spravki.nom_korr%type  default 0
   ) is
   begin
-    --
+    if (
+         ((p_nom_spr is not null or p_nom_korr <> 0) and p_contragent_id is null) 
+       or
+         (p_contragent_id is not null and (p_nom_spr is null or p_nom_korr is null))
+       ) then
+      dbms_output.put_line('fxndfl_util.create_f2ndfl_arh_spravki(' ||
+        p_code_na       || ', ' ||
+        p_year          || ', ' ||
+        p_contragent_id || ', ' ||
+        p_nom_spr       || ', ' ||
+        p_nom_korr      || '): некорректный набор параметров '
+      );
+      raise PROGRAM_ERROR;
+    end if;
     --
     insert into f2ndfl_arh_spravki(
       id,
@@ -9478,12 +9506,16 @@ end Parse_xml_izBuh;
     ) select F_NDFL_SPRID_SEQ.Nextval,
              p.kod_na,
              trunc(sysdate),
-             trim(to_char(
-               100 + row_number()over(order by nlssort(upper(p.lastname), 'NLS_SORT=RUSSIAN'), upper(p.firstname), upper(p.secondname), to_char(p.birthdate, 'yyyymmdd'), p.ui_person),
-               '000000'
-             )) nom_spr,
+             case
+               when p_nom_spr is null then 
+                 trim(to_char(
+                   100 + row_number()over(order by nlssort(upper(p.lastname), 'NLS_SORT=RUSSIAN'), upper(p.firstname), upper(p.secondname), to_char(p.birthdate, 'yyyymmdd'), p.ui_person),
+                   '000000'
+                 ))
+               else p_nom_spr
+             end  nom_spr,
              p.god,
-             0,
+             p_nom_korr,
              p.ui_person,
              p.is_participant,
              p.inn,
@@ -9510,8 +9542,33 @@ end Parse_xml_izBuh;
              end ser_nom_doc,
              1
       from   f2ndfl_arh_spravki_src_v p
-      where  p.kod_na = p_code_na
+      where  1=1
+      and    p.ui_person = nvl(p_contragent_id, p.ui_person)
+      and    p.kod_na = p_code_na
       and    p.god = p_year;
+    --
+  end create_f2ndfl_arh_spravki;
+  
+  /**
+   * Процедура enum_refs - нумерация справок 2НДФЛ
+   *  Вызывается только после полного формирования Loads и NOMSPR до заполнения f2ndfl_arh_spravki
+   * Только с 0, при полной базе!
+   */
+   /*
+   TODO: owner="V.Zhuravov" created="01.02.2018"
+   text="Добавить возможность повторного запуска, добавить защиту целостности данных"
+   */
+  procedure enum_refs(
+    p_code_na int,
+    p_year    int
+  ) is
+  begin
+    --
+    --
+    create_f2ndfl_arh_spravki(
+      p_code_na => p_code_na ,
+      p_year    => p_year    
+    );
     --
     merge into f2ndfl_arh_nomspr ns
     using (select t.kod_na,
