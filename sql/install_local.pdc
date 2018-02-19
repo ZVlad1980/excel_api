@@ -20,10 +20,6 @@ prompt install f_ndfl_spisrab_seq.sql
 @@Tables\f_ndfl_spisrab_seq.sql
 show error
 
-prompt install dv_sr_lspv_uid_pers_t.sql
-@@Tables\dv_sr_lspv_uid_pers_t.sql
-show error
-
 prompt install dv_sr_gf_persons_t.sql
 @@Tables\dv_sr_gf_persons_t.sql
 show error
@@ -51,7 +47,36 @@ show error
 prompt install create_error_tables.sql
 @@Tables\create_error_tables.sql
 show error
-*/
+
+prompt install f2ndfl_load_spravki.sql
+@@Tables\f2ndfl_load_spravki.sql
+show error
+
+prompt install f2ndfl_arh_nomspr.sql
+@@Tables\f2ndfl_arh_nomspr.sql
+show error
+
+prompt install f2ndfl_load_vych_man.sql
+@@Tables\f2ndfl_load_vych_man.sql
+show error
+
+prompt install f2ndfl_spr_nal_agent.sql
+@@Tables\f2ndfl_spr_nal_agent.sql
+show error
+
+prompt install f2ndfl_arh_srpavki_err.sql
+@@Tables\f2ndfl_arh_srpavki_err.sql
+show error
+
+prompt install f2ndfl_arh_srpavki_err.sql
+@@Tables\f2ndfl_arh_srpavki_err.sql
+show error
+
+prompt install sp_tax_residents_t.sql
+@@Tables\sp_tax_residents_t.sql
+show error
+--*/
+
 prompt install utl_error_api.pks
 @@Packages\utl_error_api.pks
 show error
@@ -88,6 +113,10 @@ prompt install ndfl_report_api.pks
 @@Packages\ndfl_report_api.pks
 show error
 
+prompt install ndfl2_report_api.pks
+@@Packages\ndfl2_report_api.pks
+show error
+
 prompt install f_ndfl_load_spisrab_api.pks
 @@Packages\f_ndfl_load_spisrab_api.pks
 show error
@@ -116,12 +145,12 @@ prompt install f2ndfl_arh_spravki_api.pks
 @@Packages\f2ndfl_arh_spravki_api.pks
 show error
 
-prompt install ndfl2_report_api.pks
-@@Packages\ndfl2_report_api.pks
-show error
-
 prompt install sp_quarters_v.sql
 @@Views\sp_quarters_v.sql
+show error
+
+prompt install sp_pen_schemes_v.sql
+@@Views\sp_pen_schemes_v.sql
 show error
 
 prompt install sp_det_charge_types_v.sql
@@ -176,6 +205,10 @@ prompt install zaprvkl_part_ident_v.sql
 @@Views\zaprvkl_part_ident_v.sql
 show error
 
+prompt install dv_sr_lspv_v.sql
+@@Views\dv_sr_lspv_v.sql
+show error
+
 prompt install dv_sr_lspv_acc_v.sql
 @@Views\dv_sr_lspv_acc_v.sql
 show error
@@ -194,10 +227,6 @@ show error
 
 prompt install dv_sr_lspv_all_v.sql
 @@Views\dv_sr_lspv_all_v.sql
-show error
-
-prompt install sp_pen_schemes_v.sql
-@@Views\sp_pen_schemes_v.sql
 show error
 
 prompt install sp_fiz_litz_lspv_v.sql
@@ -319,12 +348,27 @@ show error
 prompt install ndfl2_corr_spr_rep_v.sql
 @@Views\ndfl2_corr_spr_rep_v.sql
 show error
-
-/*
-prompt install taxdeductions_v.sql
-@@Views\taxdeductions_v.sql
+/* -- !!! ONLY PROD
+prompt install payments_taxdeductions_v.sql
+@@Views\payments_taxdeductions_v.sql
 show error
 */
+prompt install sp_ogr_pv_v.sql
+@@Views\sp_ogr_pv_v.sql
+show error
+
+prompt install sp_ogr_benefits_v.sql
+@@Views\sp_ogr_benefits_v.sql
+show error
+
+prompt install dv_sr_lspv_benefits_v.sql
+@@Views\dv_sr_lspv_benefits_v.sql
+show error
+
+prompt install dv_sr_lspv_benefits_det_v.sql
+@@Views\dv_sr_lspv_benefits_det_v.sql
+show error
+
 prompt install contragent_merge_log_v.sql
 @@Views\contragent_merge_log_v.sql
 show error
@@ -344,9 +388,13 @@ show error
 prompt install f2ndfl_arh_spravki_src_v.sql
 @@Views\f2ndfl_arh_spravki_src_v.sql
 show error
-/*
+/* -- !!! ONLY PROD
 prompt install f2ndfl_arh_spravki_errors_v.sql
 @@Views\f2ndfl_arh_spravki_errors_v.sql
+show error
+
+prompt install f2ndfl_arh_spr_src_errors_v.sql
+@@Views\f2ndfl_arh_spr_src_errors_v.sql
 show error
 */
 prompt install f2ndfl_arh_spravki_v.sql

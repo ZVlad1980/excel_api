@@ -1080,21 +1080,6 @@ create or replace package body dv_sr_lspv_docs_api is
       dbms_output.put_line(utl_error_api.get_exception_full);
       raise;
   end build_tax_diff;
-  
-  /**
-   * Временное решение для передачи произвольного набора параметров
-   */
-  procedure set_parameter(
-    p_name  varchar2,
-    p_value varchar2
-  );
-  
-  /**
-   * Временное решение для передачи произвольного набора параметров
-   */
-  function get_parameter(
-    p_name  varchar2
-  ) return varchar2;
 
 
 begin
