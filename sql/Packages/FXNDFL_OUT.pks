@@ -58,22 +58,31 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
   --    номер справки - строка с ведущими нулями
   --    номер корректировки - для первой справки 0
   --    0 - выводить архив справок в ГНИ /  1 - текущие персональные данные
+  --    pFormVersion - версия формы (def.=5.04), если NULL - будет определяться автоматически
   function GetXML_SpravkaF2(  
     pKodNA in number, 
     pGOD in number, 
     pNomSpravki in varchar2, 
     pNomKorr in number, 
     pCurrentPersData in number default 0  ,
-    pFormDate date default sysdate
+    pFormDate date default sysdate,
+    pFormVersion number default 5.04
   ) return clob;
   
   -- test:   Select FXNDFL_OUT.GetXML_SpravkaF2(  1, 2015, '000186', 0  ) from dual;
-
+  /**
+   * Справка 2НДФЛ в XML формате по заданному контрагенту
+   *
+   *  pFormDate    - дата для определения подписанта
+   *  pFormVersion - версия формы (def.=5.04), если NULL - будет определяться автоматически
+   *
+   */
   function GetXML_SpravkaF2CA(  
     pContragentID in number, 
     pYear in number, 
     pCurrentPersData in number default 0,
-    pFormDate date default sysdate
+    pFormDate date default sysdate,
+    pFormVersion number default 5.04
   ) return clob;
   
   -- получить за 2015 год список пенсионеров без ИНН

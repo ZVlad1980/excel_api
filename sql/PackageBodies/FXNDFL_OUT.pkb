@@ -50,10 +50,11 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
       if length(CrLf)<2 then  CrLf:=chr(13)||chr(10); end if;
   end Ident_Left;
 
-  procedure Read_XML_TITLE(pFileId in number)  is
+  procedure Read_XML_TITLE(pFileId in number, p_form_version number default null)  is
   begin
        Select * into rFXML from F_NDFL_ARH_XML_FILES where ID=pFileId;
-       gFormVersion := to_number(replace(rFXML.Vers_Form, ',', '.'), '90D00', 'NLS_NUMERIC_CHARACTERS=''.,''');
+       gFormVersion := nvl(p_form_version, to_number(replace(rFXML.Vers_Form, ',', '.'), '90D00', 'NLS_NUMERIC_CHARACTERS=''.,'''));
+       rFXML.Vers_Form := replace(to_char(gFormVersion), ',', '.');
   end Read_XML_TITLE;
   
   procedure Read_NA_PODPIS  is  
@@ -444,13 +445,15 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
   --    номер справки - строка с ведущими нул€ми
   --    номер корректировки - дл€ первой справки 0
   --    0 - выводить архив справок в √Ќ» /  1 - текущие персональные данные  
+  --    pFormVersion - верси€ формы (def.=5.04), если NULL - будет определ€тьс€ автоматически
   function GetXML_SpravkaF2(  
     pKodNA in number, 
     pGOD in number, 
     pNomSpravki in varchar2, 
     pNomKorr in number, 
     pCurrentPersData in number default 0  ,
-    pFormDate date default sysdate
+    pFormDate date default sysdate,
+    pFormVersion number default 5.04
   ) return clob is
   nSprId  number;
   nFileId  number;
@@ -463,7 +466,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
          Select ID, R_XMLID into nSprId, nFileId from f2NDFL_ARH_SPRAVKI where KOD_NA=pKodNA and GOD=pGOD and NOM_SPR=pNomSpravki and NOM_KORR=pNomKorr;
                   
          if nFileId is not null then
-           Read_XML_TITLE(nFileId);
+           Read_XML_TITLE(nFileId, pFormVersion);
          else
            gFormVersion := 5.04;
          end if;
@@ -511,7 +514,8 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
     pContragentID in number, 
     pYear in number, 
     pCurrentPersData in number default 0,
-    pFormDate date default sysdate
+    pFormDate date default sysdate,
+    pFormVersion number default 5.04
   ) return clob as
   vNOMKOR F2NDFL_ARH_SPRAVKI.NOM_KORR%type;
   rSPR    F2NDFL_ARH_SPRAVKI%rowtype;
@@ -558,7 +562,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
      if  rSPR.ID is Null 
          then vRES:= 'ERR Ќе найдено актуальных справок дл€ заданых контрагента и года'; 
          else gContragentID:=pContragentID;
-                vRES:= GetXML_SpravkaF2(  1, pYear, rSPR.NOM_SPR, rSPR.NOM_KORR, pCurrentPersData  ); 
+                vRES:= GetXML_SpravkaF2(  1, pYear, rSPR.NOM_SPR, rSPR.NOM_KORR, pCurrentPersData, pFormDate, pFormVersion); 
          end if;       
             
      return vRES;
