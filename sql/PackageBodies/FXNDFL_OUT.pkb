@@ -34,7 +34,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
   -- KOD_PODP, GOD, PODPISANT_TYPE, FA, IM, OT, DOVER
   
   tag_SVED_NALAG varchar2(1000);
-  tag_PODPISANT  varchar2(1000);
+  --tag_PODPISANT  varchar2(1000);
   
   ERR_Pref varchar2(255);
   ERR_SprID varchar2(100);
@@ -57,6 +57,15 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
        rFXML.Vers_Form := replace(to_char(gFormVersion), ',', '.');
   end Read_XML_TITLE;
   
+  function tag_PODPISANT return varchar2 is
+  begin
+       return  
+         '<Подписант ПрПодп="'||rPODPISANT.PODPISANT_TYPE||'">'||CrLf
+       ||'   <ФИО Фамилия="'||rPODPISANT.FA||'" Имя="'||rPODPISANT.IM||'" Отчество="'||rPODPISANT.OT||'" />'||CrLf
+       ||'   <СвПред НаимДок="'||replace(rPODPISANT.DOVER,'"','&quot;')||'"/>'||CrLf
+       ||'</Подписант>';  
+  end tag_PODPISANT;
+  
   procedure Read_NA_PODPIS  is  
   begin 
        ERR_Pref := 'Формирование документа / Подписант ';
@@ -66,11 +75,11 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
        where  pkg_dflt = 1
        and    nvl(gFormDate, sysdate) between p.from_date and nvl(p.to_date, sysdate);
        
-       tag_PODPISANT:=  
-         '<Подписант ПрПодп="'||rPODPISANT.PODPISANT_TYPE||'">'||CrLf
-       ||'   <ФИО Фамилия="'||rPODPISANT.FA||'" Имя="'||rPODPISANT.IM||'" Отчество="'||rPODPISANT.OT||'" />'||CrLf
-       ||'   <СвПред НаимДок="'||replace(rPODPISANT.DOVER,'"','&quot;')||'"/>'||CrLf
-       ||'</Подписант>';
+--       tag_PODPISANT:=  
+--         '<Подписант ПрПодп="'||rPODPISANT.PODPISANT_TYPE||'">'||CrLf
+--       ||'   <ФИО Фамилия="'||rPODPISANT.FA||'" Имя="'||rPODPISANT.IM||'" Отчество="'||rPODPISANT.OT||'" />'||CrLf
+--       ||'   <СвПред НаимДок="'||replace(rPODPISANT.DOVER,'"','&quot;')||'"/>'||CrLf
+--       ||'</Подписант>';
        
   end;
   
@@ -452,7 +461,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
     pNomSpravki in varchar2, 
     pNomKorr in number, 
     pCurrentPersData in number default 0  ,
-    pFormVersion     number default 5.04  ,
+    pFormVersion     number default 5.05  ,
     pFormDate date default sysdate
   ) return clob is
   nSprId  number;
@@ -477,6 +486,14 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
          cXML := '<?xml version="1.0" encoding="windows-1251"?>'
             ||CrLf||'<?xml-stylesheet type="text/xsl" href="2NDFL_2015.xsl"?>'
             ||CrLf||'<Файл ВерсФорм="' || rFXML.Vers_Form || '">';
+            
+         if gFormVersion >= 5.05 then                        
+             cXML := cXML||CrLf 
+                   ||'   <СвРекв  ОКТМО="'||rFXML.OKTMO||'" ОтчетГод="'||to_char(rFXML.GOD)||'" ПризнакФ="'||rFXML.PRIZNAK_F||'">'||CrLf  
+                   ||'   <СвЮЛ ИННЮЛ="'||rFXML.INN_YUL||'" КПП="'||rFXML.KPP||'" />' || CrLf
+                   ||'   ' || replace(tag_PODPISANT, chr(10), '   ' ) || CrLf
+                   ||'   </СвРекв>'||CrLf;
+            end if;   
             
             Insert_tagDocument( nSprId );
             
@@ -514,7 +531,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
     pContragentID in number, 
     pYear in number, 
     pCurrentPersData in number default 0,
-    pFormVersion     number default 5.04,
+    pFormVersion     number default 5.05,
     pFormDate        date default sysdate
   ) return clob as
   vNOMKOR F2NDFL_ARH_SPRAVKI.NOM_KORR%type;

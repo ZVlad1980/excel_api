@@ -65,7 +65,7 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
     pNomSpravki in varchar2, 
     pNomKorr in number, 
     pCurrentPersData in number default 0  ,
-    pFormVersion     number default 5.04  ,
+    pFormVersion     number default 5.05  ,
     pFormDate date default sysdate
   ) return clob;
   
@@ -81,7 +81,7 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
     pContragentID in number, 
     pYear in number, 
     pCurrentPersData in number default 0,
-    pFormVersion     number default 5.04,
+    pFormVersion     number default 5.05,
     pFormDate date default sysdate
   ) return clob;
   
