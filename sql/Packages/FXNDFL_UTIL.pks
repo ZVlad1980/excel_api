@@ -88,7 +88,8 @@ procedure InitGlobals(
   pNOMIPS  in number   default null,
   pCAID    in number   default null,
   pCOMMIT  in boolean  default true,
-  pNALRES_DEFFER in boolean default false
+  pNALRES_DEFFER in boolean default false,
+  pACTUAL_DATE   in date    default sysdate --ƒата на которую формируютс€ данные (вли€ет на учет корректировок)
 );
 
 -- загрузить список налогоплательщиков

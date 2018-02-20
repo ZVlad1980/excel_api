@@ -17,6 +17,7 @@ create or replace package body f2ndfl_load_api is
     SRC_SPRID     number        ,
     pCOMMIT       boolean       ,
     NALRES_DEFFER boolean       ,
+    ACTUAL_DATE   date          ,
     process_row   dv_sr_lspv_prc_t%rowtype
   );
   
@@ -51,7 +52,8 @@ create or replace package body f2ndfl_load_api is
         pNOMIPS => p_globals.NOMIPS ,
         pCAID   => p_globals.CAID   ,
         pCOMMIT => nvl(p_globals.pCOMMIT, false),
-        pNALRES_DEFFER => p_globals.NALRES_DEFFER
+        pNALRES_DEFFER => p_globals.NALRES_DEFFER,
+        pACTUAL_DATE => p_globals.ACTUAL_DATE
       );
     --                               
   exception
@@ -932,7 +934,8 @@ create or replace package body f2ndfl_load_api is
   procedure create_2ndfl_refs(
     p_action_code  varchar2,
     p_code_na      int,
-    p_year         int
+    p_year         int,
+    p_actual_date  date
   ) is
     l_globals      g_util_par_type;
     l_result       boolean := false;
@@ -945,6 +948,7 @@ create or replace package body f2ndfl_load_api is
     l_globals.NOMKOR        := 0;
     l_globals.NALRES_DEFFER := true;
     l_globals.pCOMMIT       := false;
+    l_globals.ACTUAL_DATE   := p_actual_date;
     --
     l_globals.process_row.process_name := upper(p_action_code);
     l_globals.process_row.start_date   := to_date(p_year || '0101', 'yyyymmdd');

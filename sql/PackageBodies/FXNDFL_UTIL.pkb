@@ -17,6 +17,7 @@ gl_NOMIPS              number       := Null;
 gl_CAID                number       := Null;
 gl_COMMIT              boolean      := true;
 gl_NALRES_DEFFER       varchar2(1)  := 'N'; --флаг отложенного определения статуса налогового резидента
+gl_ACTUAL_DATE         date         := null; --Дата на которую формируются данные (влияет на учет корректировок)
 
 --
 -- 03.11.2017 RFC_3779 - добавил параметры для формирования корр.справок
@@ -33,7 +34,8 @@ procedure InitGlobals(
   pNOMIPS        in number   default null,
   pCAID          in number   default null,
   pCOMMIT        in boolean  default true,
-  pNALRES_DEFFER in boolean default false
+  pNALRES_DEFFER in boolean default false,
+  pACTUAL_DATE   in date    default sysdate --Дата на которую формируются данные (влияет на учет корректировок)
 ) is
 begin
 
@@ -52,6 +54,7 @@ begin
     gl_CAID          := pCAID  ;
     gl_COMMIT        := pCOMMIT;
     gl_NALRES_DEFFER := case when pNALRES_DEFFER then 'Y' else 'N' end;
+    gl_ACTUAL_DATE   := greatest(nvl(pACTUAL_DATE, sysdate), gl_DATADO - .00001);
     
 end InitGlobals;
 
@@ -6015,7 +6018,7 @@ cursor cPBS is
         sfl.data_rogd,
         sfl.doc_tip,
         trim(sfl.DOC_SER1 || ' ' || case when sfl.DOC_SER2 is not null then sfl.DOC_SER2 || ' ' end ||sfl.DOC_NOM) SER_NOM_DOC,
-        sum(ds.summa) storno_doxprav
+        sum(case when ds.data_op between dtermbeg and gl_ACTUAL_DATE then ds.summa else 0 end) storno_doxprav
  from   sp_fiz_lits sfl
    inner  join sp_lspv lspv
      on     lspv.ssylka_fl = sfl.ssylka
@@ -6783,7 +6786,9 @@ cursor cPBS( pNPStatus in number ) is
                 Select dvsr.*
                 from( Select SSYLKA_FL SSYLKA, extract(MONTH from PERVDATA) MES, SUB_SHIFR_SCHET, sum(NOVSUM) DOH_SUM 
                       from( 
-                            Select lspv.SSYLKA_FL, ds.SUB_SHIFR_SCHET, sum(SUMMA) NOVSUM, min(ds.DATA_OP) PERVDATA
+                            Select lspv.SSYLKA_FL, ds.SUB_SHIFR_SCHET, 
+                                     sum(case when ds.data_op between dtermbeg and gl_ACTUAL_DATE then ds.SUMMA else 0 end) NOVSUM, 
+                                     min(ds.DATA_OP) PERVDATA
                                 from dv_sr_lspv_v ds 
                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                     start with   ds.SHIFR_SCHET= 55      -- выкупная
@@ -6918,6 +6923,7 @@ begin
       and    a.nom_ips = nvl(gl_NOMIPS, a.nom_ips)
       and    a.nom_vkl = nvl(gl_NOMVKL, a.nom_vkl)
       --
+      and    a.actual_date <= gl_ACTUAL_DATE
       and    a.date_op >= dTermBeg --to_date(20170101, 'yyyymmdd') --dTermBeg
       and    a.date_op < dTermEnd  --to_date(20180101, 'yyyymmdd') --dTermEnd;
       group by s.kod_na,
@@ -7051,6 +7057,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                                     select 1
                                     from   dv_sr_lspv_v ds83
                                     where  1=1
+                                    and    ds83.shifr_schet = 83
                                     and    ds83.nom_vkl = ds.nom_vkl
                                     and    ds83.nom_ips = ds.nom_ips
                                     and    ds83.ssylka_doc = ds.ssylka_doc
@@ -7073,9 +7080,9 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                         from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where 1 = 1--RFC_3779 gl_GOD=2016 -- коррекция только для 2016 года
-                          and ds.DATA_OP >= dTermEnd  --RFC_3779 = to_date('01.01.2017', 'dd.mm.yyyy') 
-                          and ds.SHIFR_SCHET=83 
-                        group by sp.SSYLKA_FL 
+                          and ds.DATA_OP between dTermEnd and gl_ACTUAL_DATE --RFC_3779 = to_date('01.01.2017', 'dd.mm.yyyy') 
+                          and ds.SHIFR_SCHET = 83
+                        group by sp.SSYLKA_FL
             ) group by SSYLKA_FL
         ) nal on ls.SSYLKA=nal.SSYLKA_FL
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STATUS_NP=pNPStatus
@@ -7448,7 +7455,7 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
                         group by sp.SSYLKA_FL
                     -- исправления
                     union all
-                    Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
+                    Select sp.SSYLKA_FL, sum(case when ds.data_op between dTermBeg and gl_ACTUAL_DATE then ds.SUMMA else 0 end) SGD_SUMPRED  
                         from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.SHIFR_SCHET=85 
@@ -9574,9 +9581,44 @@ end Parse_xml_izBuh;
              p.inn,
              p.status_np,
              p.citizenship,
-             p.lastname,
-             p.firstname,
-             p.secondname,
+             replace(
+               replace(
+                 replace(
+                   trim(p.lastname),
+                   ' ',
+                   ' _'
+                 ),
+                 '_ '
+               ),
+               '_'
+             ),
+             replace(
+               replace(
+                 replace(
+                   trim(p.firstname),
+                   ' ',
+                   ' _'
+                 ),
+                 '_ '
+               ),
+               '_'
+             ),
+             case --если только символы пунктуации -> null
+               when regexp_replace(p.secondname, '[^[:punct:]]') = p.secondname then
+                 null
+               else
+                 replace(
+                   replace(
+                     replace(
+                       trim(p.secondname),
+                       ' ',
+                       ' _'
+                     ),
+                     '_ '
+                   ),
+                   '_'
+                 )
+             end,
              p.birthdate,
              case
                when p.fk_idcard_type not in (3, 7, 8, 10, 11, 12, 13, 14, 15, 19, 21, 23, 24, 91) then

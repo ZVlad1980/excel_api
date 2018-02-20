@@ -52,6 +52,7 @@ create or replace package f2ndfl_load_api is
    * @ p_action_code - код действия, см. в специи пакета константы C_ACT_
    * @ p_code_na     - 
    * @ p_year        - 
+   * @ p_actual_date - дата, на которую формируются данные (до которой учитываются корректировки)
    * 
    * Если действие запрещено - e_action_forbidden
    *
@@ -59,7 +60,8 @@ create or replace package f2ndfl_load_api is
   procedure create_2ndfl_refs(
     p_action_code  varchar2,
     p_code_na      int,
-    p_year         int
+    p_year         int,
+    p_actual_date  date
   );
 
 end f2ndfl_load_api;
