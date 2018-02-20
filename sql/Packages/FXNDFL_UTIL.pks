@@ -355,11 +355,13 @@ procedure Parse_xml_izBuh(
     p_ref_row in out nocopy f2ndfl_arh_spravki%rowtype
   ) return f2ndfl_arh_spravki.id%type;
 
---
--- RFC_3779: рассчитывает и обновляет сумму использованных вычетов в таблице F2NDFL_ARH_VYCH
---
+  --
+  -- RFC_3779: рассчитывает и обновляет сумму использованных вычетов в таблице F2NDFL_ARH_VYCH
+  --
   procedure calc_benefit_usage(
-    p_spr_id f2ndfl_arh_spravki.id%type
+    p_code_na f2ndfl_arh_spravki.kod_na%type,
+    p_year    f2ndfl_arh_spravki.god%type,
+    p_spr_id  f2ndfl_arh_spravki.id%type default null
   );
   
   
