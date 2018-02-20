@@ -176,7 +176,11 @@ create or replace package body f2ndfl_arh_spravki_api is
     init_; fxndfl_util.KopirSprItog_vArhiv(pKodNA => p_globals.KODNA, pGod => p_globals.GOD);
     init_; fxndfl_util.KopirSprMes_vArhiv(pKodNA => p_globals.KODNA, pGod => p_globals.GOD);
     init_; fxndfl_util.KopirSprVych_vArhiv(pKodNA => p_globals.KODNA, pGod => p_globals.GOD);
-    fxndfl_util.calc_benefit_usage(p_spr_id => p_globals.SPRID);
+    fxndfl_util.calc_benefit_usage(
+      p_code_na => p_globals.KODNA,
+      p_year    => p_globals.GOD,
+      p_spr_id  => p_globals.SPRID
+    );
     --
   exception
     when others then

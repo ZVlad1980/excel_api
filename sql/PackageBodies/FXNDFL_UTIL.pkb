@@ -1810,14 +1810,37 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
   procedure KopirSprVych_vArhiv( pKodNA in number, pGod in number ) as
   begin
       
-        Insert into f2NDFL_ARH_VYCH 
-                 ( R_SPRID, KOD_STAVKI, VYCH_KOD_GNI, VYCH_SUM_PREDOST, VYCH_SUM_ISPOLZ )
-        Select ls.R_SPRID, MO.KOD_STAVKI, MO.VYCH_KOD_GNI, sum( MO.VYCH_SUM ) VYCHSUM, 0 POLZSUM
-            from f2NDFL_LOAD_VYCH mo
-                    inner join f2NDFL_LOAD_SPRAVKI ls on ls.KOD_NA=mo.KOD_NA and ls.GOD=mo.GOD and ls.SSYLKA=mo.SSYLKA and ls.TIP_DOX=mo.TIP_DOX and ls.NOM_KORR=mo.NOM_KORR
-            where mo.KOD_NA=pKodNA and mo.GOD=pGod 
-            and   case when gl_SPRID is null then 1 when gl_SPRID = nvl(ls.r_sprid, -1) then 1 else 0 end = 1--nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
-            group by  ls.R_SPRID, mo.KOD_STAVKI, mo.VYCH_KOD_GNI;
+        insert into f2ndfl_arh_vych
+          (r_sprid,
+           kod_stavki,
+           vych_kod_gni,
+           vych_sum_predost,
+           vych_sum_ispolz)
+          select ls.r_sprid,
+                 mo.kod_stavki,
+                 mo.vych_kod_gni,
+                 sum(mo.vych_sum) vychsum,
+                 0 polzsum
+          from   f2ndfl_load_vych mo
+          inner  join f2ndfl_load_spravki ls
+          on     ls.kod_na = mo.kod_na
+          and    ls.god = mo.god
+          and    ls.ssylka = mo.ssylka
+          and    ls.tip_dox = mo.tip_dox
+          and    ls.nom_korr = mo.nom_korr
+          where  mo.kod_na = pkodna
+          and    mo.god = pgod
+          and    case
+                  when gl_sprid is null then
+                   1
+                  when gl_sprid = nvl(ls.r_sprid, -1) then
+                   1
+                  else
+                   0
+                end = 1 --nvl(ls.r_sprid, -1) = nvl(gl_SPRID, nvl(ls.r_sprid, -1))
+          group  by ls.r_sprid,
+                    mo.kod_stavki,
+                    mo.vych_kod_gni;
             
        if gl_COMMIT then Commit; end if;
         
@@ -8475,23 +8498,53 @@ end Parse_xml_izBuh;
   end Kopir_SprF2_dlya_KORR;
 
 
---
--- RFC_3779: рассчитывает и обновляет сумму использованных вычетов в таблице F2NDFL_ARH_VYCH
---
+  --
+  -- RFC_3779: рассчитывает и обновляет сумму использованных вычетов в таблице F2NDFL_ARH_VYCH
+  --
   procedure calc_benefit_usage(
-    p_spr_id f2ndfl_arh_spravki.id%type
+    p_code_na f2ndfl_arh_spravki.kod_na%type,
+    p_year    f2ndfl_arh_spravki.god%type,
+    p_spr_id  f2ndfl_arh_spravki.id%type default null
   ) is
   begin
     --
-    update f2ndfl_arh_vych av
-    set    av.vych_sum_ispolz = 
-             least(nvl(av.vych_sum_predost, 0), nvl((
-               select sum(ai.sgd_sum)
-               from   f2ndfl_arh_itogi ai
-               where  ai.r_sprid = av.r_sprid
-             ), 0)
-           )
-    where  av.r_sprid = p_spr_id;
+    merge into f2ndfl_arh_vych v
+    using (select t.r_sprid,
+                  t.kod_stavki,
+                  t.vych_kod_gni,
+                  case
+                    when t.acc_vych_sum_usage < t.revenue then
+                      t.vych_sum_predost
+                    else
+                      greatest((t.revenue - acc_vych_sum_usage + t.vych_sum_predost), 0)
+                  end benefit_amount_use
+           from   (
+                   select m.r_sprid, 
+                          m.kod_stavki,
+                          m.vych_kod_gni,
+                          m.vych_sum_predost,
+                          sum(m.vych_sum_predost)over(partition by m.r_sprid, m.kod_stavki) total_vych_sum,
+                          sum(m.vych_sum_predost)over(partition by m.r_sprid, m.kod_stavki order by m.vych_kod_gni ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) acc_vych_sum_usage,
+                          (
+                            select sum(ai.sgd_sum)
+                            from   f2ndfl_arh_itogi ai
+                            where  ai.r_sprid = m.r_sprid
+                          ) revenue
+                   from   f2ndfl_arh_vych m
+                   where  m.r_sprid in (
+                             select s.id
+                             from   f2ndfl_arh_spravki s
+                             where  1=1
+                             and    s.id = nvl(p_spr_id, s.id)
+                             and    s.god = p_year
+                             and    s.kod_na = p_code_na
+                          )
+                   ) t
+           ) u
+    on     (v.r_sprid = u.r_sprid and v.kod_stavki = u.kod_stavki and v.vych_kod_gni = u.vych_kod_gni)
+    when matched then
+      update set
+      v.vych_sum_ispolz = u.benefit_amount_use;
     --
     /*
     update f2ndfl_arh_vych av
@@ -9657,6 +9710,11 @@ end Parse_xml_izBuh;
     p_year    int
   ) is
   begin
+    --
+    calc_benefit_usage(
+      p_code_na => p_code_na,
+      p_year    => p_year   
+    );
     --
     merge into f2ndfl_arh_spravki s
     using (
