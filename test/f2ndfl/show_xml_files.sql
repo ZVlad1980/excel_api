@@ -14,3 +14,8 @@ and    x.id in (
 
 
 )
+/
+select x.*
+from   f_ndfl_arh_xml_files x
+where  x.kod_formy = 2
+and    x.god = 2017

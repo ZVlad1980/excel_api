@@ -1,8 +1,8 @@
 select d.*, rowid
-from   dv_sr_lspv_v d
+from   dv_sr_lspv_acc_v d
 where  d.nom_vkl = 991
 and    d.nom_ips = 43933
-order by d.data_op
+order by d.date_op
 /
 select d.*, rowid
 from   dv_sr_lspv_acc_v d
@@ -10,7 +10,7 @@ where  d.nom_vkl = 991
 and    d.nom_ips = 71852
 order by d.date_op 
 /
-select d.*, rowid
+select d.*, rowid --можно править
 from   dv_sr_lspv_acc_v d
 where  d.nom_vkl = 991
 and    d.nom_ips = 31485
