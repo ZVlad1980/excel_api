@@ -148,6 +148,10 @@ create or replace package f2ndfl_arh_spravki_api is
     p_year           int,
     p_nom_spr        varchar2,
     p_fk_contragent  int,
+    p_lastname       varchar2,
+    p_firstname      varchar2,
+    p_secondname     varchar2,
+    p_birth_date     date,
     p_doc_code       int,
     p_doc_num        varchar2,
     p_inn            varchar2,
@@ -174,7 +178,7 @@ create or replace package f2ndfl_arh_spravki_api is
   procedure fix_cityzenship(
     p_code_na int,
     p_year    int,
-    p_ref_id  f2ndfl_arh_spravki.id%type
+    p_ref_id  f2ndfl_arh_spravki.id%type default null
   );
   
 end f2ndfl_arh_spravki_api;

@@ -610,7 +610,7 @@ create or replace package body ndfl_report_api is
                    when 1 then
                      'Отсутствует ссылка на корректирующую операцию'
                    when 2 then
-                     'Сумма корректирующей операции (' || r.amount || ') не полностью закрывает сумму корректируемых операций (' || r.source_amount || ')'
+                     'Ошибка возврата: не привязан к исходной или SERVICE_DOC <> -1 или возврат налога без коррекции дохода (выкуп)'
                    when 3 then
                      'Не определен GF_PERSON участника (см. sp_fiz_lits_non_ident_v)'
                    when 4 then

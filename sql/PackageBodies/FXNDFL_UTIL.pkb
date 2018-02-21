@@ -6330,6 +6330,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ds.shifr_schet = 60
         group  by ls.ssylka,
                   extract(month from ds.data_op)
+        having sum(ds.summa) <> 0
         order  by ls.ssylka,
                   extract(month from ds.data_op);
 
@@ -6426,6 +6427,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ds.service_doc = 0
         group  by ls.ssylka,
                   extract(month from ds.data_op)
+        having sum(ds.summa) <> 0
         order  by ls.ssylka,
                   extract(month from ds.data_op);
 
@@ -6556,6 +6558,7 @@ cursor cPBS( pNPStatus in number ) is
         group  by ls.ssylka,
                   extract(month from ds.data_op),
                   ds.sub_shifr_schet
+        having sum(ds.summa) <> 0
         order  by ls.ssylka,
                   extract(month from ds.data_op),
                   ds.sub_shifr_schet;
@@ -6686,6 +6689,7 @@ cursor cPBS( pNPStatus in number ) is
         group  by ls.ssylka,
                   extract(month from ds.data_op),
                   ds.sub_shifr_schet
+        having sum(ds.summa) <> 0
         order  by ls.ssylka,
                   extract(month from ds.data_op),
                   ds.sub_shifr_schet;

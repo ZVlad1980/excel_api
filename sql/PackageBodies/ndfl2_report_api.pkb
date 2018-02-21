@@ -37,6 +37,138 @@ create or replace package body ndfl2_report_api is
     );
     --
     case l_report_code
+      when 'f2_amount_errors' then
+        open l_result for
+          with w_load_errors as (
+            select 'F@NDFL_LOAD_MES' src_table,
+                   'Доход'           error_type,
+                   m.kod_na,
+                   m.god,
+                   m.ssylka,
+                   m.tip_dox,
+                   m.nom_korr,
+                   m.mes,
+                   m.doh_kod_gni amount_code,
+                   m.doh_sum     amount,
+                   cast(null as varchar2(200)) comment_txt
+            from   f2ndfl_load_mes m
+            where  1=1
+            and    coalesce(m.doh_sum, 0) <= 0
+            and    m.god = dv_sr_lspv_docs_api.get_year
+            and    m.kod_na = 1
+            union all
+            select 'F@NDFL_LOAD_VYCH' src_table,
+                   'Код вычета'       error_type,
+                   v.kod_na,
+                   v.god,
+                   v.ssylka,
+                   v.tip_dox,
+                   v.nom_korr,
+                   v.mes,
+                   v.vych_kod_gni,
+                   v.vych_sum,
+                   cast(null as varchar2(200)) comment_txt
+            from   f2ndfl_load_vych v
+            where  1=1
+            and    v.vych_kod_gni < 0
+            and    v.god = dv_sr_lspv_docs_api.get_year
+            and    v.kod_na = 1
+          ),
+          w_arh_errors as (
+            select ma.r_sprid,
+                   'F@NDFL_ARH_MES' src_table,
+                   'Доход'           error_type,
+                   ma.mes,
+                   ma.doh_kod_gni amount_code,
+                   ma.doh_sum     amount,
+                   cast(null as varchar2(200)) comment_txt
+            from   f2ndfl_arh_mes ma
+            where  1=1
+            and    coalesce(ma.doh_sum, 0) <= 0
+            union all
+            select va.r_sprid,
+                   'F@NDFL_ARH_VYCH' src_table,
+                   'Код вычета'       error_type,
+                   null mes,
+                   va.vych_kod_gni,
+                   va.vych_sum_predost,
+                   cast(null as varchar2(200)) comment_txt
+            from   f2ndfl_arh_vych va
+            where  1=1
+            and    va.vych_kod_gni < 0
+            union all
+            select va.r_sprid,
+                   'F@NDFL_ARH_VYCH' src_table,
+                   'Использованный вычет'       error_type,
+                   null mes,
+                   va.vych_kod_gni,
+                   va.vych_sum_predost,
+                   'Не задан использованный вычет' comment_txt
+            from   f2ndfl_arh_vych va
+            where  1=1
+            and    (
+                     (select sum(ai.sgd_sum)
+                      from   f2ndfl_arh_itogi ai
+                      where  ai.r_sprid = va.r_sprid
+                     ) -
+                     (select sum(vaa.vych_sum_ispolz)
+                      from   f2ndfl_arh_vych vaa
+                      where  vaa.r_sprid = va.r_sprid
+                     )
+                   ) > 0
+            and    nvl(va.vych_sum_ispolz, 0) = 0
+          )
+          select wle.src_table,
+                 s.r_sprid,
+                 s.nom_spr,
+                 s.nom_korr,
+                 np.gf_person,
+                 s.ssylka,
+                 np.nom_vkl,
+                 np.nom_ips,
+                 wle.error_type,
+                 wle.amount_code,
+                 wle.amount,
+                 wle.mes,
+                 s.familiya || ' ' || s.imya || ' ' || s.otchestvo fio,
+                 wle.comment_txt
+          from   w_load_errors       wle,
+                 f2ndfl_load_spravki s,
+                 f_ndfl_load_nalplat np
+          where  1=1
+          --
+          and    np.ssylka_sips(+) = s.ssylka
+          and    np.ssylka_tip(+) = case when s.tip_dox = 2 then 1 else 0 end
+          and    np.god(+) = s.god
+          and    np.kod_na(+) = s.kod_na
+          --
+          and    s.nom_korr = wle.nom_korr
+          and    s.ssylka = wle.ssylka
+          and    s.tip_dox = wle.tip_dox
+          and    s.god = wle.god
+          and    s.kod_na = wle.kod_na
+          union all
+          select wae.src_table,
+                 s.id,
+                 s.nom_spr,
+                 s.nom_korr,
+                 s.ui_person,
+                 null ssylka,
+                 null nom_vkl,
+                 null nom_ips,
+                 wae.error_type,
+                 wae.amount_code,
+                 wae.amount,
+                 wae.mes,
+                 s.familiya || ' ' || s.imya || ' ' || s.otchestvo fio,
+                 wae.comment_txt
+          from   f2ndfl_arh_spravki  s,
+                 w_arh_errors        wae
+          where  1=1
+          and    wae.r_sprid = s.id
+          and    s.god = dv_sr_lspv_docs_api.get_year
+          and    s.kod_na = 1;
+      --
       when 'f2_arh_itogi' then
         if gateway_pkg.get_parameter_num('gf_person') is not null then
           open l_result for
@@ -447,6 +579,10 @@ create or replace package body ndfl2_report_api is
                       e.god             ,
                       e.nom_spr         ,
                       e.ui_person       ,
+                      e.familiya        ,
+                      e.imya            ,
+                      e.otchestvo       ,
+                      e.data_rozhd      ,
                       e.kod_ud_lichn    ,
                       e.ser_nom_doc     ,
                       e.inn_fl          ,
@@ -539,6 +675,10 @@ create or replace package body ndfl2_report_api is
                       e.god             ,
                       e.nom_spr         ,
                       e.ui_person       ,
+                      e.familiya        ,
+                      e.imya            ,
+                      e.otchestvo       ,
+                      e.data_rozhd      ,
                       e.kod_ud_lichn    ,
                       e.ser_nom_doc     ,
                       e.inn_fl          ,
@@ -739,123 +879,6 @@ create or replace package body ndfl2_report_api is
                     ls.imya,
                     ls.otchestvo,
                     ls.data_rozhd;
-      when 'f2_error_report' then
-        --источник запроса: fxndfl_util.OshibDan_vSpravke
-        open l_result for
-          select ns.fk_contragent,
-                 ls.ssylka,
-                 ls.tip_dox,
-                 ls.inn_fl,
-                 ls.grazhd,
-                 ls.familiya,
-                 ls.imya,
-                 ls.otchestvo,
-                 ls.data_rozhd,
-                 ls.kod_ud_lichn,
-                 ls.ser_nom_doc,
-                 ls.status_np,
-                 ls.einfo
-          from   (select 1 ecode,
-                         'ГРАЖДАНСТВО не задано' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    grazhd is null
-                 union
-                  select 2 ecode,
-                         'ГРАЖДАНСТВО РФ не соответствует УЛ' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    grazhd = 643
-                  and    kod_ud_lichn in (10, 11, 12, 13, 15, 19)
-                 union
-                  select 3 ecode,
-                         'ГРАЖДАНСТВО неРФ не соответствует УЛ РФ' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    (grazhd <> 643)
-                  and    (kod_ud_lichn not in (10, 11, 12, 13, 15, 19, 23))
-                 union
-                  select 4 ecode,
-                         'Тип УЛ запрещенное значение' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    kod_ud_lichn not in (3, 7, 8, 10, 11, 12, 13, 14, 15, 19, 21, 23, 24, 91)
-                 union
-                  select 6 ecode,
-                         'Неправильный шаблон Паспорта РФ' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    kod_ud_lichn = 21
-                  and    not
-                         regexp_like(ser_nom_doc, '^\d{2}\s\d{2}\s\d{6}$')
-                 union
-                  select 7 ecode,
-                         'Неправильный шаблон Вида на жительство в РФ' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    kod_ud_lichn = 12
-                  and    not regexp_like(ser_nom_doc, '^\d{2}\s\d{7}$')
-                 union
-                  select 91 ecode,
-                         'Предупреждение: Налоговый резидент и ГРАЖДАНСТВО или УЛ не РФ' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    status_np = 1
-                  and    ((grazhd is null or grazhd <> 643)and
-                        kod_ud_lichn in (10, 11, 13, 15, 19))
-                 union
-                  select 92 ecode,
-                         'Предупреждение: Налоговый резидент и вид на жительство РФ' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    status_np = 1
-                  and    ((grazhd is null or grazhd <> 643) and
-                        kod_ud_lichn = 12)
-                 union
-                  select 93 ecode,
-                         'Предупреждение: Значения ГРАЖДАНСТВО и ШАБЛОН УДОСТОВЕРЕНИЯ соответствуют коду ПАСПОРТА РФ' einfo,
-                         x.*
-                  from   f2ndfl_load_spravki x
-                  where  kod_na = 1
-                  and    god = p_year
-                  and    tip_dox > 0
-                  and    kod_ud_lichn <> 21
-                  and    grazhd = 643
-                  and    regexp_like(ser_nom_doc, '^\d{2}\s\d{2}\s\d{6}$')
-                ) ls
-          inner  join f2ndfl_arh_nomspr ns
-          on     ns.kod_na = ls.kod_na
-          and    ns.god = ls.god
-          and    ns.ssylka = ls.ssylka
-          and    ns.tip_dox = ls.tip_dox
-          and    ns.flag_otmena = 0
-          and    ls.nom_korr = 0
-          order  by ecode,
-                    familiya;
       when 'f2_diff_pers_data' then
         --источник запроса: fxndfl_util.OshibDan_vSpravke
         open l_result for

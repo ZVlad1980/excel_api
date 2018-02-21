@@ -5,7 +5,7 @@ create or replace view sp_ogr_benefits_v as
          op.nom_ips,
          op.ssylka_fl,
          op.shifr_schet,
-         coalesce(to_number(pt.benefit_code), op.shifr_schet) benefit_code,
+         coalesce(to_number(pt.benefit_code), -1 * op.shifr_schet) benefit_code,
          pt.amount                  benefit_amount,
          op.start_date,
          op.end_date,

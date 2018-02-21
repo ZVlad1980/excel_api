@@ -276,7 +276,7 @@ create or replace package body f2ndfl_load_api is
       and    s.god = p_year;
     end if;
     --
-    if p_action_code in (C_PRG_ARH_SPRAVKI) then
+    if p_action_code in (C_PRG_ARH_SPRAVKI, C_PRG_LOAD_TOTAL) then
       update f2ndfl_arh_nomspr t
       set    t.nom_spr = null
       where  t.nom_spr is not null 

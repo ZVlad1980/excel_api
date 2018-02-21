@@ -1065,6 +1065,10 @@ create or replace package body f2ndfl_arh_spravki_api is
     p_year           int,
     p_nom_spr        varchar2,
     p_fk_contragent  int,
+    p_lastname       varchar2,
+    p_firstname      varchar2,
+    p_secondname     varchar2,
+    p_birth_date     date,
     p_doc_code       int,
     p_doc_num        varchar2,
     p_inn            varchar2,
@@ -1080,6 +1084,29 @@ create or replace package body f2ndfl_arh_spravki_api is
     begin
       l_result := l_result || case when l_result is not null then ' ' end || to_char(p_error_code);
     end append_code_;
+    --
+    function check_fio_(p_value varchar2) return boolean is
+    begin
+      return 
+        case
+          when regexp_replace(p_value, '[^[:punct:]]') = p_value or --если в имени только знаки препинания
+                (replace( --или имя содержит два пробела
+                   replace(
+                     replace(
+                       trim(p_value),
+                       ' ',
+                       ' _'
+                     ),
+                     '_ '
+                   ),
+                   '_'
+                 ) <> p_value
+                )
+            then true --Апшипка
+          else false --иначе - ок
+        end;
+    end check_fio_;
+    --
   begin
     --
     if p_citizenship is null                                           then append_code_(1); end if;   --ГРАЖДАНСТВО не задано
@@ -1131,6 +1158,13 @@ create or replace package body f2ndfl_arh_spravki_api is
     --
     if p_invalid_doc = 'Y'                                          then append_code_(17); end if; --Недействительный паспорт РФ
     --
+    if check_fio_(p_lastname) or 
+       check_fio_(p_firstname) or
+       check_fio_(p_secondname)                                     then append_code_(19); end if; --В полях ФИО присутствуют два пробела или одно из полей состоит из знаков пунктуации
+    --
+    if (extract(year from sysdate) 
+         - extract(year from p_birth_date)) between 18 and 100      then append_code_(20); end if; --Возвраст контрагента < 18 или 100 лет
+    --
     return l_result;
     --
   exception
@@ -1159,6 +1193,10 @@ create or replace package body f2ndfl_arh_spravki_api is
                        e.god             ,
                        e.nom_spr         ,
                        e.ui_person       ,
+                       e.familiya        ,
+                       e.imya            ,
+                       e.otchestvo       ,
+                       e.data_rozhd      ,
                        e.kod_ud_lichn    ,
                        e.ser_nom_doc     ,
                        e.inn_fl          ,
@@ -1220,7 +1258,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   procedure fix_cityzenship(
     p_code_na int,
     p_year    int,
-    p_ref_id  f2ndfl_arh_spravki.id%type
+    p_ref_id  f2ndfl_arh_spravki.id%type default null
   ) is
   begin
     merge into f2ndfl_arh_spravki sa
