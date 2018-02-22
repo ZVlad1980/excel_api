@@ -17,6 +17,7 @@ gl_NOMIPS              number       := Null;
 gl_CAID                number       := Null;
 gl_COMMIT              boolean      := true;
 gl_NALRES_DEFFER       varchar2(1)  := 'N'; --флаг отложенного определени€ статуса налогового резидента
+gl_ACTUAL_DATE         date         := null; --ƒата на которую формируютс€ данные (вли€ет на учет корректировок)
 
 --
 -- 03.11.2017 RFC_3779 - добавил параметры дл€ формировани€ корр.справок
@@ -33,7 +34,8 @@ procedure InitGlobals(
   pNOMIPS        in number   default null,
   pCAID          in number   default null,
   pCOMMIT        in boolean  default true,
-  pNALRES_DEFFER in boolean default false
+  pNALRES_DEFFER in boolean default false,
+  pACTUAL_DATE   in date    default sysdate --ƒата на которую формируютс€ данные (вли€ет на учет корректировок)
 ) is
 begin
 
@@ -52,6 +54,7 @@ begin
     gl_CAID          := pCAID  ;
     gl_COMMIT        := pCOMMIT;
     gl_NALRES_DEFFER := case when pNALRES_DEFFER then 'Y' else 'N' end;
+    gl_ACTUAL_DATE   := greatest(nvl(pACTUAL_DATE, sysdate), gl_DATADO - .00001);
     
 end InitGlobals;
 
@@ -1945,10 +1948,11 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
   -- создать запись в –еестре XML-файлов
   function zareg_xml
   (
-    pkodna  in number,
-    pgod    in number,
-    pforma  in number,
-    pcommit in number default 1
+    pkodna    in number,
+    pgod      in number,
+    pforma    in number,
+    ppriznak  in number,
+    pcommit   in number default 1
   ) return number as
     rnalag f2ndfl_spr_nal_agent%rowtype;
     nxmlid number;
@@ -2009,7 +2013,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
       rnalag.ifns,
       rnalag.god,
       4,
-      1
+      ppriznak
     );
     --
     if pcommit <> 0 and gl_commit then
@@ -2039,44 +2043,60 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
     cursor l_batches_cur is
       select s.priznak_s,
              count(1) cnt_spr
-      from   f2ndfl_arh_spravki s
-      where  s.kod_na = pkodna
-      and    s.god = pgod
-      and    s.r_xmlid is null
-      group by s.priznak_s;
+      from   (
+              select s.ui_person,
+                     max(s.priznak_s) priznak_s
+              from   f2ndfl_arh_spravki s
+              where  1 = 1
+              and    s.kod_na = 1
+              and    s.god = 2017
+              and    s.r_xmlid is null
+              group by s.ui_person
+             ) s
+      group  by s.priznak_s
+      order  by s.priznak_s;
     --
     /**
        доделать распределение по пачакам по количеству справок (пагинаци€!)
     */
     procedure raspredspravki_poxml_(
-      p_priznak_s int,
-      p_batch_cnt int
+      p_priznak_s     int,
+      p_batch_cnt     int,
+      p_max_priznak_s int default null
     ) is
       l_xmlid    int;
       l_pass_cnt int;
     begin
       for batch_num in 1 .. p_batch_cnt loop
         --
-        l_xmlid    := zareg_xml(pkodna, pgod, pforma, 0);
+        l_xmlid    := zareg_xml(pkodna, pgod, pforma, 0, p_priznak_s);
         l_pass_cnt := (batch_num - 1) * c_batch_size;
         --
-        update (select s.r_xmlid 
+        update (select s.r_xmlid
                 from   f2ndfl_arh_spravki s
                 where  s.id in (
                          select ss.id
                          from   f2ndfl_arh_spravki ss
                          where  1=1
+                         and    (
+                                  select max(sss.priznak_s)
+                                  from   f2ndfl_arh_spravki sss
+                                  where  sss.kod_na = ss.kod_na
+                                  and    sss.god = ss.god
+                                  and    sss.ui_person = ss.ui_person
+                                ) = nvl(p_max_priznak_s, p_priznak_s)
                          and    ss.r_xmlid is null
                          and    ss.priznak_s = p_priznak_s
                          and    ss.kod_na = pkodna
                          and    ss.god = pgod
                          order by ss.nom_spr, ss.nom_korr, ss.id
-                         fetch next c_batch_size rows only
+                         fetch next 3000 rows only
                        )
                ) u
         set    u.r_xmlid = l_xmlid;
         --
       end loop;
+      --
     end raspredspravki_poxml_;
     --
   begin
@@ -2085,7 +2105,18 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
       when 2 then
         --
         for b in l_batches_cur loop
-          raspredspravki_poxml_(b.priznak_s, trunc((b.cnt_spr + (c_batch_size - 1)) / c_batch_size));
+          if b.priznak_s = 2 then
+            raspredspravki_poxml_(
+              p_priznak_s     => b.priznak_s - 1, 
+              p_batch_cnt     => trunc((b.cnt_spr + (c_batch_size - 1)) / c_batch_size),
+              p_max_priznak_s => b.priznak_s
+            );
+          end if;
+          --
+          raspredspravki_poxml_(
+            p_priznak_s     => b.priznak_s, 
+            p_batch_cnt     => trunc((b.cnt_spr + (c_batch_size - 1)) / c_batch_size)
+          );
         end loop;
         --
       else
@@ -6015,7 +6046,7 @@ cursor cPBS is
         sfl.data_rogd,
         sfl.doc_tip,
         trim(sfl.DOC_SER1 || ' ' || case when sfl.DOC_SER2 is not null then sfl.DOC_SER2 || ' ' end ||sfl.DOC_NOM) SER_NOM_DOC,
-        sum(ds.summa) storno_doxprav
+        sum(case when ds.data_op between dtermbeg and gl_ACTUAL_DATE then ds.summa else 0 end) storno_doxprav
  from   sp_fiz_lits sfl
    inner  join sp_lspv lspv
      on     lspv.ssylka_fl = sfl.ssylka
@@ -6327,6 +6358,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ds.shifr_schet = 60
         group  by ls.ssylka,
                   extract(month from ds.data_op)
+        having sum(ds.summa) <> 0
         order  by ls.ssylka,
                   extract(month from ds.data_op);
 
@@ -6423,6 +6455,7 @@ cursor cPBS( pNPStatus in number ) is
         and    ds.service_doc = 0
         group  by ls.ssylka,
                   extract(month from ds.data_op)
+        having sum(ds.summa) <> 0
         order  by ls.ssylka,
                   extract(month from ds.data_op);
 
@@ -6553,6 +6586,7 @@ cursor cPBS( pNPStatus in number ) is
         group  by ls.ssylka,
                   extract(month from ds.data_op),
                   ds.sub_shifr_schet
+        having sum(ds.summa) <> 0
         order  by ls.ssylka,
                   extract(month from ds.data_op),
                   ds.sub_shifr_schet;
@@ -6683,6 +6717,7 @@ cursor cPBS( pNPStatus in number ) is
         group  by ls.ssylka,
                   extract(month from ds.data_op),
                   ds.sub_shifr_schet
+        having sum(ds.summa) <> 0
         order  by ls.ssylka,
                   extract(month from ds.data_op),
                   ds.sub_shifr_schet;
@@ -6783,7 +6818,9 @@ cursor cPBS( pNPStatus in number ) is
                 Select dvsr.*
                 from( Select SSYLKA_FL SSYLKA, extract(MONTH from PERVDATA) MES, SUB_SHIFR_SCHET, sum(NOVSUM) DOH_SUM 
                       from( 
-                            Select lspv.SSYLKA_FL, ds.SUB_SHIFR_SCHET, sum(SUMMA) NOVSUM, min(ds.DATA_OP) PERVDATA
+                            Select lspv.SSYLKA_FL, ds.SUB_SHIFR_SCHET, 
+                                     sum(case when ds.data_op between dtermbeg and gl_ACTUAL_DATE then ds.SUMMA else 0 end) NOVSUM, 
+                                     min(ds.DATA_OP) PERVDATA
                                 from dv_sr_lspv_v ds 
                                 inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                                     start with   ds.SHIFR_SCHET= 55      -- выкупна€
@@ -6918,6 +6955,7 @@ begin
       and    a.nom_ips = nvl(gl_NOMIPS, a.nom_ips)
       and    a.nom_vkl = nvl(gl_NOMVKL, a.nom_vkl)
       --
+      and    a.actual_date <= gl_ACTUAL_DATE
       and    a.date_op >= dTermBeg --to_date(20170101, 'yyyymmdd') --dTermBeg
       and    a.date_op < dTermEnd  --to_date(20180101, 'yyyymmdd') --dTermEnd;
       group by s.kod_na,
@@ -7051,6 +7089,7 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                                     select 1
                                     from   dv_sr_lspv_v ds83
                                     where  1=1
+                                    and    ds83.shifr_schet = 83
                                     and    ds83.nom_vkl = ds.nom_vkl
                                     and    ds83.nom_ips = ds.nom_ips
                                     and    ds83.ssylka_doc = ds.ssylka_doc
@@ -7073,9 +7112,9 @@ cursor cPBS( pNPStatus in number, pKodStavki in number ) is
                         from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where 1 = 1--RFC_3779 gl_GOD=2016 -- коррекци€ только дл€ 2016 года
-                          and ds.DATA_OP >= dTermEnd  --RFC_3779 = to_date('01.01.2017', 'dd.mm.yyyy') 
-                          and ds.SHIFR_SCHET=83 
-                        group by sp.SSYLKA_FL 
+                          and ds.DATA_OP between dTermEnd and gl_ACTUAL_DATE --RFC_3779 = to_date('01.01.2017', 'dd.mm.yyyy') 
+                          and ds.SHIFR_SCHET = 83
+                        group by sp.SSYLKA_FL
             ) group by SSYLKA_FL
         ) nal on ls.SSYLKA=nal.SSYLKA_FL
     where ls.KOD_NA=gl_KODNA and ls.GOD=gl_GOD and ls.TIP_DOX=gl_TIPDOX and ls.NOM_KORR=gl_NOMKOR and ls.STATUS_NP=pNPStatus
@@ -7448,7 +7487,7 @@ Select ls.SSYLKA, nvl(doh.SGD_SUM,0) SGD_DOH, nvl(vyc.SGD_SUM,0) SGD_VYCH, nvl(n
                         group by sp.SSYLKA_FL
                     -- исправлени€
                     union all
-                    Select sp.SSYLKA_FL, sum(SUMMA) SGD_SUMPRED  
+                    Select sp.SSYLKA_FL, sum(case when ds.data_op between dTermBeg and gl_ACTUAL_DATE then ds.SUMMA else 0 end) SGD_SUMPRED  
                         from dv_sr_lspv_v ds 
                              inner join SP_LSPV sp on sp.NOM_VKL=ds.NOM_VKL and sp.NOM_IPS=ds.NOM_IPS
                         where ds.SHIFR_SCHET=85 
@@ -8409,7 +8448,9 @@ end Parse_xml_izBuh;
        otchestvo,
        data_rozhd,
        kod_ud_lichn,
-       ser_nom_doc)
+       ser_nom_doc,
+       ui_person,
+       is_participant )
     values
       (p_ref_row.kod_na,
        p_ref_row.data_dok,
@@ -8427,7 +8468,9 @@ end Parse_xml_izBuh;
        p_ref_row.otchestvo,
        p_ref_row.data_rozhd,
        p_ref_row.kod_ud_lichn,
-       p_ref_row.ser_nom_doc)
+       p_ref_row.ser_nom_doc,
+       p_ref_row.ui_person,
+       p_ref_row.is_participant)
     returning id into l_result;
     --
     copy_adr(
@@ -9574,9 +9617,44 @@ end Parse_xml_izBuh;
              p.inn,
              p.status_np,
              p.citizenship,
-             p.lastname,
-             p.firstname,
-             p.secondname,
+             replace(
+               replace(
+                 replace(
+                   trim(p.lastname),
+                   ' ',
+                   ' _'
+                 ),
+                 '_ '
+               ),
+               '_'
+             ),
+             replace(
+               replace(
+                 replace(
+                   trim(p.firstname),
+                   ' ',
+                   ' _'
+                 ),
+                 '_ '
+               ),
+               '_'
+             ),
+             case --если только символы пунктуации -> null
+               when regexp_replace(p.secondname, '[^[:punct:]]') = p.secondname then
+                 null
+               else
+                 replace(
+                   replace(
+                     replace(
+                       trim(p.secondname),
+                       ' ',
+                       ' _'
+                     ),
+                     '_ '
+                   ),
+                   '_'
+                 )
+             end,
              p.birthdate,
              case
                when p.fk_idcard_type not in (3, 7, 8, 10, 11, 12, 13, 14, 15, 19, 21, 23, 24, 91) then
@@ -9702,6 +9780,207 @@ end Parse_xml_izBuh;
       end;
   end check_residenttaxrate;
   
+  function get_max_nom_spr(
+    p_code_na int,
+    p_year    int
+  ) return int is
+    l_result int;
+  begin
+    select max(to_number(s.nom_spr))
+    into   l_result
+    from   f2ndfl_arh_spravki s
+    where  1=1
+    and    s.god = p_year
+    and    s.kod_na = p_code_na;
+    return l_result;
+  end get_max_nom_spr;
+  
+  /**
+   * ѕроцедура create_arh_spravki_prz2 создает справки с признаком 2
+   *   по контрагентам, с которых недоудержали налог!
+   */
+  procedure create_arh_spravki_prz2(
+    p_code_na int,
+    p_year    int
+  ) is
+    --
+    type l_ref_tbl_type is table of f2ndfl_arh_spravki%rowtype;
+    l_ref_tbl    l_ref_tbl_type;
+    l_new_ref_id f2ndfl_arh_spravki.id%type;
+    --
+    l_nom_spr int;
+    --
+    function build_ref_tbl_ return boolean is
+    begin
+      select *
+      bulk collect into l_ref_tbl
+      from   f2ndfl_arh_spravki s
+      where  1=1
+      and    not exists(
+               select 1
+               from   f2ndfl_arh_spravki ss
+               where  1=1
+               and    ss.priznak_s = 2
+               and    ss.id <> s.id
+               and    ss.ui_person = s.ui_person
+               and    ss.nom_korr = s.nom_korr
+               and    ss.god = s.god
+               and    ss.kod_na = s.kod_na
+             )
+      and    exists(
+               select 1
+               from   f2ndfl_arh_itogi ai
+               where  ai.r_sprid = s.id
+               and    ai.vzysk_ifns <> 0
+             )
+      and    s.nom_korr = 0
+      and    s.god = p_year
+      and    s.kod_na = p_code_na;
+      --
+      return l_ref_tbl.count > 0;
+      --
+    end build_ref_tbl_;
+    --
+    --
+    --
+    procedure create_total_(
+      p_src_ref_id f2ndfl_arh_spravki.id%type,
+      p_trg_ref_id f2ndfl_arh_spravki.id%type
+    ) is
+      l_total_row f2ndfl_arh_itogi%rowtype;
+    begin
+      /*
+      vRES:=
+       '<—ум»тЌалѕер —умƒохќбщ="'      ||trim(to_char( nvl(rITOG.SGD_SUM        ,0),            '99999999999990.00' ))
+       '" ЌалЅаза="'                   ||trim(to_char( nvl(rITOG.SUM_OBL        ,0),            '99999999999990.00' ))
+       '" Ќал»счисл="'                 ||trim(to_char( nvl(rITOG.SUM_OBL_NI     ,0),       '99999999999990' ))
+       '" јвансѕлат‘икс="'             ||trim(to_char( nvl(rITOG.SUM_FIZ_AVANS	,0), '99999999999990' ))
+       '" Ќал”держ="'                  ||trim(to_char( nvl(rITOG.SUM_OBL_NU     ,0),      '99999999999990' ))
+       '" Ќалѕеречисл="'               ||trim(to_char( nvl(rITOG.SUM_NAL_PER    ,0),    '99999999999990' ))
+       '" Ќал”держЋиш="'               ||trim(to_char( nvl(rITOG.DOLG_NA        ,0),             '99999999999990' ))
+       '" ЌалЌе”держ="'                ||trim(to_char( nvl(rITOG.VZYSK_IFNS     ,0),        '99999999999990' )) ||'"/>';                           
+    else
+    
+       fDOX:=nvl(rITOG.VZYSK_IFNS,0)/(0.01*rITOG.KOD_STAVKI);
+    
+       vRES:=
+       '<—ум»тЌалѕер —умƒохќбщ="'      ||trim(to_char( nvl(fDOX,0)              ,            '99999999999990.00' ))
+        '" ЌалЅаза="'                  ||trim(to_char( nvl(fDOX,0)              ,            '99999999999990.00' ))
+        '" Ќал»счисл="'                ||trim(to_char( nvl(rITOG.VZYSK_IFNS,0)  ,       '99999999999990' ))
+        '" јвансѕлат‘икс="'            ||trim(to_char( 0                        , '99999999999990' ))
+        '" Ќал”держ="'                 ||trim(to_char( 0                        ,      '99999999999990' ))
+        '" Ќалѕеречисл="'              ||trim(to_char( 0                        ,    '99999999999990' ))
+        '" Ќал”держЋиш="'              ||trim(to_char( 0                        ,             '99999999999990' ))
+        '" ЌалЌе”держ="'               ||trim(to_char( nvl(rITOG.VZYSK_IFNS     ,0),        '99999999999990' )) ||'"/>';    
+      */
+      select ai.kod_stavki, ai.vzysk_ifns
+      into   l_total_row.kod_stavki, l_total_row.vzysk_ifns
+      from   f2ndfl_arh_itogi ai
+      where  ai.r_sprid = p_src_ref_id;
+      --Ѕаза дл€ недосдачи (
+      l_total_row.sgd_sum := round(nvl(l_total_row.vzysk_ifns, 0) / (0.01 * l_total_row.kod_stavki), 2);
+      --
+      insert into f2ndfl_arh_itogi(
+        r_sprid,
+        kod_stavki,
+        sgd_sum,
+        sum_obl,
+        sum_obl_ni,
+        sum_fiz_avans,
+        sum_obl_nu,
+        sum_nal_per,
+        dolg_na,
+        vzysk_ifns
+      ) values(
+        p_trg_ref_id,
+        l_total_row.kod_stavki,
+        l_total_row.sgd_sum,
+        l_total_row.sgd_sum,
+        l_total_row.vzysk_ifns,
+        0,
+        0,
+        0,
+        0,
+        l_total_row.vzysk_ifns
+      );
+      --
+      /*
+      TODO: owner="V.Zhuravov" created="21.02.2018"
+      text="ќпределение кода налога - пока константа 1240!"
+      */
+      /*
+      if rSprData.PRIZNAK_S=1 then
+       --if rFXML.PRIZNAK_F=1 then
+        
+          ERR_Pref := '÷икл по ћ≈—я÷ам / —тавка '||to_char(rITOG.KOD_STAVKI )||' ';
+          for rec in (Select distinct MES from f2NDFL_ARH_MES where R_SPRID=rSprData.ID and KOD_STAVKI=rITOG.KOD_STAVKI order by MES)  loop
+              Insert_tagMesSvDohVych( rec.MES );
+              end loop;
+        else
+     
+          cXML:=cXML||CrLf||'<—в—умƒох ћес€ц="'||trim(to_char(12,'00'))
+                          ||'"  одƒоход="'||trim(to_char(1240,'0000'))
+                          ||'" —умƒоход="'||trim(to_char(
+                                     nvl(rITOG.VZYSK_IFNS,0)/(0.01*rITOG.KOD_STAVKI)
+                               , '99999999999990.00'))||'"'
+                          ||' />';
+       
+        end if;     
+      */
+      insert into f2ndfl_arh_mes(
+        r_sprid,
+        kod_stavki,
+        mes,
+        doh_kod_gni,
+        doh_sum,
+        vych_kod_gni,
+        vych_sum
+      ) values (
+        p_trg_ref_id,
+        l_total_row.kod_stavki,
+        12,
+        1240,
+        l_total_row.sgd_sum,
+        0,
+        0
+      );
+      --
+    end create_total_;
+    --
+  begin
+    --
+    if not build_ref_tbl_ then
+      return;
+    end if;
+    --
+    l_nom_spr := get_max_nom_spr(
+      p_code_na => p_code_na ,
+      p_year    => p_year    
+    );
+    --
+    for i in 1..l_ref_tbl.count loop
+      --
+      l_ref_tbl(i).nom_spr := trim(to_char(l_nom_spr + i, '000000'));
+      l_ref_tbl(i).priznak_s := 2;
+      --
+      l_new_ref_id := copy_ref_2ndfl(
+        p_ref_row => l_ref_tbl(i)
+      );
+      create_total_(l_ref_tbl(i).id, l_new_ref_id);
+      --
+    end loop;
+    --
+  exception
+    when others then
+      utl_error_api.fix_exception(
+        p_err_msg => 'FXNDFL_UTIL.create_arh_spravki_prz2(' || p_year || ')'
+      );
+      dbms_output.put_line(
+        utl_error_api.get_exception_full
+      );
+      raise;
+  end create_arh_spravki_prz2; 
+  
   /**
    * ѕроцедура финального обновлени€ ARH_SPRAVKI (расставл€ет PRIZNAK_S справки и т.д.
    */
@@ -9716,24 +9995,10 @@ end Parse_xml_izBuh;
       p_year    => p_year   
     );
     --
-    merge into f2ndfl_arh_spravki s
-    using (
-            select ai.r_sprid,
-                   2 priznak_s
-            from   f2ndfl_arh_spravki s,
-                   f2ndfl_arh_itogi ai
-            where  1=1
-            and    ai.vzysk_ifns <> 0
-            and    ai.r_sprid = s.id
-            and    s.god = p_year
-            and    s.kod_na = p_code_na
-            group by ai.r_sprid
-            having max(case when ai.vzysk_ifns <> 0 then 2 else 1 end) = 2
-          ) u
-    on    (s.id = u.r_sprid)
-    when matched then
-      update set
-        s.priznak_s = u.priznak_s;
+    create_arh_spravki_prz2(
+      p_code_na => p_code_na,
+      p_year    => p_code_na
+    );
     --
   end update_spravki_finally; 
   

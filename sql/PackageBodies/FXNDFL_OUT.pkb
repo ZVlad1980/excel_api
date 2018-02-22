@@ -281,12 +281,29 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
   begin
        cXML:=cXML||CrLf||'<ƒох¬ыч>';
        Ident_Right;
-       
+       ERR_Pref := '÷икл по ћ≈—я÷ам / —тавка '||to_char(rITOG.KOD_STAVKI )||' ';
+       for rec in (Select distinct MES from f2NDFL_ARH_MES where R_SPRID=rSprData.ID and KOD_STAVKI=rITOG.KOD_STAVKI order by MES)  loop
+           Insert_tagMesSvDohVych( rec.MES );
+       end loop;
+       /*
+       if rSprData.PRIZNAK_S=1 then
+       --if rFXML.PRIZNAK_F=1 then
+        
           ERR_Pref := '÷икл по ћ≈—я÷ам / —тавка '||to_char(rITOG.KOD_STAVKI )||' ';
           for rec in (Select distinct MES from f2NDFL_ARH_MES where R_SPRID=rSprData.ID and KOD_STAVKI=rITOG.KOD_STAVKI order by MES)  loop
               Insert_tagMesSvDohVych( rec.MES );
               end loop;
+        else
+     
+          cXML:=cXML||CrLf||'<—в—умƒох ћес€ц="'||trim(to_char(12,'00'))
+                          ||'"  одƒоход="'||trim(to_char(1240,'0000'))
+                          ||'" —умƒоход="'||trim(to_char(
+                                     nvl(rITOG.VZYSK_IFNS,0)/(0.01*rITOG.KOD_STAVKI)
+                               , '99999999999990.00'))||'"'
+                          ||' />';
        
+        end if;       
+       */
        Ident_Left;   
        cXML:=cXML||CrLf||'</ƒох¬ыч>';   
   end;
@@ -329,8 +346,10 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
   end;
   
   function tag_ItogiPoStavke return varchar2 as  
+  vRES varchar2(2000);
+  fDOX float;
   begin
-       return
+  return
        '<—ум»тЌалѕер —умƒохќбщ="'      ||trim(to_char( nvl(rITOG.SGD_SUM,0),            '99999999999990.00' ))
                             ||'" ЌалЅаза="'            ||trim(to_char( nvl(rITOG.SUM_OBL,0),            '99999999999990.00' ))
                             ||'" Ќал»счисл="'        ||trim(to_char( nvl(rITOG.SUM_OBL_NI,0),       '99999999999990' ))
@@ -339,6 +358,36 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
                             ||'" Ќалѕеречисл="'     ||trim(to_char( nvl(rITOG.SUM_NAL_PER,0),    '99999999999990' ))
                             ||'" Ќал”держЋиш="'   ||trim(to_char( nvl(rITOG.DOLG_NA,0),             '99999999999990' ))
                             ||'" ЌалЌе”держ="'      ||trim(to_char( nvl(rITOG.VZYSK_IFNS,0),        '99999999999990' )) ||'"/>';
+    /*if rSprData.PRIZNAK_S=1 then 
+    --if rFXML.PRIZNAK_F=1 then
+     
+       vRES:=
+       '<—ум»тЌалѕер —умƒохќбщ="'      ||trim(to_char( nvl(rITOG.SGD_SUM,0),            '99999999999990.00' ))
+                            ||'" ЌалЅаза="'            ||trim(to_char( nvl(rITOG.SUM_OBL,0),            '99999999999990.00' ))
+                            ||'" Ќал»счисл="'        ||trim(to_char( nvl(rITOG.SUM_OBL_NI,0),       '99999999999990' ))
+                            ||'" јвансѕлат‘икс="' ||trim(to_char( nvl(rITOG.SUM_FIZ_AVANS,0), '99999999999990' ))
+                            ||'" Ќал”держ="'          ||trim(to_char( nvl(rITOG.SUM_OBL_NU,0),      '99999999999990' ))
+                            ||'" Ќалѕеречисл="'     ||trim(to_char( nvl(rITOG.SUM_NAL_PER,0),    '99999999999990' ))
+                            ||'" Ќал”держЋиш="'   ||trim(to_char( nvl(rITOG.DOLG_NA,0),             '99999999999990' ))
+                            ||'" ЌалЌе”держ="'      ||trim(to_char( nvl(rITOG.VZYSK_IFNS,0),        '99999999999990' )) ||'"/>';                           
+    else
+    
+       fDOX:=nvl(rITOG.VZYSK_IFNS,0)/(0.01*rITOG.KOD_STAVKI);
+    
+       vRES:=
+       '<—ум»тЌалѕер —умƒохќбщ="'      ||trim(to_char( nvl(fDOX,0),            '99999999999990.00' ))
+                            ||'" ЌалЅаза="'            ||trim(to_char( nvl(fDOX,0),            '99999999999990.00' ))
+                            ||'" Ќал»счисл="'        ||trim(to_char( nvl(rITOG.VZYSK_IFNS,0),       '99999999999990' ))
+                            ||'" јвансѕлат‘икс="' ||trim(to_char( 0, '99999999999990' ))
+                            ||'" Ќал”держ="'          ||trim(to_char( 0,      '99999999999990' ))
+                            ||'" Ќалѕеречисл="'     ||trim(to_char( 0,    '99999999999990' ))
+                            ||'" Ќал”держЋиш="'   ||trim(to_char( 0,             '99999999999990' ))
+                            ||'" ЌалЌе”держ="'      ||trim(to_char( nvl(rITOG.VZYSK_IFNS,0),        '99999999999990' )) ||'"/>';    
+    
+    end if;    
+              
+    return vRES;--*/
+              
   end tag_ItogiPoStavke;
   
   procedure Insert_tagSvedStavka( pStavka in number ) as

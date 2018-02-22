@@ -109,7 +109,8 @@ create or replace package gateway_pkg is
     x_err_msg       out varchar2,
     p_action_code       varchar2,
     p_code_na           varchar2,    
-    p_year              number
+    p_year              number,
+    p_actual_date       varchar2
   );
   
   /**

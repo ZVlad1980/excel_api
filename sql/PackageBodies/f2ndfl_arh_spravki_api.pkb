@@ -3,17 +3,18 @@ create or replace package body f2ndfl_arh_spravki_api is
   C_PACKAGE_NAME constant varchar2(32) := $$plsql_unit;
   
   type g_util_par_type is record (
-    KODNA     number        ,
-    GOD       number        ,
-    TIPDOX    number        ,
-    NOMKOR    number        ,
-    SPRID     number        ,
-    NOMSPR    varchar2(10)  ,
-    DATDOK    date          ,
-    NOMVKL    number        ,
-    NOMIPS    number        ,
-    CAID      number        ,
-    SRC_SPRID number
+    KODNA         number        ,
+    GOD           number        ,
+    TIPDOX        number        ,
+    NOMKOR        number        ,
+    SPRID         number        ,
+    NOMSPR        varchar2(10)  ,
+    DATDOK        date          ,
+    NOMVKL        number        ,
+    NOMIPS        number        ,
+    CAID          number        ,
+    SRC_SPRID     number        ,
+    ACTUAL_DATE   date
   );
   --
   
@@ -63,7 +64,8 @@ create or replace package body f2ndfl_arh_spravki_api is
         pNOMVKL => p_globals.NOMVKL ,
         pNOMIPS => p_globals.NOMIPS ,
         pCAID   => p_globals.CAID   ,
-        pCOMMIT => false             
+        pCOMMIT => false            ,
+        pACTUAL_DATE => p_globals.ACTUAL_DATE
       );
     --                               
   exception
@@ -193,6 +195,7 @@ create or replace package body f2ndfl_arh_spravki_api is
    *
    * @param p_ref_row     - справка f2ndfl_arh_spravki%rowtype
    * @param p_src_ref_id  - ID предыдущей справки
+   * @param p_actual_date - дата, на которую формируются данные (корректировки)
    * @param p_wo_arh      - без пересчета итогов в ARH (def: FALSE)
    * @param p_only_amount - флаг заполнения только суммовых показателей справки (вызывается из recalc_reference)
    *                      !!! при установленном флаге - не обрабатываются данные по ЗП (9)
@@ -201,6 +204,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   procedure calc_reference(
     p_ref_row     in out nocopy f2ndfl_arh_spravki%rowtype,
     p_src_ref_id  in f2ndfl_arh_spravki.id%type,
+    p_actual_date in date       ,
     p_wo_arh      in boolean default false,
     p_only_amount in boolean default false
   ) is
@@ -231,6 +235,7 @@ create or replace package body f2ndfl_arh_spravki_api is
     l_globals.NOMSPR     := p_ref_row.nom_spr;
     l_globals.DATDOK     := p_ref_row.data_dok;
     l_globals.SRC_SPRID  := p_src_ref_id;
+    l_globals.ACTUAL_DATE := p_actual_date;
     --
     for r in l_revenue_types_cur loop
       --
@@ -532,6 +537,7 @@ create or replace package body f2ndfl_arh_spravki_api is
    *
    * @param p_code_na       - код налогоплательщика (НПФ=1)
    * @param p_year          - год, за который надо сформировать корректировку
+   * @p_actual_date         - дата, на которую формируются данные (учет корректировок!)
    * @param p_contragent_id - ID контрагента, по которому формируется справка (CDM.CONTRAGENTS.ID)
    * @param p_ref_num       - номер справки (необязательный)
    *
@@ -539,6 +545,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   procedure create_reference(
     p_code_na        f2ndfl_arh_spravki.kod_na%type,
     p_year           f2ndfl_arh_spravki.god%type,
+    p_actual_date    date,
     p_contragent_id  f2ndfl_arh_spravki.ui_person%type,
     p_ref_num        f2ndfl_arh_spravki.nom_spr%type default null
   ) is
@@ -597,7 +604,8 @@ create or replace package body f2ndfl_arh_spravki_api is
     --
     calc_reference(
       p_ref_row    => l_ref_new,
-      p_src_ref_id => l_ref_curr.id
+      p_src_ref_id => l_ref_curr.id,
+      p_actual_date => p_actual_date
     );
     --
   exception
@@ -618,14 +626,16 @@ create or replace package body f2ndfl_arh_spravki_api is
   procedure create_reference_corr(
     p_code_na        f2ndfl_arh_spravki.kod_na%type,
     p_year           f2ndfl_arh_spravki.god%type,
-    p_contragent_id  f2ndfl_arh_nomspr.fk_contragent%type
+    p_contragent_id  f2ndfl_arh_nomspr.fk_contragent%type,
+    p_actual_date    date default sysdate
   ) is
   begin
     --
     create_reference(
       p_code_na       => p_code_na      ,
       p_year          => p_year         ,
-      p_contragent_id => p_contragent_id
+      p_contragent_id => p_contragent_id,
+      p_actual_date   => p_actual_date
     );
     --
   exception
@@ -644,8 +654,9 @@ create or replace package body f2ndfl_arh_spravki_api is
    *
    */
   procedure recalc_reference(
-    p_ref_id  f2ndfl_arh_spravki.id%type,
-    p_commit  boolean default false
+    p_ref_id        f2ndfl_arh_spravki.id%type,
+    p_actual_date   date,
+    p_commit        boolean default false
   ) is
     l_ref_row f2ndfl_arh_spravki%rowtype;
   begin
@@ -662,7 +673,8 @@ create or replace package body f2ndfl_arh_spravki_api is
       p_ref_row     => l_ref_row,
       p_src_ref_id  => null,
       p_wo_arh      => false,
-      p_only_amount => true
+      p_only_amount => true,
+      p_actual_date => p_actual_date
     );
     --
     if p_commit then
@@ -998,7 +1010,8 @@ create or replace package body f2ndfl_arh_spravki_api is
       calc_reference(
         p_ref_row    => l_ref_curr,
         p_src_ref_id => p_ref_rec.prev_sprid, --(для копирования данных по сотруднику Фонда)
-        p_wo_arh     => true
+        p_wo_arh     => true,
+        p_actual_date => sysdate
       );
       --
     end create_reference_corr_;
@@ -1052,6 +1065,10 @@ create or replace package body f2ndfl_arh_spravki_api is
     p_year           int,
     p_nom_spr        varchar2,
     p_fk_contragent  int,
+    p_lastname       varchar2,
+    p_firstname      varchar2,
+    p_secondname     varchar2,
+    p_birth_date     date,
     p_doc_code       int,
     p_doc_num        varchar2,
     p_inn            varchar2,
@@ -1067,6 +1084,29 @@ create or replace package body f2ndfl_arh_spravki_api is
     begin
       l_result := l_result || case when l_result is not null then ' ' end || to_char(p_error_code);
     end append_code_;
+    --
+    function check_fio_(p_value varchar2) return boolean is
+    begin
+      return 
+        case
+          when regexp_replace(p_value, '[^[:punct:]]') = p_value or --если в имени только знаки препинания
+                (replace( --или имя содержит два пробела
+                   replace(
+                     replace(
+                       trim(p_value),
+                       ' ',
+                       ' _'
+                     ),
+                     '_ '
+                   ),
+                   '_'
+                 ) <> p_value
+                )
+            then true --Апшипка
+          else false --иначе - ок
+        end;
+    end check_fio_;
+    --
   begin
     --
     if p_citizenship is null                                           then append_code_(1); end if;   --ГРАЖДАНСТВО не задано
@@ -1118,6 +1158,16 @@ create or replace package body f2ndfl_arh_spravki_api is
     --
     if p_invalid_doc = 'Y'                                          then append_code_(17); end if; --Недействительный паспорт РФ
     --
+    if check_fio_(p_lastname) or 
+       check_fio_(p_firstname) or
+       check_fio_(p_secondname)                                     then append_code_(19); end if; --В полях ФИО присутствуют два пробела или одно из полей состоит из знаков пунктуации
+    --
+    if not (
+         (extract(year from sysdate) - 
+          extract(year from p_birth_date)
+         ) between 18 and 100
+       )                                                            then append_code_(20); end if; --Возвраст контрагента < 18 или 100 лет
+    --
     return l_result;
     --
   exception
@@ -1146,6 +1196,10 @@ create or replace package body f2ndfl_arh_spravki_api is
                        e.god             ,
                        e.nom_spr         ,
                        e.ui_person       ,
+                       e.familiya        ,
+                       e.imya            ,
+                       e.otchestvo       ,
+                       e.data_rozhd      ,
                        e.kod_ud_lichn    ,
                        e.ser_nom_doc     ,
                        e.inn_fl          ,
@@ -1207,7 +1261,7 @@ create or replace package body f2ndfl_arh_spravki_api is
   procedure fix_cityzenship(
     p_code_na int,
     p_year    int,
-    p_ref_id  f2ndfl_arh_spravki.id%type
+    p_ref_id  f2ndfl_arh_spravki.id%type default null
   ) is
   begin
     merge into f2ndfl_arh_spravki sa

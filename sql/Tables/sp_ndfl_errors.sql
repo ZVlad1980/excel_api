@@ -25,7 +25,9 @@ begin
               select 15, 'Некорректный ИНН', 'Error' from dual union all
               select 16, 'Не соотвeтствие ставки и статуса резидента', 'Error' from dual union all
               select 17, 'Недействительный паспорт РФ', 'Warning' from dual union all
-              select 18, 'Неправильный шаблон паспорта РФ', 'Error' from dual
+              select 18, 'Неправильный шаблон паспорта РФ', 'Error' from dual union all
+              select 19, 'В полях ФИО присутствуют два пробела или одно из полей состоит из знаков пунктуации', 'Warning' from dual union all
+              select 20, 'Возвраст контрагента < 18 или > 100 лет', 'Warning' from dual
              ) u
   on         (se.error_id = u.error_id)
   when matched then

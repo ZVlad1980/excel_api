@@ -5,6 +5,7 @@ create or replace view dv_sr_lspv_benefits_det_v as
          a.year_op,
          a.month_op,
          a.date_op,
+         a.actual_date,
          a.shifr_schet,
          case 
            when b.ssylka_fl is null then

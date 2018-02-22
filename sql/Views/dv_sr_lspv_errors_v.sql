@@ -57,6 +57,69 @@ create or replace view dv_sr_lspv_errors_v as
   and    dc.type_op = -1
   group by dc.date_op, dc.ssylka_doc_op, dc.nom_vkl, dc.nom_ips, dc.shifr_schet, dc.sub_shifr_schet
   having count(1) > 1 and abs(sum(dc.source_op_amount)) <> abs(max(dc.corr_op_amount))
+ */
+  select dd.date_op                                                    date_op,
+         dd.ssylka_doc                                                 ssylka_doc,
+         dd.nom_vkl,
+         dd.nom_ips,
+         dd.shifr_schet                                                shifr_schet, 
+         dd.sub_shifr_schet                                            sub_shifr_schet,
+         dd.amount                                                      amount, 
+         null                                                          source_amount,
+         fl.ssylka                                                     ssylka_fl,
+         fl.last_name || ' ' || fl.first_name || ' ' || fl.second_name fio,
+         2                                                             error_code,
+         null                                                          error_sub_code,
+         null                                                          gf_person
+  from   dv_sr_lspv_acc_v dd,
+         lateral(
+           select sfl.ssylka,
+                  sfl.last_name,
+                  sfl.first_name,
+                  sfl.second_name
+           from   sp_fiz_litz_lspv_v sfl
+           where  sfl.nom_vkl = dd.nom_vkl
+           and    sfl.nom_ips = dd.nom_ips
+         ) fl
+  where  1=1
+  and    dd.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_report_date
+  and    (
+           (--коррекция без привязки к исходной операции
+              dd.shifr_schet in (55, 60, 62) and
+              dd.service_doc = -1            and
+              not exists (
+                select 1 
+                from   dv_sr_lspv ddd
+                where  ddd.nom_vkl = dd.nom_vkl
+                and    ddd.nom_ips = dd.nom_ips
+                and    ddd.service_doc = dd.ssylka_doc
+                and    ddd.shifr_schet = dd.shifr_schet
+                and    ddd.sub_shifr_schet = dd.sub_shifr_schet
+              )
+          ) 
+          or
+          (--отрицательная сумма по прямой операции!
+             dd.shifr_schet in (55, 60) and
+             dd.service_doc = 0 and
+             dd.amount < 0
+          )
+          or
+          (--возврат налога по выкупной без коррекции дохода!
+             dd.shifr_schet = 85           and
+             dd.sub_shifr_schet in (2, 3)  and
+             dd.service_doc = -1           and
+             not exists (
+               select 1 
+               from   dv_sr_lspv ddd
+               where  ddd.summa <> 0
+               and    ddd.nom_vkl = dd.nom_vkl
+               and    ddd.nom_ips = dd.nom_ips
+               and    ddd.ssylka_doc = dd.ssylka_doc
+               and    ddd.shifr_schet = 55
+               and    ddd.sub_shifr_schet = dd.sub_shifr_schet - 1
+             )
+          ) 
+        )
  union all
  /*
  TODO: owner="V.Zhuravov" created="12.12.2017"

@@ -37,6 +37,7 @@ create or replace view f2ndfl_arh_spravki_v as
            group by ns.kod_na, ns.god, ns.nom_spr, ns.fk_contragent
          ) ns
   where  1 = 1
+  and    sa.priznak_s = 1
   and    sa.god = dv_sr_lspv_docs_api.get_year
   and    sa.kod_na = 1
 /

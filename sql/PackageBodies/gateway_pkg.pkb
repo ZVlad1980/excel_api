@@ -357,14 +357,16 @@ create or replace package body gateway_pkg is
     x_err_msg       out varchar2,
     p_action_code       varchar2,
     p_code_na           varchar2,    
-    p_year              number
+    p_year              number,
+    p_actual_date       varchar2
   ) is
   begin
     --
     f2ndfl_load_api.create_2ndfl_refs(
       p_action_code => p_action_code,
       p_code_na     => p_code_na,
-      p_year        => p_year
+      p_year        => p_year,
+      p_actual_date => to_date$(p_actual_date)
     );
     --
     commit;

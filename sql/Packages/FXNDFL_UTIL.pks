@@ -88,7 +88,8 @@ procedure InitGlobals(
   pNOMIPS  in number   default null,
   pCAID    in number   default null,
   pCOMMIT  in boolean  default true,
-  pNALRES_DEFFER in boolean default false
+  pNALRES_DEFFER in boolean default false,
+  pACTUAL_DATE   in date    default sysdate --Дата на которую формируются данные (влияет на учет корректировок)
 );
 
 -- загрузить список налогоплательщиков
@@ -212,7 +213,34 @@ procedure KopirSprAdres_vArhiv( pKodNA in number, pGod in number );
 procedure Kopir_Adresa_vRF_izSOOTV( pPachka in number, pGod in number );
 
 -- создать запись в Реестре XML-файлов
-function Zareg_XML( pKodNA in number, pGod in number, pForma in number, pCommit in number default 1 ) return number;
+ 
+  /*
+    Declare 
+        RC number;
+    begin
+        dbms_output.enable(10000);
+        -- RC:=FXNDFL_UTIL.Numerovat_Spravki( 1, 2015 );   --   0'52"
+        -- RC:=FXNDFL_UTIL.KopirSprItog_vArhiv( 1, 2015 );   --   0'02"
+        -- RC:=FXNDFL_UTIL.KopirSprMes_vArhiv( 1, 2015 );  --   0'26"
+        -- RC:=FXNDFL_UTIL.KopirSprVych_vArhiv( 1, 2015 ); --   0'01"
+        -- RC:=FXNDFL_UTIL.KopirSprUved_vArhiv( 1, 2015 ); --   0'01"
+        -- RC:=FXNDFL_UTIL.KopirSprAdres_vArhiv( 1, 2015 );  -- дубли строк?
+        
+        -- RC:=FXNDFL_UTIL.Zareg_XML( 1, 2015, 2 );
+        
+        dbms_output.put_line(to_char(RC));
+    end;
+  */
+  
+  -- создать запись в Реестре XML-файлов
+  function zareg_xml
+  (
+    pkodna    in number,
+    pgod      in number,
+    pforma    in number,
+    ppriznak  in number,
+    pcommit   in number default 1
+  ) return number;
  
 
 -- распределить данные справок по XML-файлам
@@ -433,6 +461,15 @@ procedure Parse_xml_izBuh(
     p_contragent_id f2ndfl_arh_spravki.ui_person%type default null,
     p_nom_spr       f2ndfl_arh_spravki.nom_spr%type   default null,
     p_nom_korr      f2ndfl_arh_spravki.nom_korr%type  default 0
+  );
+  
+  /**
+   * Процедура create_arh_spravki_prz2 создает справки с признаком 2
+   *   по контрагентам, с которых недоудержали налог!
+   */
+  procedure create_arh_spravki_prz2(
+    p_code_na int,
+    p_year    int
   );
     
   /**
