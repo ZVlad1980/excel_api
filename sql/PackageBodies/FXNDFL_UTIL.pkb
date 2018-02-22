@@ -2069,7 +2069,14 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
     begin
       for batch_num in 1 .. p_batch_cnt loop
         --
-        l_xmlid    := zareg_xml(pkodna, pgod, pforma, 0, p_priznak_s);
+        l_xmlid    := zareg_xml(
+          pkodna   => pkodna, 
+          pgod     => pgod, 
+          pforma   => pforma, 
+          ppriznak => p_priznak_s, 
+          pcommit  => 0
+        );
+        --
         l_pass_cnt := (batch_num - 1) * c_batch_size;
         --
         update (select s.r_xmlid
