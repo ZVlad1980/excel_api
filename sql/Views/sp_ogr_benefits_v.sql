@@ -20,5 +20,5 @@ create or replace view sp_ogr_benefits_v as
   where  1=1
   and    pt.tdappid(+) = op.tdappid
   and    pt.rid(+) = op.pt_rid
-  and    nvl(op.pt_rid, 0) <> 0
+  and    nvl(op.pt_rid, 0) > 0
 /
