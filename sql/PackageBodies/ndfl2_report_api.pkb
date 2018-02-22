@@ -166,6 +166,7 @@ create or replace package body ndfl2_report_api is
                  w_arh_errors        wae
           where  1=1
           and    wae.r_sprid = s.id
+          and    s.priznak_s  = 1
           and    s.god = dv_sr_lspv_docs_api.get_year
           and    s.kod_na = 1;
       --
@@ -186,6 +187,7 @@ create or replace package body ndfl2_report_api is
             where  1=1
             and    ai.r_sprid = s.id
             and    s.ui_person = gateway_pkg.get_parameter_num('gf_person')
+            and    s.priznak_s  = 1
             and    s.god = p_year
             and    s.kod_na = 1
             order by s.nom_spr, s.nom_korr, ai.kod_stavki;
@@ -204,6 +206,7 @@ create or replace package body ndfl2_report_api is
             where  1=1
             and    av.r_sprid = s.id
             and    s.ui_person = gateway_pkg.get_parameter_num('gf_person')
+            and    s.priznak_s  = 1
             and    s.god = p_year
             and    s.kod_na = 1
             order by s.nom_spr, s.nom_korr, av.kod_stavki, av.vych_kod_gni;
@@ -224,6 +227,7 @@ create or replace package body ndfl2_report_api is
             where  1=1
             and    am.r_sprid = s.id
             and    s.ui_person = gateway_pkg.get_parameter_num('gf_person')
+            and    s.priznak_s  = 1
             and    s.god = p_year
             and    s.kod_na = 1
             order by s.nom_spr, s.nom_korr, am.mes, am.kod_stavki, am.doh_kod_gni;
@@ -595,7 +599,7 @@ create or replace package body ndfl2_report_api is
                    )                            error_list
             from   f2ndfl_arh_spravki_errors_v e
             where  1=1
-            and    e.god = 2017
+            and    e.god = p_year
             and    e.kod_na = 1
           )
           select coalesce(ed.error_type, 'ErrorUnknown') error_type, 
@@ -646,6 +650,7 @@ create or replace package body ndfl2_report_api is
                           max(s_prev.ser_nom_doc ) keep(dense_rank last order by s_prev.nom_korr) ser_nom_doc 
                    from   f2ndfl_arh_spravki s_prev
                    where  1=1
+                   and    s_prev.priznak_s = 1
                    and    s_prev.ui_person(+) = e.ui_person
                    and    s_prev.god(+) = e.god - 1
                    and    s_prev.kod_na(+) = e.kod_na
@@ -742,6 +747,7 @@ create or replace package body ndfl2_report_api is
                           max(s_prev.ser_nom_doc ) keep(dense_rank last order by s_prev.nom_korr) ser_nom_doc 
                    from   f2ndfl_arh_spravki s_prev
                    where  1=1
+                   and    s_prev.priznak_s = 1
                    and    s_prev.ui_person(+) = e.ui_person
                    and    s_prev.god(+) = e.god - 1
                    and    s_prev.kod_na(+) = e.kod_na

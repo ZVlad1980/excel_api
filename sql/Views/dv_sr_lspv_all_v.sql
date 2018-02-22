@@ -46,6 +46,8 @@ create or replace view dv_sr_lspv_all_v as
   and    dc.is_leaf = 1
   and    not (dc.ssylka_doc_op = dc.ssylka_doc and dc.source_op_amount = 0 and dc.corr_op_amount = 0)
   and    case 
+           when dc.charge_type = 'REVENUE' and dc.root_amount = 0 then
+             0
            when dc.charge_type = 'BENEFIT' 
              /*and dc.type_op = -1 */and dc.root_amount <> 0 and exists (
                select 1

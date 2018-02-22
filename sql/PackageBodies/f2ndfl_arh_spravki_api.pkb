@@ -1162,8 +1162,11 @@ create or replace package body f2ndfl_arh_spravki_api is
        check_fio_(p_firstname) or
        check_fio_(p_secondname)                                     then append_code_(19); end if; --В полях ФИО присутствуют два пробела или одно из полей состоит из знаков пунктуации
     --
-    if (extract(year from sysdate) 
-         - extract(year from p_birth_date)) between 18 and 100      then append_code_(20); end if; --Возвраст контрагента < 18 или 100 лет
+    if not (
+         (extract(year from sysdate) - 
+          extract(year from p_birth_date)
+         ) between 18 and 100
+       )                                                            then append_code_(20); end if; --Возвраст контрагента < 18 или 100 лет
     --
     return l_result;
     --

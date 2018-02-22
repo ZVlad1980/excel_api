@@ -24,5 +24,5 @@ create or replace view f2ndfl_arh_spravki_errors_v as
            on   ip.series = substr(replace(s.ser_nom_doc, ' ', null), 1, 4)
            and  ip.num = substr(replace(s.ser_nom_doc, ' ', null), 5, 6) --regexp_substr(ar.ser_nom_doc, '\d{6}$')
            and  s.kod_ud_lichn = 21
---  where  s.ui_person = 3049568
+  where  s.priznak_s = 1
 /

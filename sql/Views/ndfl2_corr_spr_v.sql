@@ -37,6 +37,7 @@ create or replace view ndfl2_corr_spr_v as
            f2ndfl_arh_spravki  s
     where  1=1
     --
+    and    s.priznak_s = 1
     and    s.kod_na = ns.kod_na
     and    s.god = ns.god
     and    s.nom_spr = ns.nom_spr
@@ -76,7 +77,7 @@ create or replace view ndfl2_corr_spr_v as
          sum(case when n.row_num <> 1 then t.sum_obl_nu end) tax_retained_last --налог удержанный по последней справке
   from   corr_w           c,
          ndfl_w           n,
-         F2NDFL_ARH_ITOGI t
+         f2ndfl_arh_itogi t
   where  1=1
   and    t.r_sprid(+) = n.spr_id
   and    n.fk_contragent(+) = c.gf_person
