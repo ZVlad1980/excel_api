@@ -1,5 +1,5 @@
 PL/SQL Developer Test script 3.0
-55
+69
 -- Created on 31.01.2018 by V.ZHURAVOV 
 declare 
   -- Local variables here
@@ -7,9 +7,9 @@ declare
 begin
   --dbms_session.reset_package; return;
   -- Test statements here
-  --/*
-  /*f2ndfl_load_api.purge_loads(
-    p_action_code => f2ndfl_load_api.C_PRG_XML, --C_PRG_ARH_SPRAVKI
+  /*
+  f2ndfl_load_api.purge_loads(
+    p_action_code => f2ndfl_load_api.C_PRG_XML, --C_PRG_LOAD_ALL C_PRG_ARH_SPRAVKI
     p_code_na     => 1,
     p_year        => C_YEAR,
     p_force       => true
@@ -17,26 +17,40 @@ begin
   --
   /*
   f2ndfl_load_api.create_2ndfl_refs(
-    p_action_code => f2ndfl_load_api.C_ACT_ENUMERATION, --C_ACT_ENUMERATION,--
+    p_action_code => f2ndfl_load_api.C_ACT_LOAD_SPRAVKI, --C_ACT_ENUMERATION,--
     p_code_na     => 1,
-    p_year        => C_YEAR
+    p_year        => C_YEAR,
+    p_actual_date => to_date(20171231, 'yyyymmdd')
+  );
+  --
+  f2ndfl_load_api.create_2ndfl_refs(
+    p_action_code => f2ndfl_load_api.C_ACT_LOAD_TOTAL, --C_ACT_ENUMERATION,--
+    p_code_na     => 1,
+    p_year        => C_YEAR,
+    p_actual_date => to_date(20171231, 'yyyymmdd')
   );
   --*/
   /*
   f2ndfl_load_api.create_2ndfl_refs(
-    p_action_code => f2ndfl_load_api.C_ACT_COPY2ARH, --C_ACT_ENUMERATION,--
+    p_action_code => f2ndfl_load_api.C_ACT_ENUMERATION, --C_ACT_ENUMERATION,--
     p_code_na     => 1,
-    p_year        => C_YEAR
+    p_year        => C_YEAR,
+    p_actual_date => to_date(20171231, 'yyyymmdd')
   );
   --*/
-  /*
+  f2ndfl_load_api.create_2ndfl_refs(
+    p_action_code => f2ndfl_load_api.C_ACT_COPY2ARH, --C_ACT_ENUMERATION,--
+    p_code_na     => 1,
+    p_year        => C_YEAR,
+    p_actual_date => to_date(20171231, 'yyyymmdd')
+  );
+  /*--
   f2ndfl_arh_spravki_api.fix_cityzenship(
     p_code_na => 1,
     p_year    => C_YEAR
   );
-  commit;
   --*/
-  --/*
+  /*
   f2ndfl_load_api.create_2ndfl_refs(
     p_action_code => f2ndfl_load_api.C_ACT_INIT_XML, --C_ACT_ENUMERATION,--
     p_code_na     => 1,

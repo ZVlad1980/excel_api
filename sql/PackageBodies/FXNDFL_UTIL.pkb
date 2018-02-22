@@ -10004,7 +10004,7 @@ end Parse_xml_izBuh;
     --
     create_arh_spravki_prz2(
       p_code_na => p_code_na,
-      p_year    => p_code_na
+      p_year    => p_year
     );
     --
   end update_spravki_finally; 
