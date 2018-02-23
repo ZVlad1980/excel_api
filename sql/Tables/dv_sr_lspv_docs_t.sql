@@ -14,6 +14,9 @@ create table dv_sr_lspv_prc_t (
   error_msg      varchar2(1000)
 )
 /
+alter table dv_sr_lspv_prc_t add
+  constraint dv_sr_lspv_prc_pk primary key (id)
+/
 create sequence dv_sr_lspv_docs_seq cache 100000
 /
 --rename dv_sr_lspv_docs_t to dv_sr_lspv_docs_t#
