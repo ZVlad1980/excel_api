@@ -4334,7 +4334,16 @@ END;
                   */                                                                      
                               ),
        q30 as (-- пенсии и выкупные (УЧАСТНИКИ)
-               Select sfl.GF_PERSON, ds.*
+               Select sfl.GF_PERSON,
+                      ds.nom_vkl, 
+                      ds.nom_ips, 
+                      ds.shifr_schet, 
+                      ds.data_op, 
+                      ds.summa, 
+                      ds.ssylka_doc, 
+                      ds.kod_oper, 
+                      ds.sub_shifr_schet,
+                      ds.service_doc
                  from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -4353,7 +4362,16 @@ END;
                      and ds.SERVICE_DOC=0          -- выплаты без последующих исправлений
                      
                UNION ALL
-                 Select sfl.GF_PERSON, ds.*
+                 Select sfl.GF_PERSON, 
+                        ds.nom_vkl, 
+                        ds.nom_ips, 
+                        ds.shifr_schet, 
+                        ds.data_op, 
+                        ds.summa, 
+                        ds.ssylka_doc, 
+                        ds.kod_oper, 
+                        ds.sub_shifr_schet,
+                        ds.service_doc
                  from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS                                 
                          inner join SP_FIZ_LITS sfl on sfl.SSYLKA=lspv.SSYLKA_FL
@@ -4417,7 +4435,16 @@ UNION ALL
                                       sum(SUMMA) over(partition by GF_PERSON, SHIFR_SCHET, MINDATOP) SUMMA, 
                                       SSYLKA_DOC, KOD_OPER, SUB_SHIFR_SCHET, SERVICE_DOC -- DS 
                                from (
-                                            Select sfl.GF_PERSON, ds.*,
+                                            Select sfl.GF_PERSON, 
+                                                   ds.nom_vkl, 
+                                                   ds.nom_ips, 
+                                                   ds.shifr_schet, 
+                                                   ds.data_op, 
+                                                   ds.summa, 
+                                                   ds.ssylka_doc, 
+                                                   ds.kod_oper, 
+                                                   ds.sub_shifr_schet,
+                                                   ds.service_doc, 
                                                    min(ds.DATA_OP) over(partition by sfl.GF_PERSON, ds.SHIFR_SCHET) MINDATOP
                                             from  dv_sr_lspv_v ds            
                                                         inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS     
@@ -4450,7 +4477,15 @@ UNION ALL
                       
                UNION ALL                                         
                -- ритаулки и наследуемые пенсии
-               Select vrp.GF_PERSON, ds.*
+               Select vrp.GF_PERSON, ds.nom_vkl, 
+                      ds.nom_ips, 
+                      ds.shifr_schet, 
+                      ds.data_op, 
+                      ds.summa, 
+                      ds.ssylka_doc, 
+                      ds.kod_oper, 
+                      ds.sub_shifr_schet,
+                      ds.service_doc
                  from dv_sr_lspv_v ds
                          inner join SP_LSPV lspv on lspv.NOM_VKL=ds.NOM_VKL and lspv.NOM_IPS=ds.NOM_IPS 
                          inner join (Select DATA_VYPL, SSYLKA, SSYLKA_DOC, GF_PERSON, NAL_REZIDENT   
