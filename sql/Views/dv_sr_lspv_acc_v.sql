@@ -2,6 +2,7 @@ create or replace view dv_sr_lspv_acc_v as
   select a.charge_type      ,
          a.det_charge_type  ,
          a.tax_rate         ,
+         d.id               ,
          d.data_op          date_op,
          d.ssylka_doc       ,
          d.service_doc      ,
@@ -11,7 +12,9 @@ create or replace view dv_sr_lspv_acc_v as
          d.sub_shifr_schet  ,
          d.summa            amount,
          d.kod_oper         ,
-         a.sub_shifr_grp    
+         a.sub_shifr_grp    ,
+         d.status           ,
+         d.year_op
   from   dv_sr_lspv_v  d,
          ndfl_accounts_t a
   where  1 = 1

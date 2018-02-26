@@ -361,6 +361,10 @@ prompt install sp_ogr_benefits_v.sql
 @@Views\sp_ogr_benefits_v.sql
 show error
 
+prompt install sp_kod_ogr_pv_v.sql
+@@Views\sp_kod_ogr_pv_v.sql
+show error
+
 prompt install dv_sr_lspv_benefits_v.sql
 @@Views\dv_sr_lspv_benefits_v.sql
 show error
