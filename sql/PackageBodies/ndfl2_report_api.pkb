@@ -40,7 +40,7 @@ create or replace package body ndfl2_report_api is
       when 'f2_amount_errors' then
         open l_result for
           with w_load_errors as (
-            select 'F@NDFL_LOAD_MES' src_table,
+            select 'F2NDFL_LOAD_MES' src_table,
                    'Доход'           error_type,
                    m.kod_na,
                    m.god,
@@ -57,7 +57,7 @@ create or replace package body ndfl2_report_api is
             and    m.god = dv_sr_lspv_docs_api.get_year
             and    m.kod_na = 1
             union all
-            select 'F@NDFL_LOAD_VYCH' src_table,
+            select 'F2NDFL_LOAD_VYCH' src_table,
                    'Код вычета'       error_type,
                    v.kod_na,
                    v.god,
@@ -76,7 +76,7 @@ create or replace package body ndfl2_report_api is
           ),
           w_arh_errors as (
             select ma.r_sprid,
-                   'F@NDFL_ARH_MES' src_table,
+                   'F2NDFL_ARH_MES' src_table,
                    'Доход'           error_type,
                    ma.mes,
                    ma.doh_kod_gni amount_code,
@@ -87,7 +87,7 @@ create or replace package body ndfl2_report_api is
             and    coalesce(ma.doh_sum, 0) <= 0
             union all
             select va.r_sprid,
-                   'F@NDFL_ARH_VYCH' src_table,
+                   'F2NDFL_ARH_VYCH' src_table,
                    'Код вычета'       error_type,
                    null mes,
                    va.vych_kod_gni,
@@ -98,7 +98,7 @@ create or replace package body ndfl2_report_api is
             and    va.vych_kod_gni < 0
             union all
             select va.r_sprid,
-                   'F@NDFL_ARH_VYCH' src_table,
+                   'F2NDFL_ARH_VYCH' src_table,
                    'Использованный вычет'       error_type,
                    null mes,
                    va.vych_kod_gni,
@@ -117,6 +117,26 @@ create or replace package body ndfl2_report_api is
                      )
                    ) > 0
             and    nvl(va.vych_sum_ispolz, 0) = 0
+            union all
+            select va.r_sprid,
+                   'F2NDFL_ARH_VYCH'            src_table,
+                   'Использованный вычет'       error_type,
+                   null mes,
+                   va.vych_kod_gni,
+                   va.vych_sum_predost,
+                   'Сумма вычета не совпадает с разницей общего и облагаемого дохода' comment_txt
+            from   f2ndfl_arh_vych va
+            where  1=1
+            and    (
+                     (select sum(ai.sgd_sum - ai.sum_obl)
+                      from   f2ndfl_arh_itogi ai
+                      where  ai.r_sprid = va.r_sprid
+                     ) <>
+                     (select sum(vaa.vych_sum_ispolz)
+                      from   f2ndfl_arh_vych vaa
+                      where  vaa.r_sprid = va.r_sprid
+                     )
+                   )
           )
           select wle.src_table,
                  s.r_sprid,

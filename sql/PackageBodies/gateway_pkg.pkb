@@ -332,13 +332,15 @@ create or replace package body gateway_pkg is
     x_err_msg       out varchar2,
     p_code_na           varchar2,    
     p_year              number,
-    p_month             number
+    p_month             number,
+    p_actual_date       varchar2
   ) is
   begin
     --
     f_ndfl_load_nalplat_api.fill_ndfl_load_nalplat(
       p_code_na     => p_code_na,
-      p_load_date   => get_date(p_year, p_month, false)
+      p_load_date   => get_date(p_year, p_month, false),
+      p_actual_date => to_date$(p_actual_date)
     );
     --
     commit;
