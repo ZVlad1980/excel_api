@@ -6962,7 +6962,10 @@ procedure Load_Vychety as
   dTermBeg date;
   dTermEnd date;
 begin
-
+    dv_sr_lspv_docs_api.set_period(
+      p_year => gl_GOD,
+      p_report_date => gl_ACTUAL_DATE
+    );
     CheckGlobals;
     dTermBeg  := gl_DATAS ;
     dTermEnd  := gl_DATADO;

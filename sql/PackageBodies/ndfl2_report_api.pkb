@@ -677,7 +677,8 @@ create or replace package body ndfl2_report_api is
                  ) s_prev --*/
           where  1=1
           and    e.error_list is not null
-          order by ed.error_id, ed.ord_value;
+          order by ed.error_id, ed.ord_value
+          fetch next 20000 rows only;
       --
       when 'f2_arh_spr_src_errors' then
         open l_result for
@@ -774,7 +775,8 @@ create or replace package body ndfl2_report_api is
                  ) s_prev
           where  1=1
           and    e.error_list is not null
-          order by ed.error_id, ed.ord_value;
+          order by ed.error_id, ed.ord_value
+          fetch next 20000 rows only;
       --
       when 'f2_full_namesake' then
         --источник запроса: fxndfl_util.SovpDan_Kontragentov
