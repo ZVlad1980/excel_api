@@ -528,8 +528,8 @@ create or replace package body f2ndfl_load_api is
             and    s.ssylka = n.ssylka_sips
             and    s.god = n.god
             and    s.kod_na = n.kod_na
-            and    n.god = 2017
-            and    n.kod_na = 1
+            and    n.god = p_globals.GOD
+            and    n.kod_na = p_globals.KODNA
           ) u
     on    (s.kod_na   = u.kod_na   and
            s.god      = u.god      and
