@@ -461,24 +461,24 @@ create or replace package body f2ndfl_arh_spravki_api is
     l_result.data_dok := trunc(sysdate);
     --
     fxndfl_util.create_f2ndfl_arh_spravki(
-      p_code_na       => p_ref_src.kod_na,
-      p_year          => p_ref_src.god,
-      p_contragent_id => p_ref_src.ui_person,
-      p_nom_spr       => p_ref_src.nom_spr,
-      p_nom_korr      => p_ref_src.nom_korr
+      p_code_na       => l_result.kod_na,
+      p_year          => l_result.god,
+      p_contragent_id => l_result.ui_person,
+      p_nom_spr       => l_result.nom_spr,
+      p_nom_korr      => l_result.nom_korr
     );
     --
     l_result.id := get_reference_last_id(
-      p_code_na     => p_ref_src.kod_na,
-      p_year        => p_ref_src.god,
-      p_ref_num     => p_ref_src.nom_spr,
+      p_code_na     => l_result.kod_na,
+      p_year        => l_result.god,
+      p_ref_num     => l_result.nom_spr,
       p_load_exists => 'N'
     );
     --
     if p_ref_src.id is not null then
       fix_cityzenship(
-        p_code_na => p_ref_src.kod_na,
-        p_year    => p_ref_src.god,
+        p_code_na => l_result.kod_na,
+        p_year    => l_result.god,
         p_ref_id  => l_result.id
       );
       fxndfl_util.copy_adr(
