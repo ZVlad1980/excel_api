@@ -46,6 +46,7 @@ begin
     gl_NOMKOR        := pNOMKOR;
     gl_DATAS         := to_date( '01.01.'||trim(to_char(gl_GOD  ,'0000')), 'dd.mm.yyyy');
     gl_DATADO        := to_date( '01.01.'||trim(to_char(gl_GOD+1,'0000')), 'dd.mm.yyyy');
+    gl_DATADO        := least(nvl(pACTUAL_DATE, gl_DATADO), gl_DATADO);
     gl_SPRID         := pSPRID ;
     gl_NOMSPR        := pNOMSPR;
     gl_DATDOK        := pDATDOK;
