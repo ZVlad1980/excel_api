@@ -3,16 +3,15 @@ PL/SQL Developer Test script 3.0
 -- Created on 31.01.2018 by V.ZHURAVOV 
 declare 
   -- Local variables here
-  C_YEAR int := 2017;
+  C_YEAR int := 2018;
 begin
   --dbms_session.reset_package; return;
   -- Test statements here
-  /*
+  ---/*
   f2ndfl_load_api.purge_loads(
-    p_action_code => f2ndfl_load_api.C_PRG_XML, --C_PRG_LOAD_ALL C_PRG_ARH_SPRAVKI
+    p_action_code => f2ndfl_load_api.C_PRG_LOAD_ALL, --C_PRG_LOAD_ALL C_PRG_ARH_SPRAVKI
     p_code_na     => 1,
-    p_year        => C_YEAR,
-    p_force       => true
+    p_year        => C_YEAR--    p_force       => true
   );--*/
   --
   /*
@@ -38,7 +37,7 @@ begin
     p_actual_date => to_date(20171231, 'yyyymmdd')
   );
   --*/
-  f2ndfl_load_api.create_2ndfl_refs(
+  /*f2ndfl_load_api.create_2ndfl_refs(
     p_action_code => f2ndfl_load_api.C_ACT_COPY2ARH, --C_ACT_ENUMERATION,--
     p_code_na     => 1,
     p_year        => C_YEAR,
@@ -54,13 +53,14 @@ begin
   f2ndfl_load_api.create_2ndfl_refs(
     p_action_code => f2ndfl_load_api.C_ACT_INIT_XML, --C_ACT_ENUMERATION,--
     p_code_na     => 1,
-    p_year        => C_YEAR
+    p_year        => C_YEAR,
+    p_actual_date => to_date(20171231, 'yyyymmdd')
   );
   --*/
   /*
   fxndfl_util.raspredSpravki_poXml(
     pKodNA => 1,
-    pGod   => 2017,
+    pGod   => C_YEAR,
     pForma => 2
   );
   --*/

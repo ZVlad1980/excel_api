@@ -13,7 +13,8 @@ create or replace package f_ndfl_load_nalplat_api is
    */
   procedure fill_ndfl_load_nalplat(
     p_code_na     int,
-    p_load_date   date
+    p_load_date   date,
+    p_actual_date date
   );
 
 end f_ndfl_load_nalplat_api;

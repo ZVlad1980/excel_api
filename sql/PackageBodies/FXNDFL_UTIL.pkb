@@ -46,6 +46,7 @@ begin
     gl_NOMKOR        := pNOMKOR;
     gl_DATAS         := to_date( '01.01.'||trim(to_char(gl_GOD  ,'0000')), 'dd.mm.yyyy');
     gl_DATADO        := to_date( '01.01.'||trim(to_char(gl_GOD+1,'0000')), 'dd.mm.yyyy');
+    gl_DATADO        := least(nvl(pACTUAL_DATE, gl_DATADO), gl_DATADO);
     gl_SPRID         := pSPRID ;
     gl_NOMSPR        := pNOMSPR;
     gl_DATDOK        := pDATDOK;
@@ -2048,8 +2049,8 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
                      max(s.priznak_s) priznak_s
               from   f2ndfl_arh_spravki s
               where  1 = 1
-              and    s.kod_na = 1
-              and    s.god = 2017
+              and    s.kod_na = pkodna
+              and    s.god = pgod
               and    s.r_xmlid is null
               group by s.ui_person
              ) s
@@ -2065,7 +2066,6 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
       p_max_priznak_s int default null
     ) is
       l_xmlid    int;
-      l_pass_cnt int;
     begin
       for batch_num in 1 .. p_batch_cnt loop
         --
@@ -2076,8 +2076,6 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
           ppriznak => p_priznak_s, 
           pcommit  => 0
         );
-        --
-        l_pass_cnt := (batch_num - 1) * c_batch_size;
         --
         update (select s.r_xmlid
                 from   f2ndfl_arh_spravki s
@@ -2091,13 +2089,14 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
                                   where  sss.kod_na = ss.kod_na
                                   and    sss.god = ss.god
                                   and    sss.ui_person = ss.ui_person
+                                  and    sss.nom_korr = ss.nom_korr
                                 ) = nvl(p_max_priznak_s, p_priznak_s)
                          and    ss.r_xmlid is null
                          and    ss.priznak_s = p_priznak_s
                          and    ss.kod_na = pkodna
                          and    ss.god = pgod
                          order by ss.nom_spr, ss.nom_korr, ss.id
-                         fetch next 3000 rows only
+                         fetch next c_batch_size rows only
                        )
                ) u
         set    u.r_xmlid = l_xmlid;
@@ -6963,7 +6962,10 @@ procedure Load_Vychety as
   dTermBeg date;
   dTermEnd date;
 begin
-
+    dv_sr_lspv_docs_api.set_period(
+      p_year => gl_GOD,
+      p_report_date => gl_ACTUAL_DATE
+    );
     CheckGlobals;
     dTermBeg  := gl_DATAS ;
     dTermEnd  := gl_DATADO;

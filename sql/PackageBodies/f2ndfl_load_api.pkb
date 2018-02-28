@@ -225,7 +225,7 @@ create or replace package body f2ndfl_load_api is
     elsif p_action_code in (C_ACT_LOAD_TOTAL, C_PRG_LOAD_TOTAL, C_ACT_ENUMERATION, C_PRG_ARH_SPRAVKI) then
       return not exists_arh_totals_;
     elsif p_action_code in (C_ACT_INIT_XML) then
-      return exists_arh_totals_; --если сформированы ARH_TOTALS
+      return exists_arh_totals_ and not exists_xml_; --если сформированы ARH_TOTALS
     else
       return not exists_xml_; --запустить purge_loads с флагом force
     end if;
@@ -470,6 +470,58 @@ create or replace package body f2ndfl_load_api is
       end if;
       raise;
   end purge_loads;
+  
+  /**
+   *
+   */
+  procedure create_nal_agent(
+    p_globals in out nocopy g_util_par_type
+  ) is
+    l_dummy int;
+  begin
+    begin
+      select 1
+      into   l_dummy
+      from   f2ndfl_spr_nal_agent na
+      where  na.god = p_globals.GOD
+      and    na.kod_na = p_globals.KODNA;
+    exception
+      when no_data_found then
+        insert into f2ndfl_spr_nal_agent(
+          kod_na,
+          oktmo,
+          phone,
+          inn,
+          kpp,
+          nazv,
+          ifns,
+          god,
+          ifns_a
+        ) select na.kod_na,
+                 na.oktmo,
+                 na.phone,
+                 na.inn,
+                 na.kpp,
+                 na.nazv,
+                 na.ifns,
+                 p_globals.GOD,
+                 na.ifns_a
+          from   f2ndfl_spr_nal_agent na
+          where  na.god = p_globals.GOD - 1
+          and    na.kod_na = p_globals.KODNA;
+        --
+        if sql%rowcount <> 1 then
+          fix_exception('create_nal_agent: не найдены данные о налоговом агенте (f2ndfl_spr_nal_agent)!');
+          raise program_error;
+        end if;
+    end;
+    --
+  exception
+    when others then
+      fix_exception;
+      raise;
+  end create_nal_agent;
+  
   /**
    *
    */
@@ -528,8 +580,8 @@ create or replace package body f2ndfl_load_api is
             and    s.ssylka = n.ssylka_sips
             and    s.god = n.god
             and    s.kod_na = n.kod_na
-            and    n.god = 2017
-            and    n.kod_na = 1
+            and    n.god = p_globals.GOD
+            and    n.kod_na = p_globals.KODNA
           ) u
     on    (s.kod_na   = u.kod_na   and
            s.god      = u.god      and
@@ -994,6 +1046,11 @@ create or replace package body f2ndfl_load_api is
     end if;
     --
     if p_action_code in (C_ACT_LOAD_SPRAVKI, C_ACT_LOAD_ALL) then
+      --
+      create_nal_agent(
+        p_globals => l_globals
+      );
+      --
       fill_load_spravki(
         p_globals => l_globals
       );
