@@ -25,7 +25,8 @@ begin
     addition_code,
     method,
     process_id,
-    is_deleted
+    is_deleted,
+    is_disabled
   ) values (
     :old.id,
     l_action,
@@ -37,7 +38,8 @@ begin
     :old.addition_code,
     :old.method,
     :old.process_id,
-    :old.is_deleted
+    :old.is_deleted,
+    :old.is_disabled
   );
   --
 end dv_sr_lspv_det_aud_trg;

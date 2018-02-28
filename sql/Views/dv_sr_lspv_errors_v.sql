@@ -116,7 +116,7 @@ create or replace view dv_sr_lspv_errors_v as
                and    ddd.nom_ips = dd.nom_ips
                and    ddd.ssylka_doc = dd.ssylka_doc
                and    ddd.shifr_schet = 55
-               and    ddd.sub_shifr_schet = dd.sub_shifr_schet - 1
+               and    ddd.sub_shifr_schet = 0
              )
           ) 
         )

@@ -1,8 +1,8 @@
 create or replace package body dv_sr_lspv_det_pkg is
 
   -- Private type declarations
-  C_PACKAGE_NAME   constant varchar2(32)                       := $$plsql_unit;  
-  С_PRC_UPDATE_DET constant dv_sr_lspv_prc_t.process_name%type := 'UPDATE_DETAIL';
+  GC_PACKAGE_NAME   constant varchar2(32)                       := $$plsql_unit;  
+  GС_PRC_UPDATE_DET constant dv_sr_lspv_prc_t.process_name%type := 'UPDATE_DETAIL';
   --
   G_LEGACY       varchar2(1);
   
@@ -12,7 +12,7 @@ create or replace package body dv_sr_lspv_det_pkg is
   procedure fix_exception(p_line number, p_msg varchar2 default null) is
   begin
     utl_error_api.fix_exception(
-      p_err_msg => C_PACKAGE_NAME || '(' || p_line || '): ' || ' ' || p_msg
+      p_err_msg => GC_PACKAGE_NAME || '(' || p_line || '): ' || ' ' || p_msg
     );
   end fix_exception;
   --
@@ -37,7 +37,7 @@ create or replace package body dv_sr_lspv_det_pkg is
    * Процедура create_process создает новый процесс в таблице dv_sr_lspv_prc_t
    */
   function create_process(
-    p_process_name varchar2 default С_PRC_UPDATE_DET
+    p_process_name varchar2 default GС_PRC_UPDATE_DET
   ) return dv_sr_lspv_prc_t.id%type is
     --
     l_process_row dv_sr_lspv_prc_t%rowtype;
@@ -75,7 +75,7 @@ create or replace package body dv_sr_lspv_det_pkg is
     l_process_row.error_msg       := p_error_msg   ;
     l_process_row.deleted_rows    := p_deleted_rows;
     l_process_row.error_rows      := p_error_rows  ;
-    
+    --
     dv_sr_lspv_prc_api.set_process_state(
       p_process_row => l_process_row
     );
@@ -88,6 +88,62 @@ create or replace package body dv_sr_lspv_det_pkg is
   end set_process_state;
   
   /**
+   * 
+   */
+  procedure update_benefits(
+    p_process_id dv_sr_lspv_det_t.process_id%type,
+    p_date       date
+  ) is
+    --
+    cursor c_dv_dates as
+      select a.date_op
+      from   dv_sr_lspv_acc_v a
+      where  1=1
+      and    a.status = 'N'
+      and    a.charge_type = 'BENEFIT'
+      and    a.date_op = p_date
+      group by a.date_op;
+    --
+    procedure update_benefits_ is
+    begin
+      
+    end update_benefits_;
+  begin
+    --
+    update_benefits_;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE, 'update_details');
+      raise;
+  end update_benefits;
+  
+  /**
+   * 
+   */
+  procedure update_details(
+    p_process_id dv_sr_lspv_det_t.process_id%type
+  ) is
+    --
+    cursor c_dv_dates as
+      select a.date_op
+      from   dv_sr_lspv_acc_v a
+      where  a.status = 'N'
+      group by a.date_op;
+    --
+  begin
+    --
+    for d in c_dv_dates loop
+      update_benefits(p_process_id, d.date_op);
+    end loop;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE, 'update_details');
+      raise;
+  end update_details;
+  
+  /**
    * Процедура update_details обновляет данные таблицы 
    *   dv_sr_lspv_det_t данными из dv_sr_lspv, строки в статусе N или U
    *   и сбрасывает их статус в null
@@ -95,9 +151,10 @@ create or replace package body dv_sr_lspv_det_pkg is
   procedure update_details is
     l_process_id dv_sr_lspv_det_t.process_id%type;
   begin
+    --
     l_process_id := create_process;
     --
-    
+    update_details(l_process_id);
     --
     set_process_state(
       l_process_id, 
