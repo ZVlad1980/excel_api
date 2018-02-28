@@ -1,0 +1,40 @@
+create or replace view dv_sr_lspv_det_v as
+  select d.id, 
+         d.fk_dv_sr_lspv, 
+         dd.charge_type,
+         dd.det_charge_type,
+         dd.date_op                src_date_op        ,
+         dd.nom_vkl                src_nom_vkl        ,
+         dd.nom_ips                src_nom_ips        ,
+         dd.shifr_schet            src_shifr_schet    ,
+         dd.sub_shifr_schet        src_sub_shifr_schet,
+         dd.ssylka_doc             src_ssylka_doc     ,
+         dd.service_doc            src_service_doc    ,
+         dd.amount                 src_amount_src,
+         d.fk_dv_sr_lspv_trg,
+         dd.date_op                trg_date_op        ,
+         dd.nom_vkl                trg_nom_vkl        ,
+         dd.nom_ips                trg_nom_ips        ,
+         dd.shifr_schet            trg_shifr_schet    ,
+         dd.sub_shifr_schet        trg_sub_shifr_schet,
+         dd.ssylka_doc             trg_ssylka_doc     ,
+         dd.service_doc            trg_service_doc    ,
+         dd.amount                 trg_amount_src,
+         d.amount,
+         d.addition_code, 
+         d.addition_id, 
+         d.process_id, 
+         d.method, 
+         d.created_by, 
+         d.created_at, 
+         d.is_deleted, 
+         d.is_disabled, 
+         d.last_updated_by, 
+         d.last_updated_at
+  from   dv_sr_lspv_det_t  d,
+         dv_sr_lspv_acc_v  dd,
+         dv_sr_lspv_acc_v  dt
+  where  1=1
+  and    dt.id(+) = d.fk_dv_sr_lspv_trg
+  and    dd.id = d.fk_dv_sr_lspv
+/
