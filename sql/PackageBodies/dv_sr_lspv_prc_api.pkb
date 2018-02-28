@@ -19,6 +19,7 @@ create or replace package body dv_sr_lspv_prc_api is
   procedure create_process(
     p_process_row in out nocopy dv_sr_lspv_prc_t%rowtype
   ) is
+    pragma autonomous_transaction;
   begin
     --
     insert into dv_sr_lspv_prc_t(
@@ -37,6 +38,7 @@ create or replace package body dv_sr_lspv_prc_api is
     --
   exception
     when others then
+      rollback;
       fix_exception;
       raise;
   end create_process;
@@ -47,6 +49,7 @@ create or replace package body dv_sr_lspv_prc_api is
   procedure set_process_state(
     p_process_row in out nocopy dv_sr_lspv_prc_t%rowtype
   ) is
+    pragma autonomous_transaction;
   begin
     --
     update dv_sr_lspv_prc_t p
@@ -61,6 +64,7 @@ create or replace package body dv_sr_lspv_prc_api is
     --
   exception
     when others then
+      rollback;
       fix_exception;
       raise;
   end set_process_state;
