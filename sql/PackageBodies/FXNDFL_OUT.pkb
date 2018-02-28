@@ -579,6 +579,7 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
     pContragentID in number, 
     pYear in number, 
     pCurrentPersData in number default 0,
+    pPRIZNAK in number default 1,
     pFormDate        date default sysdate
   ) return clob as
   vNOMKOR F2NDFL_ARH_SPRAVKI.NOM_KORR%type;
@@ -590,7 +591,8 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
      gContragentID := 0;
      gFormDate     := pFormDate;
   
-     for ns in ( Select * from f2NDFL_ARH_NOMSPR where KOD_NA=1 and GOD=pYear and fk_CONTRAGENT=pContragentID and flag_OTMENA=0 and ROWNUM=1 )    -- test 3397318,  3026175
+     for ns in --( Select * from f2NDFL_ARH_NOMSPR where KOD_NA=1 and GOD=pYear and fk_CONTRAGENT=pContragentID and flag_OTMENA=0 and ROWNUM=1 )
+               ( Select * from f2NDFL_ARH_SPRAVKI where KOD_NA=1 and GOD=pYear and UI_PERSON=pContragentID and PRIZNAK_S=pPRIZNAK and ROWNUM=1 )  
      loop
         
          begin 

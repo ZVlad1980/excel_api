@@ -80,6 +80,7 @@ type  f6NDFL_CorOpsTbl  is table of f6NDFL_CorOpsRow;
     pContragentID in number, 
     pYear in number, 
     pCurrentPersData in number default 0,
+    pPRIZNAK in number default 1,
     pFormDate date default sysdate
   ) return clob;
   
