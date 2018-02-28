@@ -1,4 +1,5 @@
-create or replace view dv_sr_lspv_det_v as
+--drop view dv_sr_lspv_det_v
+create or replace view ndfl6_rep_det_v as
   select d.date_op,
          d.date_op + 1 transfer_date,
          d.type_op,

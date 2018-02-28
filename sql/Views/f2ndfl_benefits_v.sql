@@ -1,4 +1,4 @@
-create or replace view dv_sr_lspv_benefits_v as 
+create or replace view f2ndfl_benefits_v as 
   select d.nom_vkl,
          d.nom_ips,
          d.date_op,
