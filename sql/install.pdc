@@ -285,8 +285,8 @@ prompt install dv_sr_lspv_pers_v.sql
 @@Views\dv_sr_lspv_pers_v.sql
 show error
 
-prompt install dv_sr_lspv_det_v.sql
-@@Views\dv_sr_lspv_det_v.sql
+prompt install ndfl6_rep_det_v.sql
+@@Views\ndfl6_rep_det_v.sql
 show error
 
 prompt install ndfl6_report_detail_v.sql
@@ -365,12 +365,12 @@ prompt install sp_kod_ogr_pv_v.sql
 @@Views\sp_kod_ogr_pv_v.sql
 show error
 
-prompt install dv_sr_lspv_benefits_v.sql
-@@Views\dv_sr_lspv_benefits_v.sql
+prompt install f2ndfl_benefits_v.sql
+@@Views\f2ndfl_benefits_v.sql
 show error
 
-prompt install dv_sr_lspv_benefits_det_v.sql
-@@Views\dv_sr_lspv_benefits_det_v.sql
+prompt install f2ndfl_benefits_det_v.sql
+@@Views\f2ndfl_benefits_det_v.sql
 show error
 
 prompt install contragent_merge_log_v.sql
