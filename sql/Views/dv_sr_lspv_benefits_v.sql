@@ -32,7 +32,7 @@ create or replace view dv_sr_lspv_benefits_v as
                 ) then 3
            else 1
          end revenue_type,
-         sum(d.amount) over(partition by d.nom_vkl, d.nom_ips, d.shifr_schet, extract(year from d.date_op)) total_amount
+         sum(case when d.date_op <= dv_sr_lspv_docs_api.get_report_date then d.amount else 0 end) over(partition by d.nom_vkl, d.nom_ips, d.shifr_schet, extract(year from d.date_op)) total_amount
   from   dv_sr_lspv_acc_v d
   where  d.charge_type = 'BENEFIT'
   and    d.amount <> 0 --это метки возврата в прошлые периоды!

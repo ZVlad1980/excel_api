@@ -98,8 +98,9 @@ create or replace package body f_ndfl_load_nalplat_api is
    *  f_ndfl_load_nalplat, с отметкой НА с нулевым доходом
    */
   procedure fill_ndfl_load_nalplat(
-    p_code_na     int,
-    p_load_date   date
+    p_code_na         int,
+    p_load_date       date,
+    p_actual_date     date
   ) is
     l_quarter_row sp_quarters_v%rowtype;
     
@@ -114,7 +115,7 @@ create or replace package body f_ndfl_load_nalplat_api is
     );
     l_year        := extract(year from p_load_date);
     l_from_date   := trunc(p_load_date, 'Y');
-    l_end_date    := add_months(l_from_date, l_quarter_row.month_end); --т.к. в пакете используются условия строго меньше - дата следующая за конечной!
+    l_end_date    := nvl(p_actual_date + 1, add_months(l_from_date, l_quarter_row.month_end)); --т.к. в пакете используются условия строго меньше - дата следующая за конечной!
     l_term_year   := add_months(l_from_date, 12);
     --
     dv_sr_lspv_docs_api.set_period(
@@ -131,14 +132,14 @@ create or replace package body f_ndfl_load_nalplat_api is
       p_period    => l_quarter_row.code
     );
     --
-    fxndfl_util.set_zero_nalplat(
+    /*fxndfl_util.set_zero_nalplat(
       p_code_na   => p_code_na,
       p_year      => l_year,
       p_from_date => l_from_date,
       p_end_date  => l_end_date,
       p_term_year => l_term_year
     );
-    --
+    --*/
     set_zero_nalplat(
       p_code_na => p_code_na
     );

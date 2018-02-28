@@ -228,14 +228,15 @@ create or replace package body ndfl_report_api is
                    lt.nom_korr                               nom_korr_load,
                    ta.nom_korr                               nom_korr_arh,
                    nvl(lt.gf_person, ta.gf_person)           gf_person,
-                   p.fullname,
-                   nvl(lt.revenue  , ta.revenue )            revenue ,
-                   nvl(lt.benefit  , ta.benefit )            benefit ,
-                   nvl(lt.tax_calc , ta.tax_calc)            tax_calc,
+                   p.fullname                                fullname,
+                   lt.revenue                                revenue_load ,
+                   lt.benefit                                benefit_load ,
+                   lt.tax_calc                               tax_calc_load,
                    lt.tax_retained                           tax_retained_load,
+                   ta.revenue                                revenue_arh ,
+                   ta.benefit                                benefit_arh ,
+                   ta.tax_calc                               tax_calc_arh,
                    ta.tax_retained                           tax_retained_arh,
-                   coalesce(lt.tax_retained, 0) - 
-                     coalesce(ta.tax_retained, 0)            tax_retained_diff,
                    nvl(lt.is_employee, ta.is_employee)       is_employee,
                    nvl(lt.is_participant, ta.is_participant) is_participant
             from   f2ndfl_arh_totals_v ta
@@ -245,25 +246,36 @@ create or replace package body ndfl_report_api is
               left join gf_people_v p
                on  p.fk_contragent = nvl(ta.gf_person, lt.gf_person)
             where  1=1
-            and    abs(coalesce(lt.tax_retained, 0) - coalesce(ta.tax_retained, 0)) > .01;
+            and    (
+                     abs(coalesce(lt.revenue, 0) - coalesce(ta.revenue, 0)) > .01
+                     or
+                     abs(coalesce(lt.tax_retained, 0) - coalesce(ta.tax_retained, 0)) > .01
+                     or
+                     abs(coalesce(lt.benefit, 0) - coalesce(ta.benefit, 0)) > .01
+                     or
+                     abs(coalesce(lt.tax_calc, 0) - coalesce(ta.tax_calc, 0)) > .01
+                   )
+            order by p.fullname, nvl(lt.gf_person, ta.gf_person)
+            fetch next 100 rows only;
           end if;
       when 'cmp_f2load_docs' then
         dv_sr_lspv_docs_api.set_employees(p_flag => false);
         dv_sr_lspv_docs_api.set_last_only(p_flag => true);
         if not is_empty_load(l_year) then
           open l_result for
-            select lt.nom_spr                                nom_spr,
+            select nvl(lt.gf_person, dp.gf_person)           gf_person,
+                   lt.nom_spr                                nom_spr,
                    lt.nom_korr                               nom_korr_lt,
                    null                                      nom_korr_ta,
-                   nvl(lt.gf_person, dp.gf_person)           gf_person,
-                   p.fullname,
-                   nvl(lt.revenue  , dp.revenue )            revenue ,
-                   nvl(lt.benefit  , dp.benefit )            benefit ,
-                   nvl(lt.tax_calc , dp.tax_calc)            tax_calc,
+                   p.fullname                                fullname,
+                   lt.revenue                                revenue_load ,
+                   lt.benefit                                benefit_load ,
+                   lt.tax_calc                               tax_calc_load,
                    lt.tax_retained                           tax_retained_load,
+                   dp.revenue                                revenue_docs ,
+                   dp.benefit                                benefit_docs ,
+                   dp.tax_calc                               tax_calc_docs,
                    dp.tax_retained_83                        tax_retained_docs,
-                   coalesce(lt.tax_retained, 0) - 
-                     coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
                    lt.is_employee                            is_employee,
                    lt.is_participant                         is_participant
             from   f2ndfl_load_totals_v lt
@@ -273,7 +285,17 @@ create or replace package body ndfl_report_api is
               left join gf_people_v p
                on  p.fk_contragent = nvl(lt.gf_person, dp.gf_person)
             where  1=1
-            and    abs(coalesce(lt.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01;
+            and    (
+                     abs(coalesce(lt.revenue, 0) - coalesce(dp.revenue, 0)) > .01
+                     or
+                     abs(coalesce(lt.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01
+                     or
+                     abs(coalesce(lt.benefit, 0) - coalesce(dp.benefit, 0)) > .01
+                     or
+                     abs(coalesce(lt.tax_calc, 0) - coalesce(dp.tax_calc, 0)) > .01
+                   )
+            order by p.fullname, nvl(lt.gf_person, dp.gf_person)
+            fetch next 100 rows only;
           end if;
       when 'cmp_f2arh_docs' then
         dv_sr_lspv_docs_api.set_employees(p_flag => false);
@@ -284,14 +306,15 @@ create or replace package body ndfl_report_api is
                    ta.nom_korr                               nom_korr_lt,
                    null                                      nom_korr_ta,
                    nvl(ta.gf_person, dp.gf_person)           gf_person,
-                   p.fullname,
-                   nvl(ta.revenue  , dp.revenue )            revenue ,
-                   nvl(ta.benefit  , dp.benefit )            benefit ,
-                   nvl(ta.tax_calc , dp.tax_calc)            tax_calc,
+                   p.fullname                                fullname,
+                   ta.revenue                                revenue_arh ,
+                   ta.benefit                                benefit_arh ,
+                   ta.tax_calc                               tax_calc_arh,
                    ta.tax_retained                           tax_retained_arh,
+                   dp.revenue                                revenue_docs ,
+                   dp.benefit                                benefit_docs ,
+                   dp.tax_calc                               tax_calc_docs,
                    dp.tax_retained_83                        tax_retained_docs,
-                   coalesce(ta.tax_retained, 0) - 
-                     coalesce(dp.tax_retained_83, 0)         tax_retained_diff,
                    ta.is_employee                            is_employee,
                    ta.is_participant                         is_participant
             from   f2ndfl_arh_totals_v ta
@@ -301,7 +324,17 @@ create or replace package body ndfl_report_api is
               left join gf_people_v p
                on  p.fk_contragent = nvl(ta.gf_person, dp.gf_person)
             where  1=1
-            and    abs(coalesce(ta.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01;
+            and    (
+                     abs(coalesce(ta.revenue, 0) - coalesce(dp.revenue, 0)) > .01
+                     or
+                     abs(coalesce(ta.tax_retained, 0) - coalesce(dp.tax_retained_83, 0)) > .01
+                     or
+                     abs(coalesce(ta.benefit, 0) - coalesce(dp.benefit, 0)) > .01
+                     or
+                     abs(coalesce(ta.tax_calc, 0) - coalesce(dp.tax_calc, 0)) > .01
+                   )
+            order by p.fullname, nvl(ta.gf_person, dp.gf_person)
+            fetch next 100 rows only;
           end if;
       when 'cmp_f2ndfl_f6_total' then
         dv_sr_lspv_docs_api.set_employees(p_flag => false);

@@ -476,7 +476,7 @@ create or replace package body f2ndfl_load_empl_api is
          and    s.kod_na = t.kod_na
          and    s.god = t.god
          and    t.kod_na = 1
-         and    t.god = 2017
+         and    t.god = p_year
          and    t.tip_dox = 9
        )
        select t.kod_na,
