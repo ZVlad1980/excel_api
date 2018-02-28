@@ -14,6 +14,7 @@ create or replace view payments_taxdeductions_v as
          t.upper_income,
          t.frequency,
          t.type,
-         t.payrestrictionid
+         t.payrestrictionid,
+         t.regdate
   from   payments_taxdeductions_v@fnd_fondb t
 /

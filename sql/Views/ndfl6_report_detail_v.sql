@@ -20,7 +20,7 @@ create or replace view ndfl6_report_detail_v as
                  sum(d.revenue) revenue,
                  sum(d.benefit) benefit,
                  sum(d.tax)     tax
-          from   dv_sr_lspv_det_v d
+          from   ndfl6_rep_det_v d
           where  d.type_op = 0
           group by d.date_op
        ) d
@@ -30,7 +30,7 @@ create or replace view ndfl6_report_detail_v as
                 sum(d.revenue) revenue,
                 sum(d.benefit) benefit,
                 sum(d.tax)     tax
-         from   dv_sr_lspv_det_v d
+         from   ndfl6_rep_det_v d
          where  d.type_op  = -1
          group by d.date_op, d.date_corr
        ) dc

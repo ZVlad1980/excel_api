@@ -1,4 +1,4 @@
-create or replace view dv_sr_lspv_benefits_det_v as
+create or replace view f2ndfl_benefits_det_v as
   select a.nom_vkl,
          a.nom_ips,
          a.revenue_type,
@@ -39,7 +39,7 @@ create or replace view dv_sr_lspv_benefits_det_v as
          b.tdappid,
          sum(b.benefit_amount) over(partition by a.nom_vkl, a.nom_ips, a.shifr_schet, a.date_op)  benefit_amount_all,
          count(b.benefit_code) over(partition by a.nom_vkl, a.nom_ips, a.shifr_schet, a.date_op)  benefit_codes_cnt
-  from   dv_sr_lspv_benefits_v    a,
+  from   f2ndfl_benefits_v    a,
          sp_ogr_benefits_v        b
   where  1=1
   and    a.date_op between b.start_date(+) and b.end_date(+)

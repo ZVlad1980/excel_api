@@ -14,7 +14,8 @@ create or replace view sp_ogr_benefits_v as
          pt.start_date              bit_start_date,
          pt.end_date                bit_end_date,
          pt.upper_income,
-         op.end_year
+         op.end_year,
+         pt.regdate
   from   sp_ogr_pv_v              op,
          payments_taxdeductions_v pt
   where  1=1

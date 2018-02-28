@@ -6982,7 +6982,7 @@ begin
              a.benefit_code,
              sum(a.benefit_amount),
              13
-      from   dv_sr_lspv_benefits_det_v a,
+      from   f2ndfl_benefits_det_v a,
              f2ndfl_load_spravki       s
       where  1 = 1
       and    case 
