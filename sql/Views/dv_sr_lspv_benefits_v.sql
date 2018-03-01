@@ -36,7 +36,6 @@ create or replace view dv_sr_lspv_benefits_v as
     and    b.nom_ips = a.nom_ips
     and    b.shifr_schet = a.shifr_schet
     and    a.date_op between b.start_date and b.end_date
-    and    nvl(b.regdate, a.date_op) <= a.date_op
   ) b
   where  1=1
   and    a.status is not null

@@ -9,6 +9,7 @@ create table dv_sr_lspv_det_t( --детализация движения сре�
   amount             number(10, 2)       , --сумма коррекции/сумма по коду вычета
   addition_code      varchar2(10)        , --дополнительный код операции (код вычета и др.)
   addition_id        int                 , --дополнительный внешний идентификатор, ссылка на внешний справокчник, например, payments.participant_taxdeductions
+  gf_person          int                 , --ID контрагента для пособий (остальные определяются динамически!)
   process_id         int                 ,
   method             varchar2(1)         , --метод добавления (A)utomate/(M)anual
   created_by         varchar2(32)        , --заполняется при ручной коррекции
@@ -23,6 +24,18 @@ create table dv_sr_lspv_det_t( --детализация движения сре�
     references dv_sr_lspv_prc_t(id)
 )
 /
+create index dv_sr_lspv_det_prc_ix on dv_sr_lspv_det_t(process_id)
+/
+create index dv_sr_lspv_det_dv_ix on dv_sr_lspv_det_t(fk_dv_sr_lspv)
+/
+create index dv_sr_lspv_det_dv_ix2 on dv_sr_lspv_det_t(fk_dv_sr_lspv_trg)
+/
+/*alter table dv_sr_lspv_det_t add
+  constraint dv_sr_lspv_det_dv_fk 
+  foreign key (fk_dv_sr_lspv) 
+  references dv_sr_lspv(id)
+  on delete cascade
+*/
 create table log$_dv_sr_lspv_det_t( --логирование ручных изменений!
   id                 int,
   action             varchar2(1),
@@ -33,6 +46,7 @@ create table log$_dv_sr_lspv_det_t( --логирование ручных изм
   amount             number(10, 2),        --сумма коррекции/сумма по коду вычета
   addition_code      varchar2(10),         --дополнительный код операции (код вычета и др.)
   addition_id        int,
+  gf_person          int                 , --ID контрагента для пособий (остальные определяются динамически!)
   process_id         int,
   method             varchar2(1),          --метод добавления (A)utomate/(M)anual
   created_by         varchar2(32),         --заполняется при ручной коррекции

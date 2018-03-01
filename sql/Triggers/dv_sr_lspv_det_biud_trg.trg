@@ -22,7 +22,7 @@ begin
   --
   if inserting then
     :new.created_by      := l_os_user;
-    :new.created_at      := l_os_user;
+    :new.created_at      := l_current_date;
     :new.method          := l_method;
   elsif updating then
     :new.last_updated_by := l_os_user;
