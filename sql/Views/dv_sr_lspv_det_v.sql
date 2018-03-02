@@ -1,28 +1,26 @@
 create or replace view dv_sr_lspv_det_v as
   select d.id, 
-         d.fk_dv_sr_lspv, 
-         dd.charge_type,
-         dd.det_charge_type,
-         dd.date_op                src_date_op        ,
-         dd.nom_vkl                src_nom_vkl        ,
-         dd.nom_ips                src_nom_ips        ,
-         dd.shifr_schet            src_shifr_schet    ,
-         dd.sub_shifr_schet        src_sub_shifr_schet,
-         dd.ssylka_doc             src_ssylka_doc     ,
-         dd.service_doc            src_service_doc    ,
-         dd.amount                 src_amount_src,
-         d.fk_dv_sr_lspv_trg,
-         dd.date_op                trg_date_op        ,
-         dd.nom_vkl                trg_nom_vkl        ,
-         dd.nom_ips                trg_nom_ips        ,
-         dd.shifr_schet            trg_shifr_schet    ,
-         dd.sub_shifr_schet        trg_sub_shifr_schet,
-         dd.ssylka_doc             trg_ssylka_doc     ,
-         dd.service_doc            trg_service_doc    ,
-         dd.amount                 trg_amount_src,
+         d.fk_dv_sr_lspv,
+         a.charge_type,
+         a.det_charge_type,
          d.amount,
          d.addition_code, 
          d.addition_id, 
+         dd.data_op                      date_op        ,
+         extract(year from dd.data_op)   year_op    ,
+         dd.nom_vkl                      nom_vkl        ,
+         dd.nom_ips                      nom_ips        ,
+         dd.shifr_schet                  shifr_schet    ,
+         dd.sub_shifr_schet              sub_shifr_schet,
+         dd.summa                        src_amount         ,
+         dd.ssylka_doc                   src_ssylka_doc     ,
+         dd.service_doc                  src_service_doc    ,
+         d.fk_dv_sr_lspv_trg             fk_dv_sr_lspv_trg,
+         dt.data_op                      trg_date_op        ,
+         extract(year from dt.data_op)   trg_year_op    ,
+         dt.summa                        trg_amount         ,
+         dt.ssylka_doc                   trg_ssylka_doc     ,
+         dt.service_doc                  trg_service_doc    ,
          d.process_id, 
          d.method, 
          d.created_by, 
@@ -32,9 +30,12 @@ create or replace view dv_sr_lspv_det_v as
          d.last_updated_by, 
          d.last_updated_at
   from   dv_sr_lspv_det_t  d,
-         dv_sr_lspv_acc_v  dd,
-         dv_sr_lspv_acc_v  dt
+         dv_sr_lspv_v      dd,
+         dv_sr_lspv_v      dt,
+         ndfl_accounts_t   a
   where  1=1
+  and    a.sub_shifr_schet = dd.sub_shifr_schet
+  and    a.shifr_schet = dd.shifr_schet
   and    dt.id(+) = d.fk_dv_sr_lspv_trg
   and    dd.id = d.fk_dv_sr_lspv
 /

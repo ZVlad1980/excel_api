@@ -1,6 +1,5 @@
 create or replace trigger dv_sr_lspv_det_aud_trg
   after delete or update of id, 
-                            charge_type, 
                             fk_dv_sr_lspv, 
                             fk_dv_sr_lspv_trg, 
                             amount, 

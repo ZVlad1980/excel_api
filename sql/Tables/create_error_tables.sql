@@ -2,7 +2,8 @@ declare
   l_list_tbl sys.odcivarchar2list := 
     sys.odcivarchar2list(
       'f2ndfl_load_spravki',
-      'dv_sr_lspv_docs_t'
+      'dv_sr_lspv_docs_t',
+      'dv_sr_lspv_det_t'
     );
 
   procedure create_err_table(p_table_name varchar2) is
