@@ -3,11 +3,11 @@ create or replace package body dv_sr_lspv_det_pkg is
   -- Private type declarations
   GC_PACKAGE_NAME   constant varchar2(32)                       := $$plsql_unit;  
   GС_PRC_UPDATE_DET constant dv_sr_lspv_prc_t.process_name%type := 'UPDATE_DETAIL';
-  GC_CHUNK_SIZE     constant int                                := 10000;
+  --GC_CHUNK_SIZE     constant int                                := 10000;
   --
   GC_ROW_STS_NEW    constant varchar2(1)                        := 'N';
-  GC_ROW_STS_UPDATE constant varchar2(1)                        := 'U';
-  GC_ROW_STS_DELETE constant varchar2(1)                        := 'D';
+  --GC_ROW_STS_UPDATE constant varchar2(1)                        := 'U';
+  --GC_ROW_STS_DELETE constant varchar2(1)                        := 'D';
   --
   G_LEGACY       varchar2(1);
   
@@ -96,8 +96,7 @@ create or replace package body dv_sr_lspv_det_pkg is
    *
    */
   function get_errors_cnt(
-    p_process_id dv_sr_lspv_det_t.process_id%type,
-    p_list_ids   in out nocopy sys.odciNumberList
+    p_process_id dv_sr_lspv_det_t.process_id%type
   ) return int is
     l_result int;
   begin
@@ -105,11 +104,7 @@ create or replace package body dv_sr_lspv_det_pkg is
     select count(1)
     into   l_result
     from   err$_dv_sr_lspv_det_t e
-    where  e.process_id = p_process_id
-    and    e.fk_dv_sr_lspv in (
-             select t.column_value
-             from   table(p_list_ids) t
-           );
+    where  e.process_id = p_process_id;
     --
     return l_result;
     --
@@ -121,49 +116,6 @@ create or replace package body dv_sr_lspv_det_pkg is
   end;
   
   /**
-   * @desc Процедура update_benefits_forwards - обработка новых движений по предоставлению вычетов
-   */
-  procedure insert_benefits_forwards(
-    p_process_id dv_sr_lspv_det_t.process_id%type,
-    p_list_ids   in out nocopy sys.odciNumberList
-  ) is
-    --
-  begin
-    --
-    dbms_output.put_line('update_benefits_forwards: receive ' || p_list_ids.count || ' row(s)');
-    --
-    insert into dv_sr_lspv_det_t(
-      fk_dv_sr_lspv,
-      amount,
-      addition_code,
-      addition_id,
-      process_id
-    )
-    select a.id,
-           a.benefit_amount,
-           coalesce(a.benefit_code, -1 * a.shifr_schet),
-           coalesce(a.pt_rid, -1),
-           p_process_id
-    from   dv_sr_lspv_benefits_v a
-    where  1=1
-    --
-    and    a.benefit_code_cnt = 1
-    and    a.id in (
-             select t.column_value
-             from   table(p_list_ids) t
-           )
-    log errors into err$_dv_sr_lspv_det_t reject limit unlimited;
-    --
-    dbms_output.put_line('update_benefits_forwards: insert ' || sql%rowcount || ' row(s)');
-    dbms_output.put_line('update_benefits_forwards: errors ' || get_errors_cnt(p_process_id, p_list_ids) || ' row(s)');
-    --
-  exception
-    when others then
-      fix_exception($$PLSQL_LINE, 'update_benefits_forwards');
-      raise;
-  end insert_benefits_forwards;
-  
-  /**
    * 
    */
   procedure update_benefits(
@@ -171,54 +123,56 @@ create or replace package body dv_sr_lspv_det_pkg is
     p_date       date
   ) is
     --
-    C_BEN_FORWARD constant varchar2(1) := 'F';
-    C_BEN_CORR    constant varchar2(1) := 'C';
-    C_BEN_ZERO    constant varchar2(1) := 'Z';
-    --
-    l_list_ids   sys.odciNumberList;
-    --
-    cursor c_benefits(p_status varchar2, p_action varchar2) is
-      select a.id
-      from   dv_sr_lspv_acc_v a
-      where  1=1
-      and    a.status = p_status
-      and    case
-               when a.amount > 0 then C_BEN_FORWARD --предоставление
-               when a.amount < 0 then C_BEN_CORR    --отменя или сторно или возврат
-               else                   C_BEN_ZERO
-             end = p_action
-      and    a.status is not null
-      and    a.charge_type = 'BENEFIT'
-      and    a.date_op = p_date;
-    --
-    -- Операции предоставления вычетов
-    --
-    procedure update_benefits_(
-      p_status varchar2,
-      p_action varchar2
-    ) is
+    procedure update_benefits_new_ is
     begin
-      open c_benefits(p_status, p_action);
-      loop
-        fetch c_benefits
-          bulk collect into l_list_ids
-          limit GC_CHUNK_SIZE;
-        exit when l_list_ids.count = 0;
-        --
-        if p_status = GC_ROW_STS_NEW and p_action = C_BEN_FORWARD then
-          insert_benefits_forwards(
-            p_process_id => p_process_id,
-            p_list_ids   => l_list_ids
-          );
-        end if;
-      end loop;
-    end update_benefits_;
+      --
+      insert into dv_sr_lspv_det_t(
+        charge_type,
+        fk_dv_sr_lspv,
+        amount,
+        addition_code,
+        addition_id,
+        process_id
+      ) select 'BENEFIT',
+               a.fk_dv_sr_lspv#,
+               case
+                 when a.benefit_code_cnt = 0 then
+                   a.amount
+                 when a.benefit_code_cnt = 1 then
+                  a.benefit_amount
+                 when a.benefit_code_cnt > 0 then
+                  case
+                    when a.start_month > coalesce(a.last_month, a.month_op) then
+                     0
+                    else
+                     (least(a.end_month, coalesce(a.last_month, a.month_op)) - a.start_month + 1) *
+                        a.benefit_amount
+                  end - a.total_benefits
+               end benefit_amount,
+               coalesce(a.benefit_code, -1 * a.shifr_schet),
+               coalesce(a.pt_rid, -1),
+               p_process_id
+        from   dv_sr_lspv_acc_ben_v a
+        where  1=1
+        and    (
+                 (a.benefit_code_cnt > 0 and a.amount > 0) 
+                or
+                 (a.benefit_code_cnt = 0 and a.amount <> 0)
+               )
+        and    nvl(a.regdate, a.date_op) <= a.date_op --!ТОЛЬКО АКТУАЛЬНЫЕ НА МОМЕНТ РАСЧЕТА, ЛИБО УДАЛЕННЫЕ
+        and    a.date_op = p_date
+        and    a.status = GC_ROW_STS_NEW
+      log errors into err$_dv_sr_lspv_det_t reject limit unlimited;
+      --
+      dbms_output.put_line('update_benefits_new_: insert ' || sql%rowcount || ' row(s)');
+      --
+    end update_benefits_new_;
     --
   begin
-    --новые движения предоставления вычетов
-    update_benefits_(GC_ROW_STS_NEW, C_BEN_FORWARD);
-    --новые движения предоставления вычетов
-    update_benefits_(GC_ROW_STS_NEW, C_BEN_CORR);
+    --
+    
+    --
+    update_benefits_new_;
     --
   exception
     when others then
@@ -233,7 +187,23 @@ create or replace package body dv_sr_lspv_det_pkg is
     p_process_id dv_sr_lspv_det_t.process_id%type
   ) is
     --
-    cursor c_dv_dates is
+    type lt_date_rec is record(
+      date_op date,
+      benefit_exists varchar2(1),
+      ritual_exists varchar2(1),
+      corr_exists varchar2(1)
+    );
+    type lt_dates_tbl is table of lt_date_rec;
+    l_dates_tbl lt_dates_tbl;
+    --
+    procedure build_dates_list_ is
+    begin
+      with w_dv as (
+        select /*+ materialize*/
+               d.year_op, d.nom_vkl, d.nom_ips, d.date_op, d.shifr_schet, d.sub_shifr_schet, d.ssylka_doc
+        from   dv_sr_lspv#_v d
+        where  d.status = GC_ROW_STS_NEW --only is new records
+      )
       select a.date_op,
              max(case a.charge_type when 'BENEFIT' then 'Y' end)    benefit_exists,
              max(case a.det_charge_type when 'RITUAL' then 'Y' end) ritual_exists,
@@ -246,49 +216,54 @@ create or replace package body dv_sr_lspv_det_pkg is
                    then 'Y' 
                end
              )                                                      corr_exists
+      bulk collect into l_dates_tbl
       from   dv_sr_lspv_acc_v a
-      where  a.status is not null
+      where  (a.nom_vkl, a.nom_ips, a.date_op)
+             in (select d.nom_vkl, d.nom_ips, d.date_op--, d.shifr_schet, d.sub_shifr_schet, d.ssylka_doc
+                 from   w_dv d
+                )
+      and       a.year_op >= (select min(d.year_op) from w_dv d)
       group by a.date_op
       order by a.date_op;
+      --
+    end build_dates_list_;
     --
     --Сброс статусов 
     -- 
     procedure reset_statuses_ is
     begin
-      --...не обрабатываемых операций (не возвращаются вьюхой dv_sr_lspv_acc_v)
-      update (
-               select d.status
-               from   dv_sr_lspv d
-               where  d.status is not null
-               and    not exists (
-                        select d.id, d.status
-                        from   dv_sr_lspv_acc_v a
-                        where  a.id = d.id
-                      )
-             ) u
-      set    u.status = null;
-      --... и уже обработанных
+      --... обработанных
       update (select d.status
-              from   dv_sr_lspv d
+              from   dv_sr_lspv#_v d
               where  1=1
               and    d.id in (
                        select dt.fk_dv_sr_lspv
-                       from   dv_sr_lspv_det_t dt
+                       from   dv_sr_lspv_det_v dt
                        where  dt.process_id = p_process_id
                      ) 
+              and    d.status = GC_ROW_STS_NEW
              ) u
       set    u.status = null;
     end reset_statuses_;
     --
   begin
     --
-    for d in c_dv_dates loop
-      if d.benefit_exists = 'Y' then
-        update_benefits(p_process_id, d.date_op);
+    build_dates_list_;
+    --
+    for i in 1..l_dates_tbl.count loop
+      dv_sr_lspv_docs_api.set_period(
+        p_start_date  => trunc(l_dates_tbl(i).date_op, 'Y'),
+        p_end_date    => l_dates_tbl(i).date_op,
+        p_report_date => l_dates_tbl(i).date_op
+      );
+      if l_dates_tbl(i).benefit_exists = 'Y' then
+        update_benefits(p_process_id, l_dates_tbl(i).date_op);
       end if;
     end loop;
     --
     reset_statuses_;
+    --
+    dbms_output.put_line('update_benefits_forwards: errors ' || get_errors_cnt(p_process_id) || ' row(s)');
     --
   exception
     when others then

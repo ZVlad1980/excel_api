@@ -19,7 +19,8 @@ create or replace package dv_sr_lspv_docs_api is
   procedure set_employees(p_flag boolean);
   function get_last_only       return varchar2 deterministic;
   procedure set_last_only(p_flag boolean);
-  
+  function get_detail_status   return varchar2 deterministic;
+  procedure set_detail_status(p_status varchar2);
   /**
    * Процедуры set_is_buff и unset_is_buff - включают и выключают учет буфера расчетов VYPLACH... в представлениях
    */

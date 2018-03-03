@@ -17,6 +17,7 @@ create or replace package body dv_sr_lspv_docs_api is
   G_RESIDENT_DATE   date; --дата, на которую определяется статус резиденства контрагентов
   G_WO_EMPLOYEES    varchar2(1) := 'N'; --флаг учета данных сотрудников в отчетах (актуально для 2NDFL)
   G_2NDFL_LAST_ONLY varchar2(1) := 'Y'; --флаг учета данных только последней справки!
+  G_DETAIL_STATUS   varchar2(1) := 'N'; --статус, обрабатываемых строк в таблице DV_SR_LSPV_DET_T, используется в запросах!
   
   /**
    * Обвертки обработки ошибок
@@ -43,6 +44,8 @@ create or replace package body dv_sr_lspv_docs_api is
   procedure set_employees(p_flag boolean) is begin G_WO_EMPLOYEES := case when p_flag then 'Y' else 'N' end; end set_employees;
   function get_last_only  return varchar2 deterministic is begin return G_2NDFL_LAST_ONLY; end;
   procedure set_last_only(p_flag boolean) is begin G_2NDFL_LAST_ONLY := case when p_flag then 'Y' else 'N' end; end set_last_only;
+  function get_detail_status  return varchar2 deterministic is begin return G_DETAIL_STATUS; end get_detail_status;
+  procedure set_detail_status(p_status varchar2) is begin G_DETAIL_STATUS := p_status; end set_detail_status;
   
   /**
    * Процедуры set_is_buff и unset_is_buff - включают и выключают учет буфера расчетов VYPLACH... в представлениях
@@ -79,6 +82,7 @@ create or replace package body dv_sr_lspv_docs_api is
     G_END_DATE        := trunc(p_end_date) + 1 - .00001; --на конец суток
     G_WO_EMPLOYEES    := 'N'; --по умолчанию - сброс, т.к. для выверки не актуально!
     G_2NDFL_LAST_ONLY := 'Y';
+    G_DETAIL_STATUS   := 'N';
     --
     G_REPORT_DATE   := greatest(
                          nvl(p_report_date, 
