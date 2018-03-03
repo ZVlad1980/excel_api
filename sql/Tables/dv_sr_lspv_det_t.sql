@@ -13,7 +13,8 @@ create table dv_sr_lspv_det_t( --детализация движения сре�
   gf_person          int                 , --ID контрагента для пособий (остальные определяются динамически!)
   process_id         int                 ,
   method             varchar2(1)         , --метод добавления (A)utomate/(M)anual
-  is_deleted         varchar2(1)         , --флаг удаления из движения + set is_disabled = 'Y'
+  is_deleted         varchar2(1)         , --флаг удаления записи
+  fk_dv_sr_lspv_det  int                 , --ID операции источника (при перемещении средств с одной расшифровки на другую)
   is_disabled        varchar2(1)         , --флаг деактивации строки - строка не видна из dv_sr_lspv_det_v
   created_by         varchar2(32)        , --заполняется при ручной коррекции
   created_at         date                , --заполняется при ручной коррекции
@@ -27,7 +28,10 @@ create table dv_sr_lspv_det_t( --детализация движения сре�
     references dv_sr_lspv#(id)      ,
   constraint dv_sr_lspv_det_dv_trg_fk
     foreign key (fk_dv_sr_lspv_trg)
-    references dv_sr_lspv#(id)
+    references dv_sr_lspv#(id)      ,
+  constraint dv_sr_lspv_det_det_fk
+    foreign key (fk_dv_sr_lspv_det)
+    references dv_sr_lspv_det_t(id)
 )
 /
 create index dv_sr_lspv_det_prc_ix on dv_sr_lspv_det_t(process_id)
