@@ -123,7 +123,7 @@ create or replace package body dv_sr_lspv_det_pkg is
     p_date       date
   ) is
     --
-    procedure update_details_(p_year int) is
+    procedure pre_update_(p_year int) is
       l_ids sys.odcinumberlist;
     begin
       --выбираем детализации по удаленным вычетам
@@ -170,11 +170,11 @@ create or replace package body dv_sr_lspv_det_pkg is
       where  dt.id in (select t.column_value from table(l_ids) t);
       --
       dbms_output.put_line(l_ids.count || ' row(s) moved to shifr_schet and mark as deleted');
-    end update_details_;
+    end pre_update_;
     --
     -- 
     --
-    procedure update_benefits_new_ is
+    procedure insert_new_ is
     begin
       --
       insert into dv_sr_lspv_det_t(
@@ -195,7 +195,12 @@ create or replace package body dv_sr_lspv_det_pkg is
                      0
                     else
                      (least(a.end_month, coalesce(a.last_month, a.month_op)) - a.start_month + 1) *
-                        a.benefit_amount - a.total_benefits
+                        a.benefit_amount - a.total_benefits * 
+                        case 
+                          when a.service_doc <> 0 then
+                            sign(a.amount)
+                          else 1
+                        end
                   end
                end benefit_amount,
                coalesce(a.benefit_code, a.shifr_schet),
@@ -211,7 +216,7 @@ create or replace package body dv_sr_lspv_det_pkg is
       --
       dbms_output.put_line('update_benefits_new_: insert ' || sql%rowcount || ' row(s)');
       --
-    end update_benefits_new_;
+    end insert_new_;
     --
     --
     --
@@ -238,6 +243,7 @@ create or replace package body dv_sr_lspv_det_pkg is
       fetch c_cur
         bulk collect into l_cur_tbl;
       close c_cur;
+      --
       forall i in 1..l_cur_tbl.count
         insert into dv_sr_lspv_det_t(
           charge_type,
@@ -257,41 +263,13 @@ create or replace package body dv_sr_lspv_det_pkg is
       --
       dbms_output.put_line('post_update_: insert ' || l_cur_tbl.count || ' row(s)');
       --
-      /*
-      insert into dv_sr_lspv_det_t(
-        charge_type,
-        fk_dv_sr_lspv,
-        amount,
-        addition_code,
-        addition_id,
-        process_id
-      ) select dt.charge_type,
-               dt.fk_dv_sr_lspv,
-               (round(dt.src_amount, 2) - sum(dt.amount)) corr_amount,
-               dt.shifr_schet,
-               -1,
-               p_process_id
-        from   dv_sr_lspv_det_v  dt
-        where  1=1
-        and    dt.src_status = 'N'
-        and    dt.charge_type = 'BENEFIT'
-        and    dt.date_op = p_date
-        group by dt.charge_type,
-               dt.fk_dv_sr_lspv,
-               dt.src_amount,
-               dt.shifr_schet,
-               p_process_id
-        having (round(dt.src_amount, 2) - sum(dt.amount)) <> 0;
-      --
-      dbms_output.put_line('post_update_: insert ' || sql%rowcount || ' row(s)');
-      --*/
     end post_update_;
     --
   begin
     --обработка существующих детализаций по актуальному журналу регистрации вычетов
-    --update_details_(extract(year from p_date));
+    pre_update_(extract(year from p_date));
     --обработка новых движений по вычетам
-    --update_benefits_new_;
+    insert_new_;
     --пост обработка для списания зависших сумм
     post_update_;
     --

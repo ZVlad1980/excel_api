@@ -43,6 +43,7 @@ create or replace view dv_sr_lspv_acc_ben_v as
            where  d.nom_vkl = a.nom_vkl
            and    d.nom_ips = a.nom_ips
            and    d.shifr_schet = a.shifr_schet
+           and    d.is_deleted is null
            and    d.year_op = a.year_op
            and    d.date_op < a.date_op
            and    d.addition_id = b.pt_rid
