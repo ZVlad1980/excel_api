@@ -107,9 +107,9 @@ create or replace package body dv_sr_lspv#_api is
                   d.service_doc,
                   case d.det_charge_type
                     when 'RITUAL' then
-                      ( select rp.gf_person
+                      ( select rp.fk_contragent gf_person
                         from   sp_fiz_litz_lspv_v sfl,
-                               vyplach_posob_v    rp
+                               sp_ritual_pos      rp
                         where  1=1
                         and    rp.ssylka = sfl.ssylka
                         and    sfl.nom_ips = d.nom_ips
@@ -190,6 +190,8 @@ create or replace package body dv_sr_lspv#_api is
   ) is
     l_process_id dv_sr_lspv_det_t.process_id%type;
   begin
+    --
+    utl_error_api.init_exceptions;
     --
     l_process_id := create_process(p_year_from, p_year_to);
     --
