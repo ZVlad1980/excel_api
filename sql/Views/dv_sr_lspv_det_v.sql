@@ -1,9 +1,10 @@
 create or replace view dv_sr_lspv_det_v as
   select d.id, 
+         d.detail_type,
          d.fk_dv_sr_lspv_det,
          d.fk_dv_sr_lspv,
-         a.charge_type,
-         a.det_charge_type,
+         dd.charge_type,
+         dd.det_charge_type,
          d.amount,
          d.addition_code, 
          d.addition_id, 
@@ -28,17 +29,14 @@ create or replace view dv_sr_lspv_det_v as
          d.method, 
          d.created_by, 
          d.created_at, 
-         d.is_deleted, 
          d.is_disabled, 
          d.last_updated_by, 
          d.last_updated_at
   from   dv_sr_lspv_det_t    d,
-         dv_sr_lspv#_full_v  dd,
-         dv_sr_lspv#_full_v  dt,
-         ndfl_accounts_t   a
+         dv_sr_lspv#_acc_v   dd,
+         dv_sr_lspv#_acc_v   dt
   where  1=1
-  and    a.sub_shifr_schet = dd.sub_shifr_schet
-  and    a.shifr_schet = dd.shifr_schet
   and    dt.id(+) = d.fk_dv_sr_lspv_trg
   and    dd.id = d.fk_dv_sr_lspv
+  and    d.is_deleted is null
 /

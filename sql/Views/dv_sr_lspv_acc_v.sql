@@ -14,13 +14,15 @@ create or replace view dv_sr_lspv_acc_v as
          a.sub_shifr_grp    ,
          d.year_op          ,
          dt.id              fk_dv_sr_lspv#,
-         dt.status
+         dt.status          ,
+         dt.gf_person
   from   dv_sr_lspv_v  d,
          ndfl_accounts_t a,
          lateral(
            select /*+ index dt DV_SR_LSPV_T_UX*/
                   dt.id,
-                  dt.status
+                  dt.status,
+                  dt.gf_person
            from   dv_sr_lspv#_v dt
            where  1=1
            and    dt.ssylka_doc = d.ssylka_doc

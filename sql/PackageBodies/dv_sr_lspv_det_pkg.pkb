@@ -26,7 +26,7 @@ create or replace package body dv_sr_lspv_det_pkg is
   --
   
   function get_os_user return varchar2 deterministic is
-    l_result log$_dv_sr_lspv.created_by%type;
+    l_result dv_sr_lspv_det_t.created_by%type;
   begin
     select substrb(sys_context( 'userenv', 'os_user'), 1,32)
     into   l_result
@@ -140,13 +140,12 @@ create or replace package body dv_sr_lspv_det_pkg is
       where  1=1
       and    b.pt_rid is null
       and    dt.addition_id <> -1
-      and    dt.is_deleted is null
-      and    dt.charge_type = 'BENEFIT'
+      and    dt.detail_type = 'BENEFIT'
       and    dt.date_op < p_date --to_date(20180209, 'yyyymmdd')--addition_code < 0
       and    dt.year_op = p_year;
       --
       insert into dv_sr_lspv_det_t(
-        charge_type,
+        detail_type,
         fk_dv_sr_lspv,
         amount,
         addition_code,
@@ -178,7 +177,7 @@ create or replace package body dv_sr_lspv_det_pkg is
     begin
       --
       insert into dv_sr_lspv_det_t(
-        charge_type,
+        detail_type,
         fk_dv_sr_lspv,
         amount,
         addition_code,
@@ -246,7 +245,7 @@ create or replace package body dv_sr_lspv_det_pkg is
       --
       forall i in 1..l_cur_tbl.count
         insert into dv_sr_lspv_det_t(
-          charge_type,
+          detail_type,
           fk_dv_sr_lspv,
           amount,
           addition_code,

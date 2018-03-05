@@ -101,13 +101,24 @@ create or replace package body dv_sr_lspv#_api is
                   d.nom_ips,
                   d.shifr_schet,
                   d.sub_shifr_schet,
-                  d.data_op date_op,
-                  d.summa amount,
+                  d.date_op,
+                  d.amount,
                   d.ssylka_doc,
-                  d.service_doc
-           from   dv_sr_lspv_v d
+                  d.service_doc,
+                  case d.det_charge_type
+                    when 'RITUAL' then
+                      ( select rp.gf_person
+                        from   sp_fiz_litz_lspv_v sfl,
+                               vyplach_posob_v    rp
+                        where  1=1
+                        and    rp.ssylka = sfl.ssylka
+                        and    sfl.nom_ips = d.nom_ips
+                        and    sfl.nom_vkl = d.nom_vkl
+                      )
+                  end gf_person
+           from   dv_sr_lspv_acc_v d
            where  d.year_op between p_year_from and p_year_to
-           and    (d.service_doc <> 0 or d.shifr_schet > 1000)
+           and    (d.service_doc <> 0 or d.charge_type = 'BENEFIT' or d.det_charge_type = 'RITUAL')
           ) u
     on    (d.nom_vkl         = u.nom_vkl         and
            d.nom_ips         = u.nom_ips         and
@@ -126,6 +137,7 @@ create or replace package body dv_sr_lspv#_api is
         amount,
         ssylka_doc,
         service_doc,
+        gf_person,
         process_id
       ) values (
         u.nom_vkl,
@@ -136,6 +148,7 @@ create or replace package body dv_sr_lspv#_api is
         u.amount,
         u.ssylka_doc,
         u.service_doc,
+        u.gf_person,
         p_process_id
       );
     --
@@ -143,8 +156,8 @@ create or replace package body dv_sr_lspv#_api is
     --
     update (select d.is_deleted,
                    d.status
-            from   dv_sr_lspv#_v d
-            where  d.year_op between p_year_from and p_year_to
+            from   dv_sr_lspv# d
+            where  extract(year from d.date_op) between p_year_from and p_year_to
             and    case --проверка существования записи в движении
                      when exists(
                            select 1
@@ -161,7 +174,7 @@ create or replace package body dv_sr_lspv#_api is
                     end <> nvl(d.is_deleted, 'N') --если запись помечена как удаленная, но есть в движении или записи нет в движении и она не помечена как удаленная
                     
            ) u
-    set    u.is_deleted = case when u.is_deleted is null then 'Y' else null end --инверсия флага удаления
+    set    u.is_deleted = case when u.is_deleted is null then 'Y' else null end; --инверсия флага удаления
     --
   exception
     when others then
