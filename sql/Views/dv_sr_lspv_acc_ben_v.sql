@@ -62,10 +62,9 @@ create or replace view dv_sr_lspv_acc_ben_v as
     and    b.nom_ips = a.nom_ips
     and    b.shifr_schet = a.shifr_schet
     and    a.date_op between b.start_date and b.end_date
-    and    b.regdate <= a.date_op
+    and    trunc(b.regdate) <= a.date_op
   ) b
   where  1=1
-  and    a.status = 'N'
   and    a.charge_type = 'BENEFIT'
   and    a.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
   and    a.year_op >= dv_sr_lspv_docs_api.get_year

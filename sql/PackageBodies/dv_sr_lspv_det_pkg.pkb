@@ -130,13 +130,13 @@ create or replace package body dv_sr_lspv_det_pkg is
       select dt.id
       bulk collect into   l_ids
       from   dv_sr_lspv_det_v  dt
-             left join sp_ogr_benefits_v b
-               on b.pt_rid(+) = dt.addition_id
-               and    b.shifr_schet = dt.shifr_schet
-               and    b.regdate < dt.date_op
-               and    b.start_year = dt.year_op
-               and    b.nom_ips = dt.nom_ips
-               and    b.nom_vkl = dt.nom_vkl
+        left join sp_ogr_benefits_v b
+          on     b.pt_rid(+) = dt.addition_id
+          and    b.shifr_schet = dt.shifr_schet
+          and    trunc(b.regdate) <= dt.date_op
+          and    b.start_year = dt.year_op
+          and    b.nom_ips = dt.nom_ips
+          and    b.nom_vkl = dt.nom_vkl
       where  1=1
       and    b.pt_rid is null
       and    dt.addition_id <> -1
@@ -168,7 +168,7 @@ create or replace package body dv_sr_lspv_det_pkg is
       set    dt.is_deleted = 'Y'
       where  dt.id in (select t.column_value from table(l_ids) t);
       --
-      dbms_output.put_line(l_ids.count || ' row(s) moved to shifr_schet and mark as deleted');
+      dbms_output.put_line('pre_update_: ' || l_ids.count || ' row(s) moved to shifr_schet and mark as deleted');
     end pre_update_;
     --
     -- 
@@ -208,12 +208,11 @@ create or replace package body dv_sr_lspv_det_pkg is
         from   dv_sr_lspv_acc_ben_v a
         where  1=1
         and    a.amount <> 0
-        and    nvl(a.regdate, a.date_op) <= a.date_op --!ÒÎËÜÊÎ ÀÊÒÓÀËÜÍÛÅ ÍÀ ÌÎÌÅÍÒ ÐÀÑ×ÅÒÀ, ËÈÁÎ ÓÄÀËÅÍÍÛÅ
         and    a.date_op = p_date
         and    a.status = GC_ROW_STS_NEW
       log errors into err$_dv_sr_lspv_det_t reject limit unlimited;
       --
-      dbms_output.put_line('update_benefits_new_: insert ' || sql%rowcount || ' row(s)');
+      dbms_output.put_line('insert_new_: insert ' || sql%rowcount || ' row(s)');
       --
     end insert_new_;
     --
@@ -345,13 +344,14 @@ create or replace package body dv_sr_lspv_det_pkg is
         p_report_date => l_dates_tbl(i).date_op
       );
       if l_dates_tbl(i).benefit_exists = 'Y' then
+        dbms_output.put_line(chr(10) || 'Start update benefit: ' || to_char(l_dates_tbl(i).date_op, 'dd.mm.yyyy'));
         update_benefits(p_process_id, l_dates_tbl(i).date_op);
       end if;
     end loop;
     --
     reset_statuses_;
     --
-    dbms_output.put_line('update_benefits_forwards: errors ' || get_errors_cnt(p_process_id) || ' row(s)');
+    dbms_output.put_line(chr(10) || 'update_details: errors ' || get_errors_cnt(p_process_id) || ' row(s)');
     --
   exception
     when others then
@@ -381,8 +381,10 @@ create or replace package body dv_sr_lspv_det_pkg is
       'SUCCESS'
     );
     --
+    commit;
   exception
     when others then
+      rollback;
       fix_exception($$PLSQL_LINE, 'update_details');
       if l_process_id is not null then
         set_process_state(
