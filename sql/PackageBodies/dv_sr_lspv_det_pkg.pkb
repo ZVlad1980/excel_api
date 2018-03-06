@@ -139,6 +139,14 @@ create or replace package body dv_sr_lspv_det_pkg is
           and    b.nom_vkl = dt.nom_vkl
       where  1=1
       and    b.pt_rid is null
+      --только счета, которые будут обрабатываться!
+      and    (dt.nom_vkl, dt.nom_ips) in (
+               select d.nom_vkl, d.nom_ips
+               from   dv_sr_lspv#_v d
+               where  d.year_op = p_year
+               and    d.date_op = p_date
+               and    d.status = 'N' 
+             )
       and    dt.addition_id <> -1
       and    dt.detail_type = 'BENEFIT'
       and    dt.date_op < p_date --to_date(20180209, 'yyyymmdd')--addition_code < 0
@@ -190,10 +198,10 @@ create or replace package body dv_sr_lspv_det_pkg is
                    a.amount
                  else
                   case
-                    when a.start_month > coalesce(a.last_month, a.month_op) then
+                    when a.start_month > a.end_month then
                      0
                     else
-                     (least(a.end_month, coalesce(a.last_month, a.month_op)) - a.start_month + 1) *
+                     (least(a.end_month, a.month_op) - a.start_month + 1) *
                         a.benefit_amount - a.total_benefits * 
                         case 
                           when a.service_doc <> 0 then
@@ -220,54 +228,131 @@ create or replace package body dv_sr_lspv_det_pkg is
     --
     procedure post_update_ is
       cursor c_cur is
-        select dt.charge_type,
-                          dt.fk_dv_sr_lspv,
-                          (round(dt.src_amount, 2) - sum(dt.amount)) corr_amount,
-                          dt.shifr_schet
-                    from   dv_sr_lspv_det_v  dt
-                    where  1=1
-                    and    dt.src_status = 'N'
-                    and    dt.charge_type = 'BENEFIT'
-                    and    dt.date_op = p_date
-                    group by dt.charge_type,
-                           dt.fk_dv_sr_lspv,
-                           dt.src_amount,
-                           dt.shifr_schet
-                    having (round(dt.src_amount, 2) - sum(dt.amount)) <> 0;
+        select dt.year_op,
+               dt.detail_type,
+               dt.nom_vkl,
+               dt.nom_ips,
+               dt.fk_dv_sr_lspv,
+               (round(dt.src_amount, 2) - sum(dt.amount)) corr_amount,
+               dt.shifr_schet
+        from   dv_sr_lspv_det_v  dt
+        where  1=1
+        and    dt.src_status = GC_ROW_STS_NEW
+        and    dt.detail_type = 'BENEFIT'
+        and    dt.date_op = p_date
+        group by dt.year_op,
+                 dt.detail_type,
+                 dt.nom_vkl,
+                 dt.nom_ips,
+                 dt.fk_dv_sr_lspv,
+                 dt.src_amount,
+                 dt.shifr_schet
+        having   (round(dt.src_amount, 2) - sum(dt.amount)) <> 0;
+      --
       type lt_cur_tbl_type is table of c_cur%rowtype;
       l_cur_tbl lt_cur_tbl_type;
+      --
+      --
+      --
+      procedure backdating_benefits_ is
+      begin
+        --
+        open c_cur;
+        fetch c_cur
+          bulk collect into l_cur_tbl;
+        close c_cur;
+        --
+        forall i in 1..l_cur_tbl.count
+          insert into dv_sr_lspv_det_t(
+            detail_type,
+            fk_dv_sr_lspv,
+            amount,
+            addition_code,
+            addition_id,
+            process_id
+          ) with w_benefits as (
+              select b.pt_rid,
+                     b.benefit_code,
+                     ( select coalesce(sum(d.amount), 0)
+                         from   dv_sr_lspv_det_v d
+                         where  1=1
+                         and    d.year_op = b.start_year
+                         and    d.date_op < b.end_date
+                         and    d.addition_id = b.pt_rid
+                         and    d.detail_type = 'BENEFIT'
+                       )                                                  total_benefits,
+                     (b.end_month - b.start_month + 1) * b.benefit_amount benefit_amount
+              from   sp_ogr_benefits_v b
+              where  b.nom_vkl = l_cur_tbl(i).nom_vkl
+              and    b.nom_ips = l_cur_tbl(i).nom_ips
+              and    b.start_year = l_cur_tbl(i).year_op
+              and    b.end_date < p_date
+              and    b.regdate < p_date
+            ) select 'BENEFIT',
+                     l_cur_tbl(i).fk_dv_sr_lspv,
+                     b.benefit_amount - nvl(b.total_benefits, 0),
+                     b.benefit_code,
+                     b.pt_rid,
+                     p_process_id
+              from   w_benefits b
+              where  (abs(benefit_amount) - abs(nvl(total_benefits, 0))) > 0.01;
+        --
+        dbms_output.put_line('backdating_benefits_: insert ' || l_cur_tbl.count || ' row(s)');
+        --
+      exception
+        when others then
+          fix_exception($$PLSQL_LINE, 'backdating_benefits_');
+          raise;
+      end backdating_benefits_;
+      --
+      --
+      --
+      procedure balanced_ is
+      begin
+        --
+        open c_cur;
+        fetch c_cur
+          bulk collect into l_cur_tbl;
+        close c_cur;
+        --
+        forall i in 1..l_cur_tbl.count
+          insert into dv_sr_lspv_det_t(
+            detail_type,
+            fk_dv_sr_lspv,
+            amount,
+            addition_code,
+            addition_id,
+            process_id
+          ) values (
+            l_cur_tbl(i).detail_type   ,
+            l_cur_tbl(i).fk_dv_sr_lspv ,
+            l_cur_tbl(i).corr_amount   ,
+            l_cur_tbl(i).shifr_schet   ,
+            -1,
+            p_process_id
+          );
+        --
+        dbms_output.put_line('balanced_: insert ' || l_cur_tbl.count || ' row(s)');
+        --
+      exception
+        when others then
+          fix_exception($$PLSQL_LINE, 'backdating_benefits_');
+          raise;
+      end balanced_;
+      --
     begin
-      open c_cur;
-      fetch c_cur
-        bulk collect into l_cur_tbl;
-      close c_cur;
       --
-      forall i in 1..l_cur_tbl.count
-        insert into dv_sr_lspv_det_t(
-          detail_type,
-          fk_dv_sr_lspv,
-          amount,
-          addition_code,
-          addition_id,
-          process_id
-        ) values (
-          l_cur_tbl(i).charge_type   ,
-          l_cur_tbl(i).fk_dv_sr_lspv ,
-          l_cur_tbl(i).corr_amount   ,
-          l_cur_tbl(i).shifr_schet   ,
-          -1,
-          p_process_id
-        );
+      backdating_benefits_;
       --
-      dbms_output.put_line('post_update_: insert ' || l_cur_tbl.count || ' row(s)');
+      balanced_;
       --
     end post_update_;
     --
   begin
     --обработка существующих детализаций по актуальному журналу регистрации вычетов
-    pre_update_(extract(year from p_date));
+    --pre_update_(extract(year from p_date));
     --обработка новых движений по вычетам
-    insert_new_;
+    --insert_new_;
     --пост обработка для списания зависших сумм
     post_update_;
     --
@@ -309,7 +394,7 @@ create or replace package body dv_sr_lspv_det_pkg is
              )                                                      corr_exists --*/
       bulk collect into l_dates_tbl
       from   dv_sr_lspv#_v a
-      where  a.status = 'N'
+      where  a.status = GC_ROW_STS_NEW
       group by a.date_op
       order by a.date_op;
       --

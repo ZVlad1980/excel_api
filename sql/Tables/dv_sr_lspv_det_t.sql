@@ -41,5 +41,5 @@ create index dv_sr_lspv_det_dv_ix on dv_sr_lspv_det_t(fk_dv_sr_lspv)
 /
 create index dv_sr_lspv_det_dv_ix2 on dv_sr_lspv_det_t(fk_dv_sr_lspv_trg)
 /
-create index dv_sr_lspv_det_type_ix on dv_sr_lspv_det_t(detail_type)
+create index dv_sr_lspv_det_type_ix on dv_sr_lspv_det_t(detail_type, addition_id)
 /
