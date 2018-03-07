@@ -38,4 +38,5 @@ from   det d
          where  sfl.ssylka = nvl(d.ssylka_fl, v.ssylka_fl)
        ) sfl
 where  1=1
-and    coalesce(d.amount, 0) <> coalesce(v.amount, 0)
+and    round(coalesce(d.amount, 0), 2) <> round(coalesce(v.amount, 0), 2)
+order by det_ssylka_fl

@@ -2,6 +2,7 @@ create or replace view dv_sr_lspv_acc_rev_v as
   select a.year_op,
          a.nom_vkl,
          a.nom_ips,
+         a.date_op,
          extract(month from a.date_op) month_op,
          a.amount                      revenue,
          sum(a.amount)

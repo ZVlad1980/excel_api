@@ -170,7 +170,7 @@ create or replace package body dv_sr_lspv_det_pkg is
         from   table(l_ids) t,
                dv_sr_lspv_det_v dt
         where  dt.id = t.column_value
-        log errors into err$_dv_sr_lspv_det_t reject limit unlimited;
+      log errors into err$_dv_sr_lspv_det_t('pre_update_') reject limit unlimited;
       --
       update dv_sr_lspv_det_t dt
       set    dt.is_deleted = 'Y'
@@ -190,6 +190,8 @@ create or replace package body dv_sr_lspv_det_pkg is
         amount,
         addition_code,
         addition_id,
+        fk_dv_sr_lspv_trg,
+        fk_dv_sr_lspv_det,
         process_id
       ) select 'BENEFIT',
                a.fk_dv_sr_lspv#,
@@ -201,8 +203,8 @@ create or replace package body dv_sr_lspv_det_pkg is
                     when a.start_month > a.end_month then
                      0
                     else
-                     (least(a.end_month, a.month_op) - a.start_month + 1) *
-                        a.benefit_amount - a.total_benefits * 
+                     ((least(a.end_month, a.month_op) - a.start_month + 1) *
+                        a.benefit_amount - a.total_benefits) * 
                         case 
                           when a.service_doc <> 0 then
                             sign(a.amount)
@@ -212,15 +214,109 @@ create or replace package body dv_sr_lspv_det_pkg is
                end benefit_amount,
                coalesce(a.benefit_code, a.shifr_schet),
                coalesce(a.pt_rid, -1),
+               null, --fk_dv_sr_lspv_trg
+               null, --fk_dv_sr_lspv_det
                p_process_id
         from   dv_sr_lspv_acc_ben_v a
         where  1=1
+        and    case 
+                 when a.amount < 0 and exists(
+                     select 1
+                     from   sp_fiz_litz_lspv_v sfl,
+                            sp_tax_residents_v r
+                     where  1=1
+                     and    r.resident = 'N'
+                     and    r.fk_contragent = sfl.gf_person
+                     and    sfl.nom_ips = a.nom_ips
+                     and    sfl.nom_vkl = a.nom_vkl
+                   ) then
+                   0
+                 else 1
+               end = 1
+        and    a.service_doc >= 0
         and    a.amount <> 0
-        and    a.date_op = p_date
-        and    a.status = GC_ROW_STS_NEW
-      log errors into err$_dv_sr_lspv_det_t reject limit unlimited;
+      log errors into err$_dv_sr_lspv_det_t('insert_new_') reject limit unlimited;
       --
       dbms_output.put_line('insert_new_: insert ' || sql%rowcount || ' row(s)');
+      --
+      insert into dv_sr_lspv_det_t(
+        detail_type,
+        fk_dv_sr_lspv,
+        amount,
+        addition_code,
+        addition_id,
+        fk_dv_sr_lspv_trg,
+        fk_dv_sr_lspv_det,
+        process_id
+      ) select d.detail_type,
+               a.id,
+               a.amount / sum(d.amount)over(partition by a.id) * d.amount amount,
+               to_number(d.addition_code),
+               d.addition_id,
+               d.fk_dv_sr_lspv, --fk_dv_sr_lspv_trg
+               d.id,            --fk_dv_sr_lspv_det
+               p_process_id
+        from   dv_sr_lspv#_acc_v a,
+               dv_sr_lspv_det_v  d
+        where  1=1
+        --
+        and    d.detail_type = 'BENEFIT'
+        and    d.sub_shifr_schet = a.sub_shifr_schet
+        and    d.shifr_schet = a.shifr_schet
+        and    d.src_service_doc = a.ssylka_doc
+        and    d.nom_ips = a.nom_ips
+        and    d.nom_vkl = a.nom_vkl
+        --
+        and    a.service_doc < 0
+        and    a.amount <> 0
+        and    a.date_op = p_date
+        and    a.charge_type = 'BENEFIT'
+        and    a.status = GC_ROW_STS_NEW
+      log errors into err$_dv_sr_lspv_det_t('insert_new_storno') reject limit unlimited;
+      --
+      dbms_output.put_line('insert_new_storno: insert ' || sql%rowcount || ' row(s)');
+      --
+      insert into dv_sr_lspv_det_t(
+        detail_type,
+        fk_dv_sr_lspv,
+        amount,
+        addition_code,
+        addition_id,
+        fk_dv_sr_lspv_trg,
+        fk_dv_sr_lspv_det,
+        process_id
+      ) select d.detail_type,
+               a.id,
+               -1 * d.amount,
+               to_number(d.addition_code),
+               d.addition_id,
+               d.fk_dv_sr_lspv, --fk_dv_sr_lspv_trg
+               d.id,            --fk_dv_sr_lspv_det
+               p_process_id
+        from   dv_sr_lspv#_acc_v a,
+               lateral(
+                 select d.*
+                 from   dv_sr_lspv_det_v  d
+                 where  1=1
+                 and    d.date_op < a.date_op
+                 and    d.sub_shifr_schet = a.sub_shifr_schet
+                 and    d.shifr_schet = a.shifr_schet
+                 and    d.nom_ips = a.nom_ips
+                 and    d.nom_vkl = a.nom_vkl
+                 and    d.detail_type = 'BENEFIT'
+               ) d
+        where  (a.nom_vkl, a.nom_ips) in (
+                 select sfl.nom_vkl, sfl.nom_ips
+                 from   sp_tax_residents_v r,
+                        sp_fiz_litz_lspv_v sfl
+                 where  1=1
+                 and    sfl.gf_person = r.fk_contragent
+                 and    r.resident = 'N'
+                )
+        and     a.status = GC_ROW_STS_NEW
+      log errors into err$_dv_sr_lspv_det_t('insert_new_nres') reject limit unlimited;
+      --
+      dbms_output.put_line('insert_new_no_resident: insert ' || sql%rowcount || ' row(s)');
       --
     end insert_new_;
     --
@@ -237,6 +333,7 @@ create or replace package body dv_sr_lspv_det_pkg is
                dt.shifr_schet
         from   dv_sr_lspv_det_v  dt
         where  1=1
+        and    dt.src_service_doc >= 0
         and    dt.src_status = GC_ROW_STS_NEW
         and    dt.detail_type = 'BENEFIT'
         and    dt.date_op = p_date
@@ -247,7 +344,27 @@ create or replace package body dv_sr_lspv_det_pkg is
                  dt.fk_dv_sr_lspv,
                  dt.src_amount,
                  dt.shifr_schet
-        having   (round(dt.src_amount, 2) - sum(dt.amount)) <> 0;
+        having   (round(dt.src_amount, 2) - sum(dt.amount)) <> 0
+       union all
+        select d.year_op,
+               'BENEFIT',
+               d.nom_vkl,
+               d.nom_ips,
+               d.id,
+               d.amount,
+               d.shifr_schet
+        from   dv_sr_lspv#_acc_v d
+        where  1=1
+        and    not exists (
+                 select 1
+                 from   dv_sr_lspv_det_t dt
+                 where  dt.fk_dv_sr_lspv = d.id
+                 and    dt.detail_type = 'BENEFIT'
+               )
+        and    d.service_doc >= 0
+        and    d.charge_type = 'BENEFIT'
+        and    d.date_op = p_date
+        and    d.status = GC_ROW_STS_NEW;
       --
       type lt_cur_tbl_type is table of c_cur%rowtype;
       l_cur_tbl lt_cur_tbl_type;
@@ -295,9 +412,12 @@ create or replace package body dv_sr_lspv_det_pkg is
                      b.pt_rid,
                      p_process_id
               from   w_benefits b
-              where  (abs(benefit_amount) - abs(nvl(total_benefits, 0))) > 0.01;
+              where  (abs(benefit_amount) - abs(nvl(total_benefits, 0))) > 0.01
+            log errors into err$_dv_sr_lspv_det_t('backdating_benefits_') reject limit unlimited;
         --
-        dbms_output.put_line('backdating_benefits_: insert ' || l_cur_tbl.count || ' row(s)');
+        if l_cur_tbl.count > 0 then
+          dbms_output.put_line('backdating_benefits_: insert ' || sql%rowcount || ' row(s)');
+        end if;
         --
       exception
         when others then
@@ -330,7 +450,8 @@ create or replace package body dv_sr_lspv_det_pkg is
             l_cur_tbl(i).shifr_schet   ,
             -1,
             p_process_id
-          );
+          )
+          log errors into err$_dv_sr_lspv_det_t('balanced_') reject limit unlimited;
         --
         dbms_output.put_line('balanced_: insert ' || l_cur_tbl.count || ' row(s)');
         --
@@ -350,9 +471,9 @@ create or replace package body dv_sr_lspv_det_pkg is
     --
   begin
     --обработка существующих детализаций по актуальному журналу регистрации вычетов
-    --pre_update_(extract(year from p_date));
+    pre_update_(extract(year from p_date));
     --обработка новых движений по вычетам
-    --insert_new_;
+    insert_new_;
     --пост обработка для списания зависших сумм
     post_update_;
     --

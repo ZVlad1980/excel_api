@@ -17,8 +17,7 @@ create or replace package body dv_sr_lspv_docs_api is
   G_RESIDENT_DATE   date; --дата, на которую определяется статус резиденства контрагентов
   G_WO_EMPLOYEES    varchar2(1) := 'N'; --флаг учета данных сотрудников в отчетах (актуально для 2NDFL)
   G_2NDFL_LAST_ONLY varchar2(1) := 'Y'; --флаг учета данных только последней справки!
-  G_DETAIL_STATUS   varchar2(1) := 'N'; --статус, обрабатываемых строк в таблице DV_SR_LSPV_DET_T, используется в запросах!
-  G_DETAIL_STRICT   varchar2(1) := 'Y'; --строгий режим определения зареганых вычетов (проверяется дата регистрации), см. dv_sr_lspv_acc_ben_v
+
   /**
    * Обвертки обработки ошибок
    */
@@ -44,10 +43,6 @@ create or replace package body dv_sr_lspv_docs_api is
   procedure set_employees(p_flag boolean) is begin G_WO_EMPLOYEES := case when p_flag then 'Y' else 'N' end; end set_employees;
   function get_last_only  return varchar2 deterministic is begin return G_2NDFL_LAST_ONLY; end get_last_only;
   procedure set_last_only(p_flag boolean) is begin G_2NDFL_LAST_ONLY := case when p_flag then 'Y' else 'N' end; end set_last_only;
-  function get_detail_status  return varchar2 deterministic is begin return G_DETAIL_STATUS; end get_detail_status;
-  procedure set_detail_status(p_status varchar2) is begin G_DETAIL_STATUS := p_status; end set_detail_status;
-  function get_detail_strict  return varchar2 deterministic is begin return G_DETAIL_STRICT; end get_detail_strict;
-  procedure set_detail_strict(p_strict boolean) is begin G_DETAIL_STRICT := case when p_strict then 'Y' else 'N' end; end set_detail_strict;
   
   /**
    * Процедуры set_is_buff и unset_is_buff - включают и выключают учет буфера расчетов VYPLACH... в представлениях
@@ -84,8 +79,6 @@ create or replace package body dv_sr_lspv_docs_api is
     G_END_DATE        := trunc(p_end_date) + 1 - .00001; --на конец суток
     G_WO_EMPLOYEES    := 'N'; --по умолчанию - сброс, т.к. для выверки не актуально!
     G_2NDFL_LAST_ONLY := 'Y';
-    G_DETAIL_STATUS   := 'N';
-    G_DETAIL_STRICT   := 'Y';
     --
     G_REPORT_DATE   := greatest(
                          nvl(p_report_date, 
@@ -839,6 +832,25 @@ create or replace package body dv_sr_lspv_docs_api is
         raise;
     end update_docs_t_;
     --
+    -- Обновление GF_PERSON в sp_tax_residents_t
+    --
+    procedure update_tax_residents_ is
+    begin
+      update (select r.fk_contragent,
+                     gp.gf_person_new
+              from   dv_sr_gf_persons_t gp,
+                     sp_tax_residents_t r
+              where  1=1
+              and    r.fk_contragent = gp.gf_person_old
+              and    gp.process_id = p_process_id
+             ) u
+      set u.fk_contragent = u.gf_person_new;
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_tax_residents_(' || p_process_id || ')');
+        raise;
+    end update_tax_residents_;
+    --
     -- Обновление GF_PERSON в f2ndfl_arh_nomspr
     --
     procedure update_arh_nomspr_t_ is
@@ -936,6 +948,7 @@ create or replace package body dv_sr_lspv_docs_api is
     update_pensioners_;
     update_successors_;
     update_docs_t_;
+    update_tax_residents_;
     update_arh_nomspr_t_;
     update_ndfl_load_nalplat_;
     --

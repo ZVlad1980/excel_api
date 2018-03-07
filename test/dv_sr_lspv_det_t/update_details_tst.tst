@@ -1,5 +1,9 @@
 PL/SQL Developer Test script 3.0
-14
+20
+/*select *
+from   dv_sr_lspv_det_t d
+where  d.addition_id < 0
+*/
 -- Created on 28.02.2018 by V.ZHURAVOV 
 declare 
   -- Local variables here
@@ -14,5 +18,7 @@ exception
       utl_error_api.get_exception_full
     );
 end;
+
+--*/
 0
 0
