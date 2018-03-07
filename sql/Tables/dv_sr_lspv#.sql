@@ -13,6 +13,7 @@ create table dv_sr_lspv#( --детализация движения средст
   ssylka_doc         number(10)              ,
   service_doc        number(10)              ,
   gf_person          int                     , --ID контрагента для пособий (остальные определяются динамически!)
+  is_parent          varchar2(1)             , --признак корневой операции - операции, на которую никто не ссылается
   process_id         int                     ,
   status             varchar2(1) default 'N' ,
   is_deleted         varchar2(1)             ,

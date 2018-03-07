@@ -115,7 +115,24 @@ create or replace package body dv_sr_lspv#_api is
                         and    sfl.nom_ips = d.nom_ips
                         and    sfl.nom_vkl = d.nom_vkl
                       )
-                  end gf_person
+                  end gf_person,
+                  case 
+                    when d.service_doc < 0 
+                        or 
+                        (d.service_doc > 0 and
+                          exists(
+                            select 1 
+                            from   dv_sr_lspv_v dd 
+                            where  dd.nom_vkl = d.nom_vkl
+                            and    dd.nom_ips = d.nom_ips
+                            and    dd.shifr_schet = d.shifr_schet
+                            and    dd.sub_shifr_schet = d.sub_shifr_schet
+                            and    dd.service_doc = d.ssylka_doc
+                            and    dd.data_op < d.date_op 
+                          )
+                        )                  then 'N'
+                    when d.service_doc > 0 then 'Y' 
+                  end is_parent
            from   dv_sr_lspv_acc_v d
            where  d.year_op between p_year_from and p_year_to
            and    (d.service_doc <> 0 or d.charge_type = 'BENEFIT' or d.det_charge_type = 'RITUAL')
@@ -125,7 +142,8 @@ create or replace package body dv_sr_lspv#_api is
            d.date_op         = u.date_op         and
            d.shifr_schet     = u.shifr_schet     and
            d.sub_shifr_schet = u.sub_shifr_schet and
-           d.ssylka_doc      = u.ssylka_doc
+           d.ssylka_doc      = u.ssylka_doc      and
+           d.is_parent       = u.is_parent
           )
     when not matched then
       insert (
@@ -138,6 +156,7 @@ create or replace package body dv_sr_lspv#_api is
         ssylka_doc,
         service_doc,
         gf_person,
+        is_parent,
         process_id
       ) values (
         u.nom_vkl,
@@ -149,6 +168,7 @@ create or replace package body dv_sr_lspv#_api is
         u.ssylka_doc,
         u.service_doc,
         u.gf_person,
+        u.is_parent,
         p_process_id
       );
     --

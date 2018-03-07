@@ -177,6 +177,11 @@ create or replace package body dv_sr_lspv_det_pkg is
       where  dt.id in (select t.column_value from table(l_ids) t);
       --
       dbms_output.put_line('pre_update_: ' || l_ids.count || ' row(s) moved to shifr_schet and mark as deleted');
+      --
+    exception
+      when others then
+        fix_exception($$PLSQL_LINE, 'pre_update_');
+        raise;
     end pre_update_;
     --
     -- 
@@ -194,130 +199,22 @@ create or replace package body dv_sr_lspv_det_pkg is
         fk_dv_sr_lspv_det,
         process_id
       ) select 'BENEFIT',
-               a.fk_dv_sr_lspv#,
-               case a.benefit_code_cnt
-                 when 0 then
-                   a.amount
-                 else
-                  case
-                    when a.start_month > a.end_month then
-                     0
-                    else
-                     ((least(a.end_month, a.month_op) - a.start_month + 1) *
-                        a.benefit_amount - a.total_benefits) * 
-                        case 
-                          when a.service_doc <> 0 then
-                            sign(a.amount)
-                          else 1
-                        end
-                  end
-               end benefit_amount,
-               coalesce(a.benefit_code, a.shifr_schet),
-               coalesce(a.pt_rid, -1),
-               null, --fk_dv_sr_lspv_trg
-               null, --fk_dv_sr_lspv_det
+               b.fk_dv_sr_lspv,
+               b.benefit_amount,
+               b.benefit_code,
+               b.pt_rid,
+               b.fk_dv_sr_lspv_trg,
+               b.fk_dv_sr_lspv_det,
                p_process_id
-        from   dv_sr_lspv_acc_ben_v a
-        where  1=1
-        and    case 
-                 when a.amount < 0 and exists(
-                     select 1
-                     from   sp_fiz_litz_lspv_v sfl,
-                            sp_tax_residents_v r
-                     where  1=1
-                     and    r.resident = 'N'
-                     and    r.fk_contragent = sfl.gf_person
-                     and    sfl.nom_ips = a.nom_ips
-                     and    sfl.nom_vkl = a.nom_vkl
-                   ) then
-                   0
-                 else 1
-               end = 1
-        and    a.service_doc >= 0
-        and    a.amount <> 0
+        from   dv_sr_lspv_acc_ben_v b
       log errors into err$_dv_sr_lspv_det_t('insert_new_') reject limit unlimited;
       --
       dbms_output.put_line('insert_new_: insert ' || sql%rowcount || ' row(s)');
       --
-      insert into dv_sr_lspv_det_t(
-        detail_type,
-        fk_dv_sr_lspv,
-        amount,
-        addition_code,
-        addition_id,
-        fk_dv_sr_lspv_trg,
-        fk_dv_sr_lspv_det,
-        process_id
-      ) select d.detail_type,
-               a.id,
-               a.amount / sum(d.amount)over(partition by a.id) * d.amount amount,
-               to_number(d.addition_code),
-               d.addition_id,
-               d.fk_dv_sr_lspv, --fk_dv_sr_lspv_trg
-               d.id,            --fk_dv_sr_lspv_det
-               p_process_id
-        from   dv_sr_lspv#_acc_v a,
-               dv_sr_lspv_det_v  d
-        where  1=1
-        --
-        and    d.detail_type = 'BENEFIT'
-        and    d.sub_shifr_schet = a.sub_shifr_schet
-        and    d.shifr_schet = a.shifr_schet
-        and    d.src_service_doc = a.ssylka_doc
-        and    d.nom_ips = a.nom_ips
-        and    d.nom_vkl = a.nom_vkl
-        --
-        and    a.service_doc < 0
-        and    a.amount <> 0
-        and    a.date_op = p_date
-        and    a.charge_type = 'BENEFIT'
-        and    a.status = GC_ROW_STS_NEW
-      log errors into err$_dv_sr_lspv_det_t('insert_new_storno') reject limit unlimited;
-      --
-      dbms_output.put_line('insert_new_storno: insert ' || sql%rowcount || ' row(s)');
-      --
-      insert into dv_sr_lspv_det_t(
-        detail_type,
-        fk_dv_sr_lspv,
-        amount,
-        addition_code,
-        addition_id,
-        fk_dv_sr_lspv_trg,
-        fk_dv_sr_lspv_det,
-        process_id
-      ) select d.detail_type,
-               a.id,
-               -1 * d.amount,
-               to_number(d.addition_code),
-               d.addition_id,
-               d.fk_dv_sr_lspv, --fk_dv_sr_lspv_trg
-               d.id,            --fk_dv_sr_lspv_det
-               p_process_id
-        from   dv_sr_lspv#_acc_v a,
-               lateral(
-                 select d.*
-                 from   dv_sr_lspv_det_v  d
-                 where  1=1
-                 and    d.date_op < a.date_op
-                 and    d.sub_shifr_schet = a.sub_shifr_schet
-                 and    d.shifr_schet = a.shifr_schet
-                 and    d.nom_ips = a.nom_ips
-                 and    d.nom_vkl = a.nom_vkl
-                 and    d.detail_type = 'BENEFIT'
-               ) d
-        where  (a.nom_vkl, a.nom_ips) in (
-                 select sfl.nom_vkl, sfl.nom_ips
-                 from   sp_tax_residents_v r,
-                        sp_fiz_litz_lspv_v sfl
-                 where  1=1
-                 and    sfl.gf_person = r.fk_contragent
-                 and    r.resident = 'N'
-                )
-        and     a.status = GC_ROW_STS_NEW
-      log errors into err$_dv_sr_lspv_det_t('insert_new_nres') reject limit unlimited;
-      --
-      dbms_output.put_line('insert_new_no_resident: insert ' || sql%rowcount || ' row(s)');
-      --
+    exception
+      when others then
+        fix_exception($$PLSQL_LINE, 'insert_new_');
+        raise;
     end insert_new_;
     --
     --
@@ -467,6 +364,10 @@ create or replace package body dv_sr_lspv_det_pkg is
       --
       balanced_;
       --
+    exception
+      when others then
+        fix_exception($$PLSQL_LINE, 'post_update_');
+        raise;
     end post_update_;
     --
   begin
@@ -498,6 +399,7 @@ create or replace package body dv_sr_lspv_det_pkg is
     );
     type lt_dates_tbl is table of lt_date_rec;
     l_dates_tbl lt_dates_tbl;
+    l_month     int;
     --
     procedure build_dates_list_ is
     begin
@@ -525,25 +427,28 @@ create or replace package body dv_sr_lspv_det_pkg is
     -- 
     procedure reset_statuses_ is
     begin
-      --... обработанных
-      update (select d.status
-              from   dv_sr_lspv#_v d
-              where  1=1
-              and    d.id in (
-                       select dt.fk_dv_sr_lspv
-                       from   dv_sr_lspv_det_v dt
-                       where  dt.process_id = p_process_id
-                     ) 
-              and    d.status = GC_ROW_STS_NEW
-             ) u
-      set    u.status = null;
+      --return;--... обработанных
+      update dv_sr_lspv#_v d   
+      set    d.status = null
+      where  d.id in (
+               select dt.fk_dv_sr_lspv
+               from   dv_sr_lspv_det_t dt
+               where  1=1
+               and    dt.process_id = p_process_id
+             );
+      --
+      commit;
     end reset_statuses_;
     --
   begin
     --
     build_dates_list_;
     --
+    l_month := extract(month from l_dates_tbl(1).date_op);
     for i in 1..l_dates_tbl.count loop
+      if l_month <> extract(month from l_dates_tbl(i).date_op) then
+        reset_statuses_;
+      end if;
       dv_sr_lspv_docs_api.set_period(
         p_start_date  => trunc(l_dates_tbl(i).date_op, 'Y'),
         p_end_date    => l_dates_tbl(i).date_op,
@@ -553,6 +458,7 @@ create or replace package body dv_sr_lspv_det_pkg is
         dbms_output.put_line(chr(10) || 'Start update benefit: ' || to_char(l_dates_tbl(i).date_op, 'dd.mm.yyyy'));
         update_benefits(p_process_id, l_dates_tbl(i).date_op);
       end if;
+      l_month := extract(month from l_dates_tbl(i).date_op);
     end loop;
     --
     reset_statuses_;
@@ -561,6 +467,7 @@ create or replace package body dv_sr_lspv_det_pkg is
     --
   exception
     when others then
+      rollback;
       fix_exception($$PLSQL_LINE, 'update_details');
       raise;
   end update_details;
@@ -587,10 +494,8 @@ create or replace package body dv_sr_lspv_det_pkg is
       'SUCCESS'
     );
     --
-    commit;
   exception
     when others then
-      rollback;
       fix_exception($$PLSQL_LINE, 'update_details');
       if l_process_id is not null then
         set_process_state(

@@ -10,6 +10,7 @@ create or replace view dv_sr_lspv#_v as
          d.amount, 
          d.ssylka_doc, 
          d.service_doc, 
+         d.is_parent,
          d.process_id,
          d.status
   from   dv_sr_lspv# d

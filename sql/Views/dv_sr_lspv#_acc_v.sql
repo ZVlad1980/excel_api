@@ -13,8 +13,10 @@ create or replace view dv_sr_lspv#_acc_v as
          dd.summa amount, 
          d.ssylka_doc, 
          dd.service_doc, 
+         d.is_parent,
          d.process_id,
-         d.status
+         d.status,
+         a.tax_rate
   from   dv_sr_lspv#_v d,
          dv_sr_lspv_v  dd,
          ndfl_accounts_t   a
