@@ -836,15 +836,19 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     procedure update_tax_residents_ is
     begin
-      update (select r.fk_contragent,
-                     gp.gf_person_new
-              from   dv_sr_gf_persons_t gp,
-                     sp_tax_residents_t r
-              where  1=1
-              and    r.fk_contragent = gp.gf_person_old
-              and    gp.process_id = p_process_id
-             ) u
-      set u.fk_contragent = u.gf_person_new;
+      merge into sp_tax_residents_t r
+      using (select r.id,
+                    gp.gf_person_new
+             from   dv_sr_gf_persons_t gp,
+                    sp_tax_residents_t r
+             where  1=1
+             and    r.fk_contragent = gp.gf_person_old
+             and    gp.process_id = p_process_id
+            ) u
+      on    (r.id = u.id)
+      when matched then
+        update set
+          r.fk_contragent = gf_person_new;
     exception
       when others then
         fix_exception($$plsql_line, 'update_tax_residents_(' || p_process_id || ')');
