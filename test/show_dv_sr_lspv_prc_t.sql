@@ -21,4 +21,4 @@ select p.*
   where  1=1--p.process_name = 'UPDATE_GF_PERSONS'
   order  by p.created_at desc
   --fetch first rows only
-  offset 5 rows fetch next 10 rows only
+  fetch next 10 rows only

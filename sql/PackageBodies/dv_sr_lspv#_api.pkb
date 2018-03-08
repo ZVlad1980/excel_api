@@ -142,8 +142,7 @@ create or replace package body dv_sr_lspv#_api is
            d.date_op         = u.date_op         and
            d.shifr_schet     = u.shifr_schet     and
            d.sub_shifr_schet = u.sub_shifr_schet and
-           d.ssylka_doc      = u.ssylka_doc      and
-           d.is_parent       = u.is_parent
+           d.ssylka_doc      = u.ssylka_doc
           )
     when not matched then
       insert (
@@ -170,7 +169,8 @@ create or replace package body dv_sr_lspv#_api is
         u.gf_person,
         u.is_parent,
         p_process_id
-      );
+      )
+    log errors into err$_dv_sr_lspv#('merge') reject limit unlimited;
     --
     -- Обновление статуса записей
     --
@@ -194,7 +194,8 @@ create or replace package body dv_sr_lspv#_api is
                     end <> nvl(d.is_deleted, 'N') --если запись помечена как удаленная, но есть в движении или записи нет в движении и она не помечена как удаленная
                     
            ) u
-    set    u.is_deleted = case when u.is_deleted is null then 'Y' else null end; --инверсия флага удаления
+    set    u.is_deleted = case when u.is_deleted is null then 'Y' else null end
+    log errors into err$_dv_sr_lspv#('update') reject limit unlimited; --инверсия флага удаления
     --
     update dv_sr_lspv_det_t dt
     set    dt.is_deleted = 'Y'
@@ -202,7 +203,8 @@ create or replace package body dv_sr_lspv#_api is
              select d.id
              from   dv_sr_lspv# d
              where  d.is_deleted = 'Y'
-           );
+           )
+    log errors into err$_dv_sr_lspv#('update2') reject limit unlimited;
     --
   exception
     when others then
@@ -217,6 +219,20 @@ create or replace package body dv_sr_lspv#_api is
     p_year_to    int
   ) is
     l_process_id dv_sr_lspv_det_t.process_id%type;
+    --
+    function exists_errors_ return boolean is
+      l_dummy int;
+    begin
+      select 1
+      into   l_dummy
+      from   err$_dv_sr_lspv# d
+      where  rownum = 1
+      and    d.process_id = l_process_id;
+      return true;
+    exception
+      when no_data_found then
+        return false;
+    end exists_errors_;
   begin
     --
     utl_error_api.init_exceptions;
@@ -225,7 +241,14 @@ create or replace package body dv_sr_lspv#_api is
     --
     update_dv_sr_lspv#(l_process_id, p_year_from, p_year_to);
     --
+    if exists_errors_ then
+      fix_exception($$PLSQL_LINE, 'update_dv_sr_lspv#: exists_errors, process_id=' || l_process_id);
+      raise program_error;
+    end if;
+    --
     commit;
+    --
+    dbms_stats.gather_table_stats(user, 'dv_sr_lspv#');
     --
     set_process_state(
       l_process_id, 
