@@ -123,6 +123,72 @@ create or replace package body ndfl_report_api is
     end if;
     --
     case l_report_code
+      when 'benefit_detail_report' then
+        open l_result for
+          with det as (
+            select sl.ssylka_fl,
+                   sl.nom_vkl,
+                   sl.nom_ips,
+                   d#.shifr_schet,
+                   to_number(d.addition_code) benefit_code, 
+                   sum(d.amount)              amount
+            from   dv_sr_lspv_det_t d,
+                   dv_sr_lspv#      d#,
+                   sp_lspv          sl
+            where  1=1
+            and    sl.nom_vkl = d#.nom_vkl
+            and    sl.nom_ips = d#.nom_ips
+            and    d.detail_type = 'BENEFIT'
+            and    d.addition_id > 0
+            and    d.fk_dv_sr_lspv = d#.id
+            and    d#.shifr_schet > 1000
+            and    extract(year from d#.date_op) = l_year
+            group by sl.ssylka_fl,
+                     sl.nom_vkl,
+                     sl.nom_ips,
+                     d#.shifr_schet, 
+                     d.addition_code
+          ),
+          vych as (
+            select lv.ssylka ssylka_fl, lv.vych_kod_gni benefit_code, 
+                   (select o.kod_ogr_pv
+                    from   kod_ogr_pv             o,
+                           payments.taxdeductions t
+                    where  1=1
+                    and    t.payrestrictionid = o.id
+                    and    t.code = lv.vych_kod_gni
+                   ) shifr_schet,
+                   sum(lv.vych_sum) amount
+            from   f2ndfl_load_vych lv
+            where  lv.kod_na = 1
+            and    lv.god = l_year
+            and    lv.tip_dox in (1,3)
+            and    lv.nom_korr = 0
+            group by lv.ssylka, lv.vych_kod_gni
+          )
+          select sfl.gf_person,
+                 nvl(d.ssylka_fl, v.ssylka_fl) ssylka_fl,
+                 sfl.nom_vkl,
+                 sfl.nom_ips,
+                 sfl.full_name,
+                 nvl(d.shifr_schet, v.shifr_schet) shifr_schet,
+                 nvl(d.benefit_code, v.benefit_code) benefit_code,
+                 d.amount         det_amount  ,
+                 v.amount         vych_amount ,
+                 dv_sr_lspv_det_pkg.get_remains_shifr_schet(l_year, sfl.nom_vkl, sfl.nom_ips, nvl(d.shifr_schet, v.shifr_schet)) remains
+          from   det d
+                 full outer join vych v
+                  on  d.ssylka_fl = v.ssylka_fl
+                  and d.benefit_code = v.benefit_code
+                 outer apply(
+                   select sfl.gf_person, sfl.nom_vkl, sfl.nom_ips, sfl.full_name
+                   from   sp_fiz_litz_lspv_v sfl
+                   where  sfl.ssylka = nvl(d.ssylka_fl, v.ssylka_fl)
+                 ) sfl
+          where  1=1
+          and    round(coalesce(d.amount, 0), 2) <> round(coalesce(v.amount, 0), 2)
+          order by sfl.full_name, sfl.gf_person, nvl(d.shifr_schet, v.shifr_schet), nvl(d.benefit_code, v.benefit_code);
+      --
       when 'gf_person_info' then
         if gateway_pkg.get_parameter_num('gf_person') is not null then
           open l_result for

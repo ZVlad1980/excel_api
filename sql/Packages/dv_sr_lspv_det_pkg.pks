@@ -13,7 +13,19 @@ create or replace package dv_sr_lspv_det_pkg is
    *   dv_sr_lspv_det_t данными из dv_sr_lspv, строки в статусе N или U
    *   и сбрасывает их статус в null
    */
-  procedure update_details;
+  procedure update_details(
+    p_commit boolean default false
+  );
+  
+  /**
+   *
+   */
+  function get_remains_shifr_schet(
+    p_year         int,
+    p_nom_vkl      int,
+    p_nom_ips      int,
+    p_shifr_schet  int
+  ) return number;
   
 end dv_sr_lspv_det_pkg;
 /

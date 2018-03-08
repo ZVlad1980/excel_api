@@ -30,3 +30,5 @@ create index dv_sr_lspv#_date_ix2 on dv_sr_lspv#(status)
 /
 create unique index dv_sr_lspv#_ux on dv_sr_lspv#(nom_vkl, nom_ips, date_op, shifr_schet, sub_shifr_schet, ssylka_doc)
 /
+create index dv_sr_lspv#_del_ix on dv_sr_lspv#(is_deleted)
+/

@@ -196,6 +196,14 @@ create or replace package body dv_sr_lspv#_api is
            ) u
     set    u.is_deleted = case when u.is_deleted is null then 'Y' else null end; --инверсия флага удаления
     --
+    update dv_sr_lspv_det_t dt
+    set    dt.is_deleted = 'Y'
+    where  dt.fk_dv_sr_lspv in (
+             select d.id
+             from   dv_sr_lspv# d
+             where  d.is_deleted = 'Y'
+           );
+    --
   exception
     when others then
       fix_exception($$plsql_line, 'update_dv_sr_lspv#(' || p_process_id || ', ' || p_year_from || ', ' || p_year_to || ')');

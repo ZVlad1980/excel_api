@@ -10,14 +10,14 @@ with det as (
   and    d.addition_id > 0
   and    d.fk_dv_sr_lspv = d#.id
   and    d#.shifr_schet > 1000
-  and    extract(year from d#.date_op) = 2017
+  and    extract(year from d#.date_op) = 2018
   group by sl.ssylka_fl, d.addition_code
 ),
 vych as (
   select lv.ssylka ssylka_fl, lv.vych_kod_gni benefit_code, sum(lv.vych_sum) amount
   from   f2ndfl_load_vych lv
   where  lv.kod_na = 1
-  and    lv.god = 2017
+  and    lv.god = 2018
   and    lv.tip_dox in (1,3)
   group by lv.ssylka, lv.vych_kod_gni
 )

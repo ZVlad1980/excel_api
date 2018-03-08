@@ -111,6 +111,13 @@ create or replace package body gateway_pkg is
       p_year => p_year
     );
     --
+    dv_sr_lspv#_api.update_dv_sr_lspv#(
+      p_year_from => p_year,
+      p_year_to   => p_year
+    );
+    --
+    dv_sr_lspv_det_pkg.update_details;
+    --
     commit;
     --
   exception
@@ -121,6 +128,38 @@ create or replace package body gateway_pkg is
       x_err_msg :=  utl_error_api.get_error_msg;
       --
   end synhr_dv_sr_lspv_docs;
+  
+  /**
+   * Процедура update_dv_sr_lspv# запускает обновление таблицы dv_sr_lspv#
+   *
+   * @param p_year        - год формирования данных
+   *
+   */
+  procedure update_dv_sr_lspv#(
+    x_err_msg    out varchar2,
+    p_year            number
+  ) is
+  begin
+    --
+    utl_error_api.init_exceptions;
+    --
+    dv_sr_lspv#_api.update_dv_sr_lspv#(
+      p_year_from => p_year,
+      p_year_to   => p_year
+    );
+    --
+    dv_sr_lspv_det_pkg.update_details;
+    --
+    commit;
+    --
+  exception
+    when others then
+      --
+      rollback;
+      fix_exception;
+      x_err_msg :=  utl_error_api.get_error_msg;
+      --
+  end update_dv_sr_lspv#;
   
   /**
    * Процедура update_gf_persons обновляет не актуальные CONTRAGENTS.ID

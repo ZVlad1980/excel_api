@@ -257,6 +257,7 @@ create or replace package body dv_sr_lspv_det_pkg is
                  from   dv_sr_lspv_det_t dt
                  where  dt.fk_dv_sr_lspv = d.id
                  and    dt.detail_type = 'BENEFIT'
+                 and    dt.is_disabled is null
                )
         and    d.service_doc >= 0
         and    d.charge_type = 'BENEFIT'
@@ -388,7 +389,8 @@ create or replace package body dv_sr_lspv_det_pkg is
    * 
    */
   procedure update_details(
-    p_process_id dv_sr_lspv_det_t.process_id%type
+    p_process_id dv_sr_lspv_det_t.process_id%type,
+    p_commit     boolean
   ) is
     --
     type lt_date_rec is record(
@@ -434,10 +436,14 @@ create or replace package body dv_sr_lspv_det_pkg is
                select dt.fk_dv_sr_lspv
                from   dv_sr_lspv_det_t dt
                where  1=1
+               and    dt.is_deleted is null
                and    dt.process_id = p_process_id
              );
       --
-      commit;
+      if p_commit then
+        commit;
+      end if;
+      --
     end reset_statuses_;
     --
   begin
@@ -467,7 +473,10 @@ create or replace package body dv_sr_lspv_det_pkg is
     --
   exception
     when others then
-      rollback;
+      if p_commit then
+        rollback;
+      end if;
+      --
       fix_exception($$PLSQL_LINE, 'update_details');
       raise;
   end update_details;
@@ -477,7 +486,9 @@ create or replace package body dv_sr_lspv_det_pkg is
    *   dv_sr_lspv_det_t данными из dv_sr_lspv, строки в статусе N или U
    *   и сбрасывает их статус в null
    */
-  procedure update_details is
+  procedure update_details(
+    p_commit boolean default false
+  ) is
     l_process_id dv_sr_lspv_det_t.process_id%type;
   begin
     --
@@ -487,7 +498,7 @@ create or replace package body dv_sr_lspv_det_pkg is
     --
     G_LEGACY := 'Y';
     --
-    update_details(l_process_id);
+    update_details(l_process_id, p_commit);
     --
     set_process_state(
       l_process_id, 
@@ -506,6 +517,30 @@ create or replace package body dv_sr_lspv_det_pkg is
       end if;
       raise;
   end update_details;
+  
+  /**
+   *
+   */
+  function get_remains_shifr_schet(
+    p_year         int,
+    p_nom_vkl      int,
+    p_nom_ips      int,
+    p_shifr_schet  int
+  ) return number is
+    l_result number;
+  begin
+    select sum(dt.amount)
+    into   l_result
+    from   dv_sr_lspv_det_v dt
+    where  dt.detail_type = 'BENEFIT'
+    and    dt.year_op = p_year
+    and    dt.nom_vkl = p_nom_vkl
+    and    dt.nom_ips = p_nom_ips
+    and    dt.shifr_schet = p_shifr_schet
+    and    dt.addition_code = p_shifr_schet;
+    --
+    return l_result;
+  end get_remains_shifr_schet;
   
 end dv_sr_lspv_det_pkg;
 /
