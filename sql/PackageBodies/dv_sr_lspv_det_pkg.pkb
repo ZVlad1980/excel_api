@@ -120,7 +120,9 @@ create or replace package body dv_sr_lspv_det_pkg is
    */
   procedure update_benefits(
     p_process_id dv_sr_lspv_det_t.process_id%type,
-    p_date       date
+    p_date       date,
+    p_nom_vkl    int,
+    p_nom_ips    int
   ) is
     --
     procedure pre_update_(p_year int) is
@@ -128,13 +130,13 @@ create or replace package body dv_sr_lspv_det_pkg is
     begin
       --выбираем детализации по удаленным вычетам
       select dt.id
-      bulk collect into   l_ids
+      bulk collect into l_ids
       from   dv_sr_lspv_det_v  dt
         left join sp_ogr_benefits_v b
           on     b.pt_rid(+) = dt.addition_id
           and    b.shifr_schet = dt.shifr_schet
           and    trunc(b.regdate) <= dt.date_op
-          and    b.start_year = dt.year_op
+          and    dt.date_op between b.start_date and b.end_date
           and    b.nom_ips = dt.nom_ips
           and    b.nom_vkl = dt.nom_vkl
       where  1=1
@@ -145,7 +147,9 @@ create or replace package body dv_sr_lspv_det_pkg is
                from   dv_sr_lspv#_v d
                where  d.year_op = p_year
                and    d.date_op = p_date
-               and    d.status = 'N' 
+               and    d.status = 'N'
+               and    d.nom_ips = nvl(p_nom_ips, d.nom_ips)
+               and    d.nom_vkl = nvl(p_nom_vkl, d.nom_vkl)
              )
       and    dt.addition_id <> -1
       and    dt.detail_type = 'BENEFIT'
@@ -207,6 +211,8 @@ create or replace package body dv_sr_lspv_det_pkg is
                b.fk_dv_sr_lspv_det,
                p_process_id
         from   dv_sr_lspv_acc_ben_v b
+        where  b.nom_ips = nvl(p_nom_ips, b.nom_ips)
+        and    b.nom_vkl = nvl(p_nom_vkl, b.nom_vkl)
       log errors into err$_dv_sr_lspv_det_t('insert_new_') reject limit unlimited;
       --
       dbms_output.put_line('insert_new_: insert ' || sql%rowcount || ' row(s)');
@@ -230,6 +236,8 @@ create or replace package body dv_sr_lspv_det_pkg is
                dt.shifr_schet
         from   dv_sr_lspv_det_v  dt
         where  1=1
+        and    dt.nom_ips = nvl(p_nom_ips, dt.nom_ips)
+        and    dt.nom_vkl = nvl(p_nom_vkl, dt.nom_vkl)
         and    dt.src_service_doc >= 0
         and    dt.src_status = GC_ROW_STS_NEW
         and    dt.detail_type = 'BENEFIT'
@@ -259,6 +267,8 @@ create or replace package body dv_sr_lspv_det_pkg is
                  and    dt.detail_type = 'BENEFIT'
                  and    dt.is_disabled is null
                )
+        and    d.nom_ips = nvl(p_nom_ips, d.nom_ips)
+        and    d.nom_vkl = nvl(p_nom_vkl, d.nom_vkl)
         and    d.service_doc >= 0
         and    d.charge_type = 'BENEFIT'
         and    d.date_op = p_date
@@ -300,7 +310,7 @@ create or replace package body dv_sr_lspv_det_pkg is
               from   sp_ogr_benefits_v b
               where  b.nom_vkl = l_cur_tbl(i).nom_vkl
               and    b.nom_ips = l_cur_tbl(i).nom_ips
-              and    b.start_year = l_cur_tbl(i).year_op
+              and    l_cur_tbl(i).year_op between b.start_year and b.end_year
               and    b.end_date < p_date
               and    b.regdate < p_date
             ) select 'BENEFIT',
@@ -390,7 +400,10 @@ create or replace package body dv_sr_lspv_det_pkg is
    */
   procedure update_details(
     p_process_id dv_sr_lspv_det_t.process_id%type,
-    p_commit     boolean
+    p_commit     boolean,
+    p_year       int,
+    p_nom_vkl    int,
+    p_nom_ips    int
   ) is
     --
     type lt_date_rec is record(
@@ -420,6 +433,9 @@ create or replace package body dv_sr_lspv_det_pkg is
       bulk collect into l_dates_tbl
       from   dv_sr_lspv#_v a
       where  a.status = GC_ROW_STS_NEW
+      and    a.nom_ips = nvl(p_nom_ips, a.nom_ips)
+      and    a.nom_vkl = nvl(p_nom_vkl, a.nom_vkl)
+      and    a.year_op = nvl(p_year,    a.year_op)
       group by a.date_op
       order by a.date_op;
       --
@@ -462,7 +478,12 @@ create or replace package body dv_sr_lspv_det_pkg is
       );
       if l_dates_tbl(i).benefit_exists = 'Y' then
         dbms_output.put_line(chr(10) || 'Start update benefit: ' || to_char(l_dates_tbl(i).date_op, 'dd.mm.yyyy'));
-        update_benefits(p_process_id, l_dates_tbl(i).date_op);
+        update_benefits(
+          p_process_id,
+          l_dates_tbl(i).date_op,
+          p_nom_vkl,
+          p_nom_ips
+        );
       end if;
       l_month := extract(month from l_dates_tbl(i).date_op);
     end loop;
@@ -487,7 +508,10 @@ create or replace package body dv_sr_lspv_det_pkg is
    *   и сбрасывает их статус в null
    */
   procedure update_details(
-    p_commit boolean default false
+    p_year    int default null,
+    p_nom_vkl int default null,
+    p_nom_ips int default null,
+    p_commit  boolean
   ) is
     l_process_id dv_sr_lspv_det_t.process_id%type;
   begin
@@ -498,7 +522,13 @@ create or replace package body dv_sr_lspv_det_pkg is
     --
     G_LEGACY := 'Y';
     --
-    update_details(l_process_id, p_commit);
+    update_details(
+      l_process_id, 
+      p_commit,
+      p_year   ,
+      p_nom_vkl,
+      p_nom_ips
+    );
     --
     set_process_state(
       l_process_id, 
@@ -517,6 +547,104 @@ create or replace package body dv_sr_lspv_det_pkg is
       end if;
       raise;
   end update_details;
+  
+  /**
+   * ѕроцедура update_details обновл€ет данные таблицы 
+   *   dv_sr_lspv_det_t данными из dv_sr_lspv, строки в статусе N или U
+   *   и сбрасывает их статус в null
+   */
+  procedure update_details(
+    p_commit  boolean default false
+  ) is
+  begin
+    --
+    update_details(
+      p_year    => null,
+      p_nom_vkl => null,
+      p_nom_ips => null,
+      p_commit  => p_commit
+    );
+    --
+  end update_details;
+  
+  /**
+   * ѕроцедура purge_details удал€ет детализацию
+   *  по заданному контрагенту и году
+   */
+  procedure purge_details(
+    p_year    int,
+    p_nom_vkl int,
+    p_nom_ips int
+  ) is
+  begin
+    --
+    delete from dv_sr_lspv_det_t dt
+    where  dt.id in (
+             select dtt.id
+             from   dv_sr_lspv_det_v dtt
+             where  dtt.year_op = p_year
+             and    dtt.nom_vkl = p_nom_vkl
+             and    dtt.nom_ips = p_nom_ips
+           );
+    --
+    update dv_sr_lspv#_v dd
+    set    dd.status = 'N'
+    where  1=1
+    and    dd.nom_vkl = p_nom_vkl
+    and    dd.nom_ips = p_nom_ips
+    and    dd.year_op = p_year;
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE, 'purge_details(' || p_year || ', ' || p_nom_vkl || ', ' || p_nom_ips || ')');
+      raise;
+  end purge_details;
+  
+  /**
+   * ѕроцедура recalc_pers_details пересчитывает детализацию 
+   *  по заданному контрагенту и году
+   */
+  procedure recalc_pers_details(
+    p_commit    boolean default false,
+    p_year      int,
+    p_ssylka_fl int
+  ) is
+    l_nom_vkl int;
+    l_nom_ips int;
+    --
+    procedure define_nom_ is
+    begin
+      select sl.nom_vkl, sl.nom_ips
+      into   l_nom_vkl,  l_nom_ips
+      from   sp_lspv sl
+      where  sl.ssylka_fl = p_ssylka_fl;
+    exception
+      when others then
+        fix_exception($$PLSQL_LINE, 'define_nom_');
+        raise;
+    end define_nom_;
+  begin
+    --
+    define_nom_;
+    --
+    purge_details(
+      p_year,
+      l_nom_vkl,
+      l_nom_ips
+    );
+    --
+    update_details(
+      p_year    => p_year,
+      p_nom_vkl => l_nom_vkl,
+      p_nom_ips => l_nom_ips,
+      p_commit  => p_commit
+    );
+    --
+  exception
+    when others then
+      fix_exception($$PLSQL_LINE, 'recalc_pers_details(' || p_year || ', ' || p_ssylka_fl || ')');
+      raise;
+  end recalc_pers_details;
   
   /**
    *

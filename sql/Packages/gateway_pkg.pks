@@ -35,6 +35,19 @@ create or replace package gateway_pkg is
   );
   
   /**
+   * Процедура recalc_pers_details запускает пересчет детализации
+   *   по заданному SSYLKA_FL и году
+   *  SSYLKA_FL передается через set_parameters!
+   *
+   * @param p_year        - год формирования данных
+   *
+   */
+  procedure recalc_pers_details(
+    x_err_msg    out varchar2,
+    p_year            number
+  );
+  
+  /**
    * Процедура get_report возвращает курсор с данными отчета
    * 
    * @param x_result      - курсор с данными

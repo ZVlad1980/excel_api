@@ -14,7 +14,17 @@ create or replace package dv_sr_lspv_det_pkg is
    *   и сбрасывает их статус в null
    */
   procedure update_details(
-    p_commit boolean default false
+    p_commit  boolean default false
+  );
+  
+  /**
+   * Процедура recalc_pers_details пересчитывает детализацию 
+   *  по заданному контрагенту и году
+   */
+  procedure recalc_pers_details(
+    p_commit    boolean default false,
+    p_year      int,
+    p_ssylka_fl int
   );
   
   /**

@@ -1,11 +1,11 @@
 PL/SQL Developer Test script 3.0
-59
+66
 -- Created on 05.03.2018 by V.ZHURAVOV 
 declare 
   -- Local variables here
-  LC_YEAR        constant int := 2017;
-  LC_SSYLKA      constant int := 1659124;
-  C_START_MONTH  constant int := 1;
+  LC_YEAR        constant int := 2018;
+  LC_SSYLKA      constant int := 1195218;
+  C_START_MONTH  constant int := 2;
   C_END_MONTH    constant int := 2;
   --
   l_nom_vkl int;
@@ -26,7 +26,7 @@ declare
              and    dtt.nom_vkl = p_nom_vkl
              and    dtt.nom_ips = p_nom_ips
             and    extract(month from dtt.date_op) between C_START_MONTH and nvl(C_END_MONTH, C_START_MONTH)
-           );--*/
+           );--
     --
     update dv_sr_lspv#_v dd
     set    dd.status = 'N'
@@ -39,18 +39,25 @@ declare
     dbms_output.put_line('Prepare recalc: set status: ' || sql%rowcount);
     --
   end prepare_;
+  --*/
 begin
   --dbms_session.reset_package; return;
   --
-  select sl.nom_vkl, sl.nom_ips
+  /*select sl.nom_vkl, sl.nom_ips
   into   l_nom_vkl, l_nom_ips
   from   sp_lspv sl
   where  sl.ssylka_fl = LC_SSYLKA;
   -- Test statements here
   prepare_(LC_YEAR, l_nom_vkl, l_nom_ips);
-  --
-  dv_sr_lspv_det_pkg.update_details;
-  --
+  --*/
+  --dv_sr_lspv_det_pkg.update_details;
+  --/*
+  dv_sr_lspv_det_pkg.recalc_pers_details(
+    p_commit    => false,
+    p_year      => LC_YEAR,
+    p_ssylka_fl => LC_SSYLKA
+  );
+  --*/
 exception
   when others then
     utl_error_api.fix_exception;

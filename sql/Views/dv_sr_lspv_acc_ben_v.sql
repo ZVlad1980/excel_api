@@ -16,7 +16,7 @@ create or replace view dv_sr_lspv_acc_ben_v as
                )                                                     then 2 --это смена статуса резидента!
              else                                                         1 --это обычная операция
            end type_op,
-           d.id, 
+           d.id,
            d.charge_type, 
            d.det_charge_type,
            d.year_op, 
@@ -40,6 +40,8 @@ create or replace view dv_sr_lspv_acc_ben_v as
     and    d.year_op >= dv_sr_lspv_docs_api.get_year
   )
   select d.type_op,
+         d.nom_vkl,
+         d.nom_ips,
          d.id                                          fk_dv_sr_lspv,
          case count(distinct b.pt_rid)
                 over(partition by d.date_op, 
@@ -97,6 +99,8 @@ create or replace view dv_sr_lspv_acc_ben_v as
   where  d.type_op = 1 --резиденты, обычная операция
 union all
   select d.type_op,
+         d.nom_vkl,
+         d.nom_ips,
          d.id                        fk_dv_sr_lspv,
          d.amount / 
            sum(dt.amount)
@@ -120,6 +124,8 @@ union all
   and    d.type_op = 3
 union all
   select d.type_op,
+         d.nom_vkl,
+         d.nom_ips,
          d.id                        fk_dv_sr_lspv,
          -1 * dt.amount              benefit_amount,
          to_number(dt.addition_code) benefit_code,
