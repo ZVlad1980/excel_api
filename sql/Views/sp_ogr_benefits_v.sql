@@ -5,17 +5,17 @@ create or replace view sp_ogr_benefits_v as
          op.nom_ips,
          op.ssylka_fl,
          op.shifr_schet,
-         coalesce(to_number(pt.benefit_code), -1 * op.shifr_schet) benefit_code,
-         pt.amount                  benefit_amount,
+         op.benefit_code,
+         op.benefit_amount,
          op.start_date,
          op.end_date,
          op.pt_rid,
          op.tdappid,
-         pt.start_date              bit_start_date,
-         pt.end_date                bit_end_date,
-         pt.upper_income,
+         op.bit_start_date,
+         op.bit_end_date,
+         op.upper_income,
          op.end_year,
-         pt.regdate,
+         op.regdate,
          case 
            when extract(day from op.start_date) > 25
                and not exists (
@@ -35,7 +35,7 @@ create or replace view sp_ogr_benefits_v as
              from   dv_sr_lspv_acc_rev_v p
              where  p.nom_vkl = op.nom_vkl
              and    p.nom_ips = op.nom_ips
-             and    p.revenue_acc > pt.upper_income
+             and    p.revenue_acc > op.upper_income
              and    p.year_op = op.start_year
            ), 12),
            extract(month from op.end_date) -
@@ -54,9 +54,5 @@ create or replace view sp_ogr_benefits_v as
                else 0
              end
          ) end_month
-  from   sp_ogr_pv_v              op,
-         payments_taxdeductions_v pt
-  where  1=1
-  and    pt.rid(+) = op.pt_rid
-  and    nvl(op.pt_rid, 0) > 0
+  from   sp_ogr_benefits_all_v op
 /

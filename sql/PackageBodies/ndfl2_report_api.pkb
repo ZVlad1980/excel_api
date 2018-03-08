@@ -389,7 +389,8 @@ create or replace package body ndfl2_report_api is
       when 'f2_vych_bit' then
         if gateway_pkg.get_parameter_num('ssylka_fl') is not null then
           open l_result for
-            select to_char(pt.start_date, 'dd.mm.yyyy') start_date,
+            select to_char(pt.regdate, 'dd.mm.yyyy') reg_date,
+                   to_char(pt.start_date, 'dd.mm.yyyy') start_date,
                    to_char(pt.end_date, 'dd.mm.yyyy')   end_date,
                    pt.benefit_code, 
                    pt.amount,
@@ -412,7 +413,6 @@ create or replace package body ndfl2_report_api is
                    t.shifr_schet,
                    null,
                    o.soderg_ogr,
-                   null,
                    t.tdappid,
                    t.pt_rid
             from   sp_ogr_pv_v t,
@@ -461,6 +461,25 @@ create or replace package body ndfl2_report_api is
             and    v.god = p_year
             and    v.kod_na = 1
             order by v.vych_kod_gni, v.mes;
+        end if;
+      --
+      when 'f2_pers_vych_detail' then
+        if gateway_pkg.get_parameter_num('ssylka_fl') is not null then
+          open l_result for
+            select to_char(d.date_op, 'dd.mm.yyyy') date_op,
+                   d.shifr_schet,
+                   case 
+                     when d.addition_id > 0 then
+                       d.addition_code
+                   end addition_code,
+                   d.amount
+            from   sp_lspv          sl,
+                   dv_sr_lspv_det_v d
+            where  d.nom_vkl = sl.nom_vkl
+            and    d.nom_ips = sl.nom_ips
+            and    d.year_op = p_year
+            and    sl.ssylka_fl = gateway_pkg.get_parameter_num('ssylka_fl')
+            order by d.date_op, d.shifr_schet, d.addition_code;
         end if;
       --
       when 'f2_load_vych_errors' then

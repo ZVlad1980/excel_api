@@ -123,6 +123,53 @@ create or replace package body ndfl_report_api is
     end if;
     --
     case l_report_code
+      when 'benefit_no_distribute_amounts' then
+        open l_result for
+          select sp.gf_person,
+                 sp.ssylka,
+                 dt.nom_vkl,
+                 dt.nom_ips,
+                 sp.full_name,
+                 dt.shifr_schet,
+                 dt.amount_ops - dt.distribute_amount no_distr_amount,
+                 dt.amount_ops,
+                 dt.distribute_amount
+          from   (
+                  select dt.nom_vkl,
+                         dt.nom_ips,
+                         dt.shifr_schet,
+                         sum(dt.amount_op) amount_ops,
+                         sum(dt.distribute_amount) distribute_amount
+                  from   (
+                          select dt.nom_vkl,
+                                 dt.nom_ips,
+                                 dt.shifr_schet,
+                                 dt.fk_dv_sr_lspv,
+                                 min(dt.addition_id) min_addition_id,
+                                 max(dt.src_amount)  amount_op,
+                                 sum(case when dt.addition_id > 0 then dt.amount else 0 end) distribute_amount
+                          from   dv_sr_lspv_det_v dt
+                          where  dt.year_op = l_year
+                          and    dt.detail_type = 'BENEFIT'
+                          group  by dt.nom_vkl,
+                                    dt.nom_ips,
+                                    dt.shifr_schet,
+                                    dt.fk_dv_sr_lspv
+                          having min(dt.addition_id) = -1
+                         ) dt
+                  group by dt.nom_vkl,
+                         dt.nom_ips,
+                         dt.shifr_schet
+                  having sum(dt.amount_op) <> sum(dt.distribute_amount)
+                 ) dt,
+                 lateral(
+                   select sp.ssylka, sp.gf_person, sp.full_name
+                   from   sp_fiz_litz_lspv_v sp
+                   where  sp.nom_vkl = dt.nom_vkl
+                   and    sp.nom_ips = dt.nom_ips
+                 ) sp
+          order by sp.full_name, sp.gf_person, dt.shifr_schet;
+     --
       when 'benefit_detail_report' then
         open l_result for
           with det as (
