@@ -1010,7 +1010,7 @@ create or replace package body f2ndfl_load_api is
       p_process_row => l_globals.process_row
     );
     --
-    if not check_legacy_action(p_action_code => p_action_code, p_code_na => l_globals.KODNA, p_year => l_globals.GOD) 
+    if p_year <> extract(year from sysdate) and not check_legacy_action(p_action_code => p_action_code, p_code_na => l_globals.KODNA, p_year => l_globals.GOD) 
       then
       fix_exception('create_2ndfl_refs(' ||
         p_action_code || ', ' ||
@@ -1044,6 +1044,8 @@ create or replace package body f2ndfl_load_api is
         p_revenue_type => 9
       );
     end if;
+    --
+    commit;
     --
     if p_action_code in (C_ACT_LOAD_SPRAVKI, C_ACT_LOAD_ALL) then
       --

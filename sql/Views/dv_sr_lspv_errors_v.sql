@@ -1,63 +1,4 @@
 create or replace view dv_sr_lspv_errors_v as
-  /*with corrections as (
-    select c.date_op, 
-           c.ssylka_doc_op, 
-           c.date_doc, 
-           c.ssylka_doc, 
-           c.nom_vkl, 
-           c.nom_ips, 
-           c.charge_type, 
-           c.det_charge_type, 
-           c.shifr_schet, 
-           c.sub_shifr_schet, 
-           c.sub_shifr_grp, 
-           c.tax_rate, 
-           c.service_doc, 
-           c.amount, 
-           c.source_op_amount,
-           c.type_op, 
-           c.corr_op_amount
-    from   dv_sr_lspv_corr_v c
-    where  c.type_op = -1
-  )
-  --нет ссылок на корректирующую операцию
-  select dc.date_op,
-         dc.ssylka_doc_op ssylka_doc,
-         dc.nom_vkl,
-         dc.nom_ips,
-         dc.shifr_schet,
-         dc.SUB_SHIFR_SCHET,
-         dc.amount,
-         null source_amount,
-         null ssylka_fl,
-         cast(null as varchar2(200)) fio,
-         1 error_code,
-         null error_sub_code,
-         null gf_person
-  from   corrections dc
-  where  dc.type_op = -1
-  and    dc.ssylka_doc_op = dc.ssylka_doc
- union all
-  --сумма коррекции не соответствует сумме исходных операций (для двойных цепочек)
-  select dc.date_op,
-         dc.ssylka_doc_op ssylka_doc,
-         dc.nom_vkl,
-         dc.nom_ips,
-         dc.shifr_schet,
-         dc.SUB_SHIFR_SCHET,
-         max(dc.corr_op_amount)    amount,
-         sum(dc.source_op_amount)  source_amount,
-         null ssylka_fl,
-         null fio,
-         2 error_code,
-         null error_sub_code,
-         null gf_person
-  from   corrections dc
-  where  dc.charge_type <> 'BENEFIT' --отключил проверку по вычетам, т.к. они не всегда кратны
-  and    dc.type_op = -1
-  group by dc.date_op, dc.ssylka_doc_op, dc.nom_vkl, dc.nom_ips, dc.shifr_schet, dc.sub_shifr_schet
-  having count(1) > 1 and abs(sum(dc.source_op_amount)) <> abs(max(dc.corr_op_amount))
- */
   select dd.date_op                                                    date_op,
          dd.ssylka_doc                                                 ssylka_doc,
          dd.nom_vkl,
@@ -116,7 +57,6 @@ create or replace view dv_sr_lspv_errors_v as
                and    ddd.nom_ips = dd.nom_ips
                and    ddd.ssylka_doc = dd.ssylka_doc
                and    ddd.shifr_schet = 55
-               and    ddd.sub_shifr_schet = 0
              )
           ) 
         )

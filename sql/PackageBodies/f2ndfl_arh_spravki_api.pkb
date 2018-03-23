@@ -325,7 +325,8 @@ create or replace package body f2ndfl_arh_spravki_api is
     into   l_result
     from   f2ndfl_arh_nomspr an
     where  1=1
-    and    an.fk_contragent = p_contragent_id
+    --and    an.fk_contragent = p_contragent_id
+    and    an.ui_person = p_contragent_id
     and    an.god           = p_year
     and    an.kod_na        = p_code_na       
     --group by an.nom_spr

@@ -69,21 +69,21 @@ create or replace package body f_ndfl_load_nalplat_api is
   ) is
   begin
     --
-    update (select n.sgd_isprvnol
+    update (select n.sgd_isprvnol,
+                   case when n.sgd_isprvnol = 1 then 0 else 1 end new_sgd_isprvnol
             from   f_ndfl_load_nalplat n
             where  1=1
-            and    not exists (
+            and    n.kod_na = p_code_na
+            and    n.god = dv_sr_lspv_docs_api.get_year
+            and    n.sgd_isprvnol <> case when not exists (
                      select 1
                      from   dv_sr_lspv_acc_v a
                      where  a.date_op between dv_sr_lspv_docs_api.get_start_date and dv_sr_lspv_docs_api.get_end_date
                      and    a.nom_vkl = n.nom_vkl
                      and    a.nom_ips = n.nom_ips
-                   )
-            and    n.kod_na = p_code_na
-            and    n.god = dv_sr_lspv_docs_api.get_year
-            and    n.sgd_isprvnol = 0
+                   ) then 1 else 0 end
            ) u
-    set    u.sgd_isprvnol = 1;
+    set    u.sgd_isprvnol = new_sgd_isprvnol;
     --
   exception
     when others then
@@ -123,6 +123,10 @@ create or replace package body f_ndfl_load_nalplat_api is
       p_report_date => l_end_date
     );
     --
+    update_gf_person(
+      p_year    => l_year
+    );
+    --
     fxndfl_util.fill_ndfl_load_nalplat(
       p_code_na   => p_code_na,
       p_year      => l_year,
@@ -142,10 +146,6 @@ create or replace package body f_ndfl_load_nalplat_api is
     --*/
     set_zero_nalplat(
       p_code_na => p_code_na
-    );
-    --
-    update_gf_person(
-      p_year    => l_year
     );
     --Пока так. При переходе на формирование по dv_sr_lspv_docs_t - убрать!
     update_resident_status(

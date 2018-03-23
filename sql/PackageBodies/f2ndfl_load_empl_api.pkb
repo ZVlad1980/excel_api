@@ -381,9 +381,9 @@ create or replace package body f2ndfl_load_empl_api is
       sgd_sum,
       sum_obl,
       sum_obl_ni,
-      sum_fiz_avans,
       sum_obl_nu,
       sum_nal_per,
+      sum_fiz_avans,
       dolg_na,
       vzysk_ifns
     ) select t.code_na,

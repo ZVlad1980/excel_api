@@ -3,7 +3,8 @@ declare
     sys.odcivarchar2list(
       'f2ndfl_load_spravki',
       'dv_sr_lspv_docs_t',
-      'dv_sr_lspv_det_t'
+      'dv_sr_lspv_det_t',
+      'dv_sr_lspv#'
     );
 
   procedure create_err_table(p_table_name varchar2) is
