@@ -9,6 +9,14 @@ create or replace view dv_sr_lspv_docs_pers_v as
          sum(d.tax_retained)                           tax_retained,
          sum(case when d.tax_rate = 30 then round(d.revenue_curr_year * .3, 0) end) tax_calc,
          sum(d.tax_return)                             tax_return,
+         sum(
+           case 
+             when d.year_doc < 
+               dv_sr_lspv_docs_api.get_year 
+              then d.tax_return 
+              else 0 
+           end
+         )                                             tax_return_prev,
          sum(d.tax_83)                                 tax_83
   from   dv_sr_lspv_docs_v d
   group by d.gf_person,

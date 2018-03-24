@@ -674,11 +674,22 @@ create or replace package body ndfl_report_api is
             case d.det_charge_type when 'PENSION' then 1 when 'RITUAL' then 2 else 3 end,
             d.pen_scheme_code;
       when 'tax_retained_report2' then
-        open l_result for
-          select 'TAX_RETAINED_DATE' key, (select sum(d.tax_retained) from ndfl6_part2_v d)     value from dual union all
-          select 'TAX_NOT_RETAINED'  key, (select sum(d.tax_diff) from dv_sr_lspv_tax_diff_v d) value from dual union all
-          select 'TAX_RETURN'        key, (select d.tax_return from ndfl6_part1_general_v d)    value from dual union all
-          select 'TAX_RETURN_83'     key, (select sum(d.tax_83) from dv_sr_lspv_docs_v d)       value from dual;
+        declare
+          l_tax_return      number;
+          l_tax_return_prev number;
+        begin
+          select sum(g.tax_return), sum(g.tax_return_prev)
+          into   l_tax_return, l_tax_return_prev
+          from   ndfl6_part1_general_v g;
+          --
+          open l_result for
+            select 'TAX_RETAINED_DATE' key, (select sum(d.tax_retained) from ndfl6_part2_v d)     value from dual union all
+            select 'TAX_NOT_RETAINED'  key, (select sum(d.tax_diff) from dv_sr_lspv_tax_diff_v d) value from dual union all
+            select 'TAX_RETURN'        key, l_tax_return                                          value from dual union all
+            select 'TAX_RETURN_PREV'   key, l_tax_return_prev                                     value from dual union all
+            select 'TAX_RETURN_83'     key, (select sum(d.tax_83) from dv_sr_lspv_docs_v d)       value from dual union all
+            select 'TAX_CALC'          key, (select sum(d.tax_calc) from dv_sr_lspv_pers_v d where d.exists_revenue = 'Y')  value from dual;
+        end;
       when 'detail_report' then
         open l_result for
           select r.date_op,
