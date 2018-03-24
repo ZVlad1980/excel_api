@@ -5,8 +5,9 @@ create or replace package dv_sr_lspv#_api is
   -- Purpose : 
   
   procedure update_dv_sr_lspv#(
-    p_year_from  int,
-    p_year_to    int
+    p_year_from   int,
+    p_year_to     int,
+    p_actual_date date
   );
 
 end dv_sr_lspv#_api;

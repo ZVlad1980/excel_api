@@ -126,19 +126,22 @@ create or replace package body gateway_pkg is
    * Процедура update_dv_sr_lspv# запускает обновление таблицы dv_sr_lspv#
    *
    * @param p_year        - год формирования данных
+   * @param p_actual_date - дата актуализации данных 
    *
    */
   procedure update_dv_sr_lspv#(
-    x_err_msg    out varchar2,
-    p_year            number
+    x_err_msg    out  varchar2,
+    p_year            number,
+    p_actual_date     varchar2
   ) is
   begin
     --
     utl_error_api.init_exceptions;
     --
     dv_sr_lspv#_api.update_dv_sr_lspv#(
-      p_year_from => p_year,
-      p_year_to   => p_year
+      p_year_from   => p_year,
+      p_year_to     => p_year,
+      p_actual_date => to_date$(p_actual_date)
     );
     --
     dv_sr_lspv_det_pkg.update_details;

@@ -27,11 +27,13 @@ create or replace package gateway_pkg is
    * Процедура update_dv_sr_lspv# запускает обновление таблицы dv_sr_lspv#
    *
    * @param p_year        - год формирования данных
+   * @param p_actual_date - дата актуализации данных 
    *
    */
   procedure update_dv_sr_lspv#(
-    x_err_msg    out varchar2,
-    p_year            number
+    x_err_msg    out  varchar2,
+    p_year            number,
+    p_actual_date     varchar2
   );
   
   /**

@@ -92,7 +92,8 @@ create or replace package body dv_sr_lspv#_api is
   procedure update_dv_sr_lspv#(
     p_process_id      dv_sr_lspv_prc_t.id%type,
     p_year_from    int,
-    p_year_to      int
+    p_year_to      int,
+    p_actual_date date
   ) is
   begin
     --
@@ -134,7 +135,9 @@ create or replace package body dv_sr_lspv#_api is
                     when d.service_doc > 0 then 'Y' 
                   end is_parent
            from   dv_sr_lspv_acc_v d
-           where  d.year_op between p_year_from and p_year_to
+           where  1=1
+           and    d.date_op <= p_actual_date
+           and    d.year_op between p_year_from and p_year_to
            and    (d.service_doc <> 0 or d.charge_type = 'BENEFIT' or d.det_charge_type = 'RITUAL')
           ) u
     on    (d.nom_vkl         = u.nom_vkl         and
@@ -216,7 +219,8 @@ create or replace package body dv_sr_lspv#_api is
    */
   procedure update_dv_sr_lspv#(
     p_year_from  int,
-    p_year_to    int
+    p_year_to    int,
+    p_actual_date date
   ) is
     l_process_id dv_sr_lspv_det_t.process_id%type;
     --
@@ -239,7 +243,7 @@ create or replace package body dv_sr_lspv#_api is
     --
     l_process_id := create_process(p_year_from, p_year_to);
     --
-    update_dv_sr_lspv#(l_process_id, p_year_from, p_year_to);
+    update_dv_sr_lspv#(l_process_id, p_year_from, p_year_to, p_actual_date);
     --
     if exists_errors_ then
       fix_exception($$PLSQL_LINE, 'update_dv_sr_lspv#: exists_errors, process_id=' || l_process_id);

@@ -33,3 +33,20 @@ select 'BENEFIT',
                b.fk_dv_sr_lspv_det,
                null--p_process_id*/
         from   dv_sr_lspv_acc_ben_v b
+/*
+select b.start_date,
+                  b.end_date,
+                  b.benefit_code,
+                  b.benefit_amount,
+                  b.upper_income,
+                  b.pt_rid,
+                  b.regdate,
+                  b.start_month,
+                  b.end_month
+           from   sp_ogr_benefits_v b
+           where  b.nom_vkl = 140
+           and    b.nom_ips = 3635
+           and    b.shifr_schet in (1021, 1031)
+           and    trunc(b.regdate) <= to_date(20180209, 'yyyymmdd')
+           and    to_date(20180209, 'yyyymmdd') between b.start_date and b.end_date 
+--*/
