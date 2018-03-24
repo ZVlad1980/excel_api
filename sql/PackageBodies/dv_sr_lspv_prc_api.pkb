@@ -56,8 +56,8 @@ create or replace package body dv_sr_lspv_prc_api is
     set    p.state           = p_process_row.state          ,
            p.error_msg       = p_process_row.error_msg      ,
            p.last_udpated_at = systimestamp,
-           p.deleted_rows    = p_process_row.deleted_rows   ,
-           p.error_rows      = p_process_row.error_rows     
+           p.deleted_rows    = nvl(p_process_row.deleted_rows, p.deleted_rows)   ,
+           p.error_rows      = nvl(p_process_row.error_rows,   p.error_rows)
     where  p.id = p_process_row.id;
     --
     commit;
