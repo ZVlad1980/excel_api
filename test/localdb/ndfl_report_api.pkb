@@ -313,6 +313,12 @@ create or replace package body ndfl_report_api is
         end if;
       when 'synch_error_report' then
         open l_result for
+          with w_process as (
+            select p.id
+            from   dv_sr_lspv_prc_t p
+            order by p.created_at desc
+            fetch first rows only
+          )
           select case when e.type_op = -1 then 'Коррекция' end type_op,
                  substr(e.date_op, 1, 10) date_op,
                  e.ssylka_doc_op,
@@ -323,15 +329,34 @@ create or replace package body ndfl_report_api is
                  e.nom_ips,
                  e.gf_person,
                  e.det_charge_type,
+                 e.revenue,
+                 e.benefit,
+                 e.tax,
                  e.ora_err_mesg$,
                  e.process_id
-          from   err$_dv_sr_lspv_docs_t e
-          where  e.process_id in (
-            select p.id
-            from   dv_sr_lspv_prc_t p
-            order by p.created_at desc
-            fetch first rows only
-          );
+          from   err$_dv_sr_lspv_docs_t e,
+                 w_process              p
+          where  e.process_id = p.id
+          union all
+          select 'Удаление'                 type_op,
+                 to_char(d.date_op, 'dd.mm.yyyy')   date_op,
+                 to_char(d.ssylka_doc_op),
+                 to_char(d.date_doc, 'dd.mm.yyyy')  date_doc,
+                 to_char(d.ssylka_doc),
+                 to_char(d.ssylka_fl),
+                 to_char(d.nom_vkl),
+                 to_char(d.nom_ips),
+                 to_char(d.gf_person),
+                 d.det_charge_type,
+                 to_char(d.revenue),
+                 to_char(d.benefit),
+                 to_char(d.tax),
+                 null ora_err_mesg$,
+                 to_char(d.process_id)
+          from   dv_sr_lspv_docs_t  d,
+                 w_process          p
+          where  d.delete_process_id = p.id
+          and    d.is_delete = 'Y';
       when 'cmp_f2load_arh' then
         dv_sr_lspv_docs_api.set_employees(p_flag => true);
         dv_sr_lspv_docs_api.set_last_only(p_flag => true);
@@ -674,11 +699,22 @@ create or replace package body ndfl_report_api is
             case d.det_charge_type when 'PENSION' then 1 when 'RITUAL' then 2 else 3 end,
             d.pen_scheme_code;
       when 'tax_retained_report2' then
-        open l_result for
-          select 'TAX_RETAINED_DATE' key, (select sum(d.tax_retained) from ndfl6_part2_v d)     value from dual union all
-          select 'TAX_NOT_RETAINED'  key, (select sum(d.tax_diff) from dv_sr_lspv_tax_diff_v d) value from dual union all
-          select 'TAX_RETURN'        key, (select d.tax_return from ndfl6_part1_general_v d)    value from dual union all
-          select 'TAX_RETURN_83'     key, (select sum(d.tax_83) from dv_sr_lspv_docs_v d)       value from dual;
+        declare
+          l_tax_return      number;
+          l_tax_return_prev number;
+        begin
+          select sum(g.tax_return), sum(g.tax_return_prev)
+          into   l_tax_return, l_tax_return_prev
+          from   ndfl6_part1_general_v g;
+          --
+          open l_result for
+            select 'TAX_RETAINED_DATE' key, (select sum(d.tax_retained) from ndfl6_part2_v d)     value from dual union all
+            select 'TAX_NOT_RETAINED'  key, (select sum(d.tax_diff) from dv_sr_lspv_tax_diff_v d) value from dual union all
+            select 'TAX_RETURN'        key, l_tax_return                                          value from dual union all
+            select 'TAX_RETURN_PREV'   key, l_tax_return_prev                                     value from dual union all
+            select 'TAX_RETURN_83'     key, (select sum(d.tax_83) from dv_sr_lspv_docs_v d)       value from dual union all
+            select 'TAX_CALC'          key, (select sum(d.tax_calc) from dv_sr_lspv_pers_v d where d.exists_revenue = 'Y')  value from dual;
+        end;
       when 'detail_report' then
         open l_result for
           select r.date_op,

@@ -50,12 +50,22 @@ create table dv_sr_lspv_docs_t (
   source_tax         number,
   process_id         number         not null,
   is_tax_return      varchar2(1),
-  is_delete          varchar2(1)   --флаг удаления записи из fnd.dv_sr_lspv
+  is_delete          as             (case when delete_process_id is not null then 'Y' end),
+  delete_process_id  number
 )
+/*
+alter table dv_sr_lspv_docs_t  drop column is_delete
+alter table dv_sr_lspv_docs_t  add (is_delete as (case when delete_process_id is not null then 'Y' end))
+create index dv_sr_lspv_docs_i7 on dv_sr_lspv_docs_t(is_delete)
+alter  table dv_sr_lspv_docs_t add delete_process_id  number
+*/
 /
 alter table dv_sr_lspv_docs_t add constraint dv_sr_lspv_docs_chk1 check (not(coalesce(type_op, 0) = -1 and ssylka_doc = ssylka_doc_op))
 /
-create unique index dv_sr_lspv_docs_u1 on dv_sr_lspv_docs_t(date_op, ssylka_doc_op, date_doc, ssylka_doc, nom_vkl, nom_ips, gf_person, tax_rate)
+--create unique index dv_sr_lspv_docs_u1 on dv_sr_lspv_docs_t(date_op, ssylka_doc_op, date_doc, ssylka_doc, nom_vkl, nom_ips, gf_person, tax_rate)
+drop index dv_sr_lspv_docs_u1
+/
+create unique index dv_sr_lspv_docs_u1 on dv_sr_lspv_docs_t(date_op, ssylka_doc_op, date_doc, ssylka_doc, nom_vkl, nom_ips, gf_person, tax_rate, delete_process_id)
 /
 create index dv_sr_lspv_docs_i1 on dv_sr_lspv_docs_t(gf_person, tax_rate, date_op)
 /

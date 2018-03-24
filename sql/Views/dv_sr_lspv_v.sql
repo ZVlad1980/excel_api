@@ -3,7 +3,7 @@ create or replace view dv_sr_lspv_v as
          d.nom_ips,
          d.shifr_schet,
          d.data_op,
-         d.summa summa,
+         round(d.summa, 2) summa,
          d.ssylka_doc,
          d.kod_oper,
          d.sub_shifr_schet,

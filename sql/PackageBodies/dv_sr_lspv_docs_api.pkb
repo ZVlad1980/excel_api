@@ -422,53 +422,33 @@ create or replace package body dv_sr_lspv_docs_api is
     );
     --
     merge into dv_sr_lspv_docs_t d
-    using (select dc.date_op, 
-                  dc.ssylka_doc_op, 
-                  dc.type_op, 
-                  dc.date_doc, 
-                  dc.ssylka_doc, 
-                  dc.nom_vkl, 
-                  dc.nom_ips, 
-                  dc.ssylka_fl, 
-                  dc.gf_person, 
-                  dc.pen_scheme_code,
-                  dc.tax_rate, 
-                  dc.det_charge_type,
-                  dc.revenue, 
-                  dc.benefit, 
-                  dc.tax,
-                  dc.source_revenue, 
-                  dc.source_benefit, 
-                  dc.source_tax,
-                  dc.is_tax_return
-           from   dv_sr_lspv_docs_src_v  dc
-           where  coalesce(abs(dc.revenue), 0) + 
-                  coalesce(abs(dc.benefit), 0) + 
-                  coalesce(abs(dc.tax),     0)
-                   >= 0.01
+    using (select d.id,
+                  d.date_op, 
+                  d.ssylka_doc_op, 
+                  d.type_op, 
+                  d.date_doc, 
+                  d.ssylka_doc, 
+                  d.nom_vkl, 
+                  d.nom_ips, 
+                  d.ssylka_fl, 
+                  d.gf_person, 
+                  d.pen_scheme_code,
+                  d.tax_rate, 
+                  d.det_charge_type,
+                  d.revenue, 
+                  d.benefit, 
+                  d.tax,
+                  d.source_revenue, 
+                  d.source_benefit, 
+                  d.source_tax,
+                  d.is_tax_return
+           from   dv_sr_lspv_docs_srv_all_v d
+           order by d.id nulls last
          ) u
-    on   (d.date_op       = u.date_op         and 
-          d.ssylka_doc_op = u.ssylka_doc_op   and 
-          d.date_doc      = u.date_doc        and 
-          d.ssylka_doc    = u.ssylka_doc      and 
-          d.nom_vkl       = u.nom_vkl         and 
-          d.nom_ips       = u.nom_ips         and 
-          d.gf_person     = u.gf_person       and 
-          d.tax_rate      = u.tax_rate
-         )
+    on   (d.id = u.id)
     when matched then
       update set
-        d.type_op         = u.type_op,
-        d.det_charge_type = u.det_charge_type,
-        d.revenue         = u.revenue, 
-        d.benefit         = u.benefit, 
-        d.tax             = u.tax,
-        d.source_revenue  = u.source_revenue,
-        d.source_benefit  = u.source_benefit,
-        d.source_tax      = u.source_tax,
-        d.is_tax_return   = u.is_tax_return,
-        d.process_id      = p_process_id,
-        d.is_delete       = null
+        d.delete_process_id = p_process_id
     when not matched then
       insert (
         id,
@@ -517,18 +497,11 @@ create or replace package body dv_sr_lspv_docs_api is
       )
       log errors into err$_dv_sr_lspv_docs_t reject limit unlimited;
     --
-    update dv_sr_lspv_docs_t d
-    set    d.is_delete = 'Y'
-    where  1=1
-    and    d.is_delete is null
-    and    d.process_id <> p_process_id
-    and    (
-            (d.date_doc between get_start_date and get_end_date)
-            or
-            (d.date_op between get_start_date and get_end_date)
-           );
-    --
-    l_del_rows := sql%rowcount;
+    select count(1)
+    into   l_del_rows
+    from   dv_sr_lspv_docs_t d
+    where  d.is_delete = 'Y'
+    and    d.delete_process_id = p_process_id;
     --
     set_process_state(
       p_process_id, 

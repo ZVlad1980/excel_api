@@ -4,8 +4,8 @@ PL/SQL Developer Test script 3.0
 declare 
   -- Local variables here
   LC_YEAR        constant int := 2018;
-  LC_SSYLKA      constant int := 1195218;
-  C_START_MONTH  constant int := 2;
+  LC_SSYLKA      constant int := 2188072;
+  C_START_MONTH  constant int := 1;
   C_END_MONTH    constant int := 2;
   --
   l_nom_vkl int;
