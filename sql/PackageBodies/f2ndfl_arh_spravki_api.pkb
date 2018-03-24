@@ -905,12 +905,12 @@ create or replace package body f2ndfl_arh_spravki_api is
     --
     init_exceptions;
     --
-    if is_employee_ref(p_ref_id) then
+    l_ref_row := get_reference_row(p_ref_id);
+    --
+    if l_ref_row.priznak_s = 1 and is_employee_ref(p_ref_id) then
       fix_exception($$PLSQL_LINE, 'Удаление справки (' || p_ref_id || ') отклонено. Справка по сотруднику фонда, не являющемся контрагентом фонда.');
       raise utl_error_api.G_EXCEPTION;
     end if;
-    --
-    l_ref_row := get_reference_row(p_ref_id);
     --
     if l_ref_row.r_xmlid is not null then
       fix_exception($$PLSQL_LINE, 'Удаление (' || p_ref_id || ') отклонено. Данные справки включены в файл для передачи в ГНИ.');
