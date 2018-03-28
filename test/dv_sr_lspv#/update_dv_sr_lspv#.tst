@@ -1,5 +1,5 @@
 PL/SQL Developer Test script 3.0
-19
+20
 -- Created on 02.03.2018 by V.ZHURAVOV 
 declare 
   -- Local variables here
@@ -9,10 +9,11 @@ begin
   -- Test statements here
   dv_sr_lspv#_api.update_dv_sr_lspv#(
     p_year_from => 2018,
-    p_year_to   => 2018
+    p_year_to   => 2018,
+    p_actual_date => to_date(20180228, 'yyyymmdd')
   );
   --
-  dbms_stats.gather_table_stats(user, 'dv_sr_lspv#');
+  --dbms_stats.gather_table_stats(user, 'dv_sr_lspv#');
   --
 exception
   when others then

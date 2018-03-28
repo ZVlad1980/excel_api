@@ -176,25 +176,24 @@ create or replace package body ndfl_report_api is
             select sl.ssylka_fl,
                    sl.nom_vkl,
                    sl.nom_ips,
-                   d#.shifr_schet,
-                   to_number(d.addition_code) benefit_code, 
-                   sum(d.amount)              amount
-            from   dv_sr_lspv_det_t d,
-                   dv_sr_lspv#      d#,
+                   d.shifr_schet,
+                   to_number(d.addition_code) benefit_code,
+                   sum(d.amount) amount
+            from   dv_sr_lspv_det_v d,
                    sp_lspv          sl
-            where  1=1
-            and    sl.nom_vkl = d#.nom_vkl
-            and    sl.nom_ips = d#.nom_ips
+            where  1 = 1
+            and    sl.nom_vkl = d.nom_vkl
+            and    sl.nom_ips = d.nom_ips
             and    d.detail_type = 'BENEFIT'
             and    d.addition_id > 0
-            and    d.fk_dv_sr_lspv = d#.id
-            and    d#.shifr_schet > 1000
-            and    extract(year from d#.date_op) = l_year
-            group by sl.ssylka_fl,
-                     sl.nom_vkl,
-                     sl.nom_ips,
-                     d#.shifr_schet, 
-                     d.addition_code
+            and    d.date_op <= dv_sr_lspv_docs_api.get_end_date
+            and    d.year_op = l_year
+            group  by sl.ssylka_fl,
+                      sl.nom_vkl,
+                      sl.nom_ips,
+                      d.shifr_schet,
+                      d.addition_code
+
           ),
           vych as (
             select lv.ssylka ssylka_fl, lv.vych_kod_gni benefit_code, 
@@ -207,7 +206,9 @@ create or replace package body ndfl_report_api is
                    ) shifr_schet,
                    sum(lv.vych_sum) amount
             from   f2ndfl_load_vych lv
-            where  lv.kod_na = 1
+            where  1=1
+            and    lv.mes <= extract(month from dv_sr_lspv_docs_api.get_end_date)
+            and    lv.kod_na = 1
             and    lv.god = l_year
             and    lv.tip_dox in (1,3)
             and    lv.nom_korr = 0

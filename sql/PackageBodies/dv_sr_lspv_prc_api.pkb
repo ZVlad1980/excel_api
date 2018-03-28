@@ -26,11 +26,13 @@ create or replace package body dv_sr_lspv_prc_api is
       process_name,
       start_date,
       end_date,
+      actual_date,
       state
     ) values (
       p_process_row.process_name,
       p_process_row.start_date,
       p_process_row.end_date  ,
+      p_process_row.actual_date,
       'CREATED'
     ) returning id, state into p_process_row.id, p_process_row.state;
     --

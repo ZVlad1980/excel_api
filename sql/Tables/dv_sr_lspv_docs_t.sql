@@ -5,6 +5,7 @@ create table dv_sr_lspv_prc_t (
   process_name   varchar2(40),
   start_date     date,
   end_date       date,
+  actual_date    date,
   state          varchar2(10),
   deleted_rows   integer,
   error_rows     integer,
@@ -54,10 +55,10 @@ create table dv_sr_lspv_docs_t (
   delete_process_id  number
 )
 /*
+alter  table dv_sr_lspv_docs_t add delete_process_id  number
 alter table dv_sr_lspv_docs_t  drop column is_delete
 alter table dv_sr_lspv_docs_t  add (is_delete as (case when delete_process_id is not null then 'Y' end))
 create index dv_sr_lspv_docs_i7 on dv_sr_lspv_docs_t(is_delete)
-alter  table dv_sr_lspv_docs_t add delete_process_id  number
 */
 /
 alter table dv_sr_lspv_docs_t add constraint dv_sr_lspv_docs_chk1 check (not(coalesce(type_op, 0) = -1 and ssylka_doc = ssylka_doc_op))

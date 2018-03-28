@@ -37,7 +37,8 @@ create or replace package body dv_sr_lspv#_api is
    */
   function create_process(
     p_year_from    int,
-    p_year_to      int
+    p_year_to      int,
+    p_actual_date  date
   ) return dv_sr_lspv_prc_t.id%type is
     --
     l_process_row dv_sr_lspv_prc_t%rowtype;
@@ -46,6 +47,7 @@ create or replace package body dv_sr_lspv#_api is
     l_process_row.process_name := GÑ_PRC_NAME;
     l_process_row.start_date   := to_date(p_year_from || '0101', 'yyyymmdd');
     l_process_row.end_date     := to_date(p_year_to   || '1231', 'yyyymmdd');
+    l_process_row.actual_date  := p_actual_date;
     --
     dv_sr_lspv_prc_api.create_process(
       p_process_row => l_process_row
@@ -241,7 +243,7 @@ create or replace package body dv_sr_lspv#_api is
     --
     utl_error_api.init_exceptions;
     --
-    l_process_id := create_process(p_year_from, p_year_to);
+    l_process_id := create_process(p_year_from, p_year_to, p_actual_date);
     --
     update_dv_sr_lspv#(l_process_id, p_year_from, p_year_to, p_actual_date);
     --
@@ -252,7 +254,7 @@ create or replace package body dv_sr_lspv#_api is
     --
     commit;
     --
-    dbms_stats.gather_table_stats(user, 'dv_sr_lspv#');
+    --dbms_stats.gather_table_stats(user, 'dv_sr_lspv#');
     --
     set_process_state(
       l_process_id, 

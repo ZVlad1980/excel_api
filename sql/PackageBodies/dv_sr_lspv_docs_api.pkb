@@ -524,22 +524,7 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     l_process_id int;
     --
-    function check_update_gf_persons_ return boolean is
-      l_last_start date;
-    begin
-      select max(p.created_at)
-      into   l_last_start
-      from   dv_sr_lspv_prc_t p
-      where  p.process_name = 'UPDATE_GF_PERSONS';
-      --
-      return trunc(sysdate) - trunc(l_last_start) >= 1;
-    exception
-      when no_data_found then
-        return true;
-      when others then
-        fix_exception($$plsql_line, 'check_update_gf_persons_');
-        raise;
-    end check_update_gf_persons_;
+    
     --
     --
     procedure stats_ is
@@ -548,10 +533,8 @@ create or replace package body dv_sr_lspv_docs_api is
     end;
     --
   begin
-    --Обновление GF_PERSONS запускает в процессе проверки ошибок, здесь только для страховки
-    if check_update_gf_persons_ then
-      update_gf_persons(p_year);
-    end if;
+    --
+    update_gf_persons(p_year => p_year);
     --
     set_period(p_year);
     --
@@ -946,13 +929,37 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     l_process_id int;
     --
+    function check_update_gf_persons_ return boolean is
+      l_last_start date;
+    begin
+      --
+      select max(p.created_at)
+      into   l_last_start
+      from   dv_sr_lspv_prc_t p
+      where  p.process_name = 'UPDATE_GF_PERSONS';
+      --
+      return trunc(sysdate) - trunc(l_last_start) >= 1;
+    exception
+      when no_data_found then
+        return true;
+      when others then
+        fix_exception($$plsql_line, 'check_update_gf_persons_');
+        raise;
+    end check_update_gf_persons_;
+    --
   begin
+    --
+    if not check_update_gf_persons_ then
+      return;
+    end if;
     --
     set_period(p_year);
     --
     l_process_id := create_process(
       p_process_name => C_PRC_UPDATE_GF_PERSONS
     );
+    --
+    
     --
     build_list_gf_persons(
       p_process_id => l_process_id

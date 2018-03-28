@@ -24,7 +24,7 @@ create or replace package body gateway_pkg is
   
   /**
    * Функция конвертирования строки в дату (возвращает null в случае ошибки)
-   *  Дата ожидается в формате ГГГГММДД
+   *  Дата ожидается в формате C_DATE_FMT: dd.mm.yyyy
    */
   function to_date$(p_date_str varchar2) return date is
   begin

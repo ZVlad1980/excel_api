@@ -39,8 +39,8 @@ create or replace view sp_ogr_pv_v as
          t.shifr_schet,
          t.start_year,
          t.end_year,
-         min(t.start_date) start_date,
-         max(t.end_date)   end_date
+         trunc(min(t.start_date), 'MM') start_date,
+         last_day(max(t.end_date))   end_date
   from   w_benefits t
   group by t.source_table,
            t.pt_rid,
