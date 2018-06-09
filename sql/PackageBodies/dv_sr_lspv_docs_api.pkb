@@ -936,7 +936,8 @@ create or replace package body dv_sr_lspv_docs_api is
       select max(p.created_at)
       into   l_last_start
       from   dv_sr_lspv_prc_t p
-      where  p.process_name = 'UPDATE_GF_PERSONS';
+      where  p.process_name = 'UPDATE_GF_PERSONS'
+      and    p.state = 'SUCCESS';
       --
       return trunc(sysdate) - trunc(l_last_start) >= 1;
     exception
