@@ -2096,7 +2096,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
                          and    ss.kod_na = pkodna
                          and    ss.god = pgod
                          order by ss.nom_spr, ss.nom_korr, ss.id
-                         fetch next c_batch_size rows only
+                         fetch next to_number(c_batch_size) rows only
                        )
                ) u
         set    u.r_xmlid = l_xmlid;
