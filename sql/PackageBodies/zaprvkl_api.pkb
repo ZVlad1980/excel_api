@@ -1,8 +1,8 @@
 create or replace package body zaprvkl_api is
   
-  -- Ğ¡Ñ‚Ñ€Ğ¾ĞºĞ¸ ÑĞ¸Ğ¼Ğ²Ğ¾Ğ»Ğ¾Ğ² Ğ´Ğ»Ñ Ğ·Ğ°Ğ¼ĞµĞ½Ñ‹
+  -- Ñòğîêè ñèìâîëîâ äëÿ çàìåíû
   G_SRC_CHR  constant varchar2(200) := 'AOPEHBCXMK';
-  G_DEST_CHR constant varchar2(200) := 'ĞĞĞ Ğ•ĞĞ’Ğ¡Ğ¥ĞœĞš';
+  G_DEST_CHR constant varchar2(200) := 'ÀÎĞÅÍÂÑÕÌÊ';
   
   
   procedure plog(p_msg varchar2) is
@@ -21,11 +21,11 @@ create or replace package body zaprvkl_api is
   
   
   /**
-   * Ğ¤ÑƒĞ½ĞºÑ†Ğ¸Ñ create_header - ÑĞ¾Ğ·Ğ´Ğ°ĞµÑ‚ Ğ·Ğ°Ğ³Ğ¾Ğ»Ğ¾Ğ²Ğ¾Ğº Ğ¾Ğ±Ñ€Ğ°Ğ±Ğ¾Ñ‚ĞºĞ¸
+   * Ôóíêöèÿ create_header - ñîçäàåò çàãîëîâîê îáğàáîòêè
    *
-   * @param x_err_msg     - ÑĞ¾Ğ¾Ğ±Ñ‰ĞµĞ½Ğ¸Ğµ Ğ¾Ğ± Ğ¾ÑˆĞ¸Ğ±ĞºĞµ (ĞµÑĞ»Ğ¸ ĞµÑÑ‚ÑŒ)
-   * @param p_investor_id - Ğ½Ğ¾Ğ¼ĞµÑ€ Ğ²ĞºĞ»Ğ°Ğ´Ñ‡Ğ¸ĞºĞ° (ÑĞ¼. fnd.sp_fiz_lits.nom_vkl).
-   *                          Ğ•ÑĞ»Ğ¸ Ğ½Ğµ Ğ·Ğ°Ğ´Ğ°Ğ½ - Ğ½Ğµ Ğ±ÑƒĞ´ĞµÑ‚ Ğ²Ñ‹Ğ¿Ğ¾Ğ»Ğ½ÑÑ‚ÑÑ Ğ°Ğ½Ğ°Ğ»Ğ¸Ğ· Ğ¿Ñ€Ğ¸Ğ½Ğ°Ğ´Ğ»ĞµĞ¶Ğ½Ğ¾ÑÑ‚Ğ¸ ÑƒÑ‡Ğ°ÑÑ‚Ğ½Ğ¸ĞºĞ° Ğº Ğ²ĞºĞ»Ğ°Ğ´Ñ‡Ğ¸ĞºÑƒ
+   * @param x_err_msg     - ñîîáùåíèå îá îøèáêå (åñëè åñòü)
+   * @param p_investor_id - íîìåğ âêëàä÷èêà (ñì. fnd.sp_fiz_lits.nom_vkl).
+   *                          Åñëè íå çàäàí - íå áóäåò âûïîëíÿòñÿ àíàëèç ïğèíàäëåæíîñòè ó÷àñòíèêà ê âêëàä÷èêó
    *
    */
   function create_header(
@@ -51,7 +51,7 @@ create or replace package body zaprvkl_api is
       --
     exception
       when no_data_found then
-        x_err_msg := 'Ğ’ĞºĞ»Ğ°Ğ´Ñ‡Ğ¸Ğº (ssylka = ' || p_investor_id || ') Ğ½Ğµ Ğ½Ğ°Ğ¹Ğ´ĞµĞ½.';
+        x_err_msg := 'Âêëàä÷èê (ssylka = ' || p_investor_id || ') íå íàéäåí.';
         raise;
     end get_investor_id_;
     --
@@ -70,16 +70,16 @@ create or replace package body zaprvkl_api is
   end create_header;
   
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° add_line_tmp Ğ´Ğ¾Ğ±Ğ°Ğ²Ğ»ÑĞµÑ‚ Ğ¿ĞµÑ€ÑĞ¾Ğ½Ğ°Ğ»ÑŒĞ½Ñ‹Ğµ Ğ´Ğ°Ğ½Ğ½Ñ‹Ğµ Ğ² tmp Ñ‚Ğ°Ğ±Ğ»Ğ¸Ñ†Ñƒ
-   *   Ğ’Ñ‹Ğ·Ñ‹Ğ²Ğ°ĞµÑ‚ API 
+   * Ïğîöåäóğà add_line_tmp äîáàâëÿåò ïåğñîíàëüíûå äàííûå â tmp òàáëèöó
+   *   Âûçûâàåò API 
    *
-   * @param p_last_name   - Ñ„Ğ°Ğ¼Ğ¸Ğ»Ğ¸Ñ
-   * @param p_first_name  - Ğ¸Ğ¼Ñ
-   * @param p_second_name - Ğ¾Ñ‚Ñ‡ĞµÑÑ‚Ğ²Ğ¾
-   * @param p_birth_date  - Ğ´Ğ°Ñ‚Ğ° Ñ€Ğ¾Ğ¶Ğ´ĞµĞ½Ğ¸Ñ Ğ² Ñ„Ğ¾Ñ€Ğ¼Ğ°Ñ‚Ğµ Ğ”Ğ”.ĞœĞœ.Ğ“Ğ“Ğ“Ğ“
-   * @param p_employee_id - Ñ‚Ğ°Ğ±ĞµĞ»ÑŒĞ½Ñ‹Ğ¹ Ğ½Ğ¾Ğ¼ĞµÑ€
-   * @param p_snils       - Ğ¡ĞĞ˜Ğ›Ğ¡
-   * @param p_inn         - Ğ˜ĞĞ
+   * @param p_last_name   - ôàìèëèÿ
+   * @param p_first_name  - èìÿ
+   * @param p_second_name - îò÷åñòâî
+   * @param p_birth_date  - äàòà ğîæäåíèÿ â ôîğìàòå ÄÄ.ÌÌ.ÃÃÃÃ
+   * @param p_employee_id - òàáåëüíûé íîìåğ
+   * @param p_snils       - ÑÍÈËÑ
+   * @param p_inn         - ÈÍÍ
    *
    */
   procedure add_line_tmp(
@@ -114,10 +114,10 @@ create or replace package body zaprvkl_api is
   end add_line_tmp;
   
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° prepare - Ğ¿Ğ¾Ğ´Ğ³Ğ¾Ñ‚Ğ¾Ğ²ĞºĞ° Ğ´Ğ°Ğ½Ğ½Ñ‹Ñ… Ğ´Ğ»Ñ Ğ¾Ğ±Ñ€Ğ°Ğ±Ğ¾Ñ‚ĞºĞ¸
-   *   Ğ”Ğ°Ğ½Ğ½Ñ‹Ğµ Ğ´Ğ¾Ğ»Ğ¶Ğ½Ñ‹ Ğ±Ñ‹Ñ‚ÑŒ Ğ·Ğ°Ğ³Ñ€ÑƒĞ¶ĞµĞ½Ñ‹ Ğ² Ñ‚Ğ°Ğ±Ğ»Ğ¸Ñ†Ñƒ zaprvkl_lines_tmp
+   * Ïğîöåäóğà prepare - ïîäãîòîâêà äàííûõ äëÿ îáğàáîòêè
+   *   Äàííûå äîëæíû áûòü çàãğóæåíû â òàáëèöó zaprvkl_lines_tmp
    * 
-   * @param p_header_id - ID Ğ·Ğ°Ğ³Ğ¾Ğ»Ğ¾Ğ²ĞºĞ° Ğ¿Ñ€Ğ¾Ñ†ĞµÑÑĞ° (Ğ´.Ğ±. ÑĞ¾Ğ·Ğ´Ğ°Ğ½)
+   * @param p_header_id - ID çàãîëîâêà ïğîöåññà (ä.á. ñîçäàí)
    * 
    */
   procedure prepare_lines(
@@ -160,9 +160,9 @@ create or replace package body zaprvkl_api is
              t.inn,
              case
                when t.birth_date is null and t.birth_date_str is not null then
-                 'ĞĞµĞºĞ¾Ñ€Ñ€ĞµĞºÑ‚Ğ½Ñ‹Ğ¹ Ñ„Ğ¾Ñ€Ğ¼Ğ°Ñ‚ Ğ´Ğ°Ñ‚Ñ‹ Ñ€Ğ¾Ğ¶Ğ´ĞµĞ½Ğ¸Ñ. Ğ”Ğ°Ñ‚Ğ° Ğ´Ğ¾Ğ»Ğ¶Ğ½Ğ° Ğ±Ñ‹Ñ‚ÑŒ Ğ² Ñ„Ğ¾Ñ€Ğ¼Ğ°Ñ‚Ğµ: ' || G_FMT_DATE
+                 'Íåêîğğåêòíûé ôîğìàò äàòû ğîæäåíèÿ. Äàòà äîëæíà áûòü â ôîğìàòå: ' || G_FMT_DATE
                when t.birth_date > sysdate or t.birth_date < to_date(19000101, 'yyyymmdd') then
-                 'ĞŸÑ€Ğ¾Ğ²ĞµÑ€ÑŒÑ‚Ğµ Ğ´Ğ°Ñ‚Ñƒ Ñ€Ğ¾Ğ¶Ğ´ĞµĞ½Ğ¸Ñ, Ğ²Ğ¾Ğ·Ğ¼Ğ¾Ğ¶Ğ½Ğ¾ Ğ¾Ğ½Ğ° Ğ·Ğ°Ğ´Ğ°Ğ½Ğ° Ğ½Ğµ ĞºĞ¾Ñ€Ñ€ĞµĞºÑ‚Ğ½Ğ°!'
+                 'Ïğîâåğüòå äàòó ğîæäåíèÿ, âîçìîæíî îíà çàäàíà íå êîğğåêòíà!'
              end,
              t.double_id
       from   zaprvkl_lines_tmp_v t;
@@ -172,11 +172,11 @@ create or replace package body zaprvkl_api is
   end prepare_lines;
   
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° update_status_lines - Ğ¾Ğ±Ğ½Ğ¾Ğ²Ğ»ÑĞµÑ‚ ÑÑ‚Ğ°Ñ‚ÑƒÑÑ‹ ÑÑ‚Ñ€Ğ¾Ğº (Ñ‚Ğ¾Ğ»ÑŒĞºĞ¾ Ğ² ÑÑ‚Ğ°Ñ‚ÑƒÑĞµ Create)
+   * Ïğîöåäóğà update_status_lines - îáíîâëÿåò ñòàòóñû ñòğîê (òîëüêî â ñòàòóñå Create)
    *
-   * @param p_header_id    - ID Ğ¾Ğ±Ñ€Ğ°Ğ±Ğ¾Ñ‚ĞºĞ¸
-   * @param p_final_status - Ñ„Ğ¸Ğ½Ğ°Ğ»ÑŒĞ½Ñ‹Ğ¹ ÑÑ‚Ğ°Ñ‚ÑƒÑ ÑÑ‚Ñ€Ğ¾ĞºĞ¸ (ĞµÑĞ»Ğ¸ Ğ¾Ğ½Ğ° Ğ½Ğµ Ğ½Ğ°Ğ¹Ğ´ĞµĞ½Ğ° Ğ² zaprvkl_cross_t)
-   *                           Ğ•ÑĞ»Ğ¸ Ğ½Ğµ Ğ·Ğ°Ğ´Ğ°Ğ½ - ÑÑ‚Ğ°Ñ‚ÑƒÑ Ğ¾ÑÑ‚Ğ°ĞµÑ‚ÑÑ Ğ±ĞµĞ· Ğ¸Ğ·Ğ¼ĞµĞ½ĞµĞ½Ğ¸Ğ¹
+   * @param p_header_id    - ID îáğàáîòêè
+   * @param p_final_status - ôèíàëüíûé ñòàòóñ ñòğîêè (åñëè îíà íå íàéäåíà â zaprvkl_cross_t)
+   *                           Åñëè íå çàäàí - ñòàòóñ îñòàåòñÿ áåç èçìåíåíèé
    *
    */
   procedure update_status_lines(
@@ -195,7 +195,7 @@ create or replace package body zaprvkl_api is
   end update_status_lines;
   
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° full_ident - Ğ¾Ñ‚Ğ±Ğ¾Ñ€ Ğ·Ğ°Ğ¿Ğ¸ÑĞµĞ¹, Ğ¿Ğ¾Ğ»Ğ½Ğ¾ÑÑ‚ÑŒÑ ÑĞ¾Ğ²Ğ¿Ğ°Ğ´Ğ°ÑÑ‰Ğ¸Ñ… Ñ Ğ·Ğ°Ğ´Ğ°Ğ½Ğ½Ñ‹Ğ¼Ğ¸ (Ñ„Ğ¸Ğ¾ + Ğ´Ñ€)
+   * Ïğîöåäóğà full_ident - îòáîğ çàïèñåé, ïîëíîñòüş ñîâïàäàşùèõ ñ çàäàííûìè (ôèî + äğ)
    */
   procedure full_ident(
     p_header_row in out nocopy zaprvkl_headers_t%rowtype
@@ -226,7 +226,7 @@ create or replace package body zaprvkl_api is
   end full_ident;
   
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° part_ident - Ğ¾Ñ‚Ğ±Ğ¾Ñ€ Ğ·Ğ°Ğ¿Ğ¸ÑĞµĞ¹, Ñ‡Ğ°ÑÑ‚Ğ¸Ñ‡Ğ½Ğ¾ ÑĞ¾Ğ²Ğ¿Ğ°Ğ´Ğ°ÑÑ‰Ğ¸Ñ… Ñ Ğ·Ğ°Ğ´Ğ°Ğ½Ğ½Ñ‹Ğ¼Ğ¸
+   * Ïğîöåäóğà part_ident - îòáîğ çàïèñåé, ÷àñòè÷íî ñîâïàäàşùèõ ñ çàäàííûìè
    */
   procedure part_ident(
     p_header_row in out nocopy zaprvkl_headers_t%rowtype
@@ -260,10 +260,10 @@ create or replace package body zaprvkl_api is
   end part_ident;
   
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° start_process Ğ¿ĞµÑ€ĞµĞ·Ğ°Ğ¿ÑƒÑĞºĞ°ĞµÑ‚ Ñ€Ğ°Ğ½ĞµĞµ ÑĞ¾Ğ·Ğ´Ğ°Ğ½Ğ½Ñ‹Ğ¹ Ğ¿Ñ€Ğ¾Ñ†ĞµÑÑ, Ğ´Ğ¾Ğ±Ğ°Ğ²Ğ»ÑÑ ÑÑ‚Ñ€Ğ¾ĞºĞ¸ Ğ¸Ğ· zaprvkl_lines_tmp (ĞµÑĞ»Ğ¸ ĞµÑÑ‚ÑŒ)
+   * Ïğîöåäóğà start_process ïåğåçàïóñêàåò ğàíåå ñîçäàííûé ïğîöåññ, äîáàâëÿÿ ñòğîêè èç zaprvkl_lines_tmp (åñëè åñòü)
    * 
-   * @param x_err_msg   - ÑĞ¾Ğ¾Ğ±Ñ‰ĞµĞ½Ğ¸Ğµ Ğ¾Ğ±Ğ¾ Ğ¾ÑˆĞ¸Ğ±ĞºĞµ (Ñ„ÑƒĞ½ĞºÑ†Ğ¸Ñ Ğ²Ğ¾Ğ·Ğ²Ñ€Ğ°Ñ‚Ğ¸Ğ»Ğ° -1)
-   * @param p_header_id - ID Ñ€Ğ°Ğ½ĞµĞµ ÑĞ¾Ğ·Ğ´Ğ°Ğ½Ğ½Ğ¾Ğ³Ğ¾ Ğ¿Ñ€Ğ¾Ñ†ĞµÑÑĞ°
+   * @param x_err_msg   - ñîîáùåíèå îáî îøèáêå (ôóíêöèÿ âîçâğàòèëà -1)
+   * @param p_header_id - ID ğàíåå ñîçäàííîãî ïğîöåññà
    * 
    */
   procedure process(
@@ -286,9 +286,9 @@ create or replace package body zaprvkl_api is
   end process;
 
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° start_process - Ğ¾ÑĞ½Ğ¾Ğ²Ğ½Ğ°Ñ Ğ¾Ğ±Ñ€Ğ°Ğ±Ğ¾Ñ‚ĞºĞ° 
+   * Ïğîöåäóğà start_process - îñíîâíàÿ îáğàáîòêà 
    * 
-   * x_err_msg - ÑĞ¾Ğ¾Ğ±Ñ‰ĞµĞ½Ğ¸Ğµ Ğ¾Ğ±Ğ¾ Ğ¾ÑˆĞ¸Ğ±ĞºĞµ (Ñ„ÑƒĞ½ĞºÑ†Ğ¸Ñ Ğ²Ğ¾Ğ·Ğ²Ñ€Ğ°Ñ‚Ğ¸Ğ»Ğ° -1)
+   * x_err_msg - ñîîáùåíèå îáî îøèáêå (ôóíêöèÿ âîçâğàòèëà -1)
    * 
    */
   procedure start_process(
@@ -335,10 +335,10 @@ create or replace package body zaprvkl_api is
   end start_process;
   
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° start_process Ğ·Ğ°Ğ¿ÑƒÑĞºĞ°ĞµÑ‚/Ğ¿ĞµÑ€ĞµĞ·Ğ°Ğ¿ÑƒÑĞºĞ°ĞµÑ‚ Ğ¿Ñ€Ğ¾Ñ†ĞµÑÑ Ğ¾Ğ±Ñ€Ğ°Ğ±Ğ¾Ñ‚ĞºĞ¸ Ğ´Ğ°Ğ½Ğ½Ñ‹Ñ…
+   * Ïğîöåäóğà start_process çàïóñêàåò/ïåğåçàïóñêàåò ïğîöåññ îáğàáîòêè äàííûõ
    * 
-   * @param x_err_msg    - ÑĞ¾Ğ¾Ğ±Ñ‰ĞµĞ½Ğ¸Ğµ Ğ¾Ğ±Ğ¾ Ğ¾ÑˆĞ¸Ğ±ĞºĞµ (Ñ„ÑƒĞ½ĞºÑ†Ğ¸Ñ Ğ²Ğ¾Ğ·Ğ²Ñ€Ğ°Ñ‚Ğ¸Ğ»Ğ° -1)
-   * @param p_header_id  - ID Ğ·Ğ°Ğ³Ğ¾Ğ»Ğ¾Ğ²ĞºĞ° Ğ¿Ñ€Ğ¾Ñ†ĞµÑÑĞ°
+   * @param x_err_msg    - ñîîáùåíèå îáî îøèáêå (ôóíêöèÿ âîçâğàòèëà -1)
+   * @param p_header_id  - ID çàãîëîâêà ïğîöåññà
    * 
    */
   procedure start_process(
@@ -364,16 +364,16 @@ create or replace package body zaprvkl_api is
   end start_process;
   
   /**
-   * ĞŸÑ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ğ° get_results - Ğ²Ğ¾Ğ·Ğ²Ñ€Ğ°Ñ‰Ğ°ĞµÑ‚ Ğ½Ğ°Ğ±Ğ¾Ñ€ Ñ€ĞµĞºĞ¾Ñ€Ğ´ÑĞµÑ‚Ğ¾Ğ² Ñ Ñ€ĞµĞ·ÑƒĞ»ÑŒÑ‚Ğ°Ñ‚Ğ°Ğ¼Ğ¸ Ğ¾Ğ±Ñ€Ğ°Ğ±Ğ¾Ñ‚ĞºĞ¸
+   * Ïğîöåäóğà get_results - âîçâğàùàåò íàáîğ ğåêîğäñåòîâ ñ ğåçóëüòàòàìè îáğàáîòêè
    *
-   * @param x_result      - Ñ€ĞµĞ·ÑƒĞ»ÑŒÑ‚Ğ¸Ñ€ÑƒÑÑ‰Ğ¸Ğ¹ ĞºÑƒÑ€ÑĞ¾Ñ€
-   * @param x_err_msg     - ÑĞ¾Ğ¾Ğ±Ñ‰ĞµĞ½Ğ¸Ğµ Ğ¾Ğ± Ğ¾ÑˆĞ¸Ğ±ĞºĞµ
-   * @param p_header_id   - ID Ğ·Ğ°Ğ³Ğ¾Ğ»Ğ¾Ğ²ĞºĞ° Ğ¾Ğ±Ñ€Ğ°Ğ±Ğ¾Ñ‚ĞºĞ¸
-   * @param p_result_code - ĞºĞ¾Ğ´ Ğ·Ğ°Ğ¿Ñ€Ğ°ÑˆĞ¸Ğ²Ğ°ĞµĞ¼Ñ‹Ñ… Ğ´Ğ°Ğ½Ğ½Ñ‹Ñ…:
-   *                          participants            - ÑƒÑ‡Ğ°ÑÑ‚Ğ½Ğ¸ĞºĞ¸
-   *                          not_found               - Ğ½ĞµÑƒÑ‡Ğ°ÑÑ‚Ğ½Ğ¸ĞºĞ¸
-   *                          possible_participants   - Ğ²Ğ¾Ğ·Ğ¼Ğ¾Ğ¶Ğ½Ñ‹Ğµ ÑƒÑ‡Ğ°ÑÑ‚Ğ½Ğ¸ĞºĞ¸
-   *                          errors                  - Ğ¾ÑˆĞ¸Ğ±ĞºĞ¸
+   * @param x_result      - ğåçóëüòèğóşùèé êóğñîğ
+   * @param x_err_msg     - ñîîáùåíèå îá îøèáêå
+   * @param p_header_id   - ID çàãîëîâêà îáğàáîòêè
+   * @param p_result_code - êîä çàïğàøèâàåìûõ äàííûõ:
+   *                          participants            - ó÷àñòíèêè
+   *                          not_found               - íåó÷àñòíèêè
+   *                          possible_participants   - âîçìîæíûå ó÷àñòíèêè
+   *                          errors                  - îøèáêè
    *
    */
   procedure get_results(
@@ -392,6 +392,7 @@ create or replace package body zaprvkl_api is
                  p.first_name,
                  p.second_name,
                  to_char(p.birth_date, zaprvkl_api.get_fmt_date) birth_date,
+                 p.sex,
                  p.employee_id,
                  to_char(
                    p.accession_date, 
@@ -400,11 +401,11 @@ create or replace package body zaprvkl_api is
                  nvl(p.rasch_pen, p.dop_pen) pension_amount,
                  case
                    when p.is_disabled = 'Y' then
-                     'Ğ˜Ğ½Ğ²Ğ°Ğ»Ğ¸Ğ´'
+                     'Èíâàëèä'
                    when p.rasch_pen is not null then
-                     'ĞŸĞµĞ½ÑĞ¸Ğ¾Ğ½ĞµÑ€'
+                     'Ïåíñèîíåğ'
                    else
-                     'Ğ£Ñ‡Ğ°ÑÑ‚Ğ½Ğ¸Ğº'
+                     'Ó÷àñòíèê'
                  end person_type,
                  to_char(
                    nvl(
@@ -437,6 +438,7 @@ create or replace package body zaprvkl_api is
                  p.first_name, 
                  p.second_name, 
                  to_char(p.birth_date, zaprvkl_api.get_fmt_date) birth_date, 
+                 p.sex,
                  p.employee_id,
                  p.snils,
                  to_char(p.accession_date, zaprvkl_api.get_fmt_date) accession_date,
@@ -481,7 +483,7 @@ create or replace package body zaprvkl_api is
                  lin.employee_id,
                  case lin.status
                    when zaprvkl_api.get_ln_sts_double_ident then
-                     'Ğ”ÑƒĞ±Ğ»Ğ¸ĞºĞ°Ñ‚ Ğ² Ğ¸ÑÑ…Ğ¾Ğ´Ğ½Ğ¾Ğ¼ ÑĞ¿Ğ¸ÑĞºĞµ'
+                     'Äóáëèêàò â èñõîäíîì ñïèñêå'
                    else
                      lin.err_msg
                  end err_msg,
@@ -498,7 +500,7 @@ create or replace package body zaprvkl_api is
   end get_results;
   
   /**
-   * Ğ¤ÑƒĞ½ĞºÑ†Ğ¸Ñ edit_distance Ğ²Ñ‹Ğ¿Ğ¾Ğ»Ğ½ÑĞµÑ‚ ÑÑ€Ğ°Ğ²Ğ½ĞµĞ½Ğ¸Ğµ Ğ´Ğ²ÑƒÑ… Ğ¸Ğ¼ĞµĞ½ Ğ¿Ğ¾ Ñ€Ğ°ÑÑĞ¾ÑĞ½Ğ¸Ñ Ğ”Ğ°Ğ¼ĞµÑ€Ğ°Ñƒâ€“Ğ›ĞµĞ²ĞµĞ½ÑˆÑ‚ĞµĞ¹Ğ½Ğ°
+   * Ôóíêöèÿ edit_distance âûïîëíÿåò ñğàâíåíèå äâóõ èìåí ïî ğàññîÿíèş Äàìåğàó–Ëåâåíøòåéíà
    */
   function edit_distance
   (
@@ -517,8 +519,8 @@ create or replace package body zaprvkl_api is
   end edit_distance;
   
   /**
-   * Ğ¤ÑƒĞ½ĞºÑ†Ğ¸Ñ edit_distance Ğ²Ñ‹Ğ¿Ğ¾Ğ»Ğ½ÑĞµÑ‚ ÑÑ€Ğ°Ğ²Ğ½ĞµĞ½Ğ¸Ğµ Ğ´Ğ²ÑƒÑ… Ğ´Ğ°Ñ‚ Ğ¿Ğ¾ Ñ€Ğ°ÑÑĞ¾ÑĞ½Ğ¸Ñ Ğ”Ğ°Ğ¼ĞµÑ€Ğ°Ñƒâ€“Ğ›ĞµĞ²ĞµĞ½ÑˆÑ‚ĞµĞ¹Ğ½Ğ°
-   *   Ğ”Ğ»Ñ ÑÑ€Ğ°Ğ²Ğ½ĞµĞ½Ğ¸Ñ Ğ²Ñ‹Ğ¿Ğ¾Ğ»Ğ½ÑĞµÑ‚ Ğ¿Ñ€ĞµĞ¾Ğ±Ñ€Ğ°Ğ·Ğ¾Ğ²Ğ°Ğ½Ğ¸Ğµ Ğ´Ğ°Ñ‚Ñ‹ Ğ² ÑÑ‚Ñ€Ğ¾ĞºÑƒ Ğ² Ñ„Ğ¾Ñ€Ğ¼Ğ°Ñ‚ yyyymmdd
+   * Ôóíêöèÿ edit_distance âûïîëíÿåò ñğàâíåíèå äâóõ äàò ïî ğàññîÿíèş Äàìåğàó–Ëåâåíøòåéíà
+   *   Äëÿ ñğàâíåíèÿ âûïîëíÿåò ïğåîáğàçîâàíèå äàòû â ñòğîêó â ôîğìàò yyyymmdd
    */
   function edit_distance(
     plname in date,
@@ -529,12 +531,12 @@ create or replace package body zaprvkl_api is
   end edit_distance;
   
   /**
-   * Ğ¤ÑƒĞ½ĞºÑ†Ğ¸Ñ Ğ¿Ğ¾Ğ´Ğ³Ğ¾Ñ‚Ğ¾Ğ²ĞºĞ¸ ÑÑ‚Ñ€Ğ¾ĞºĞ¸ Ğ¸Ğ¼ĞµĞ½Ğ¸ (Ğ¤Ğ˜Ğ) Ğ´Ğ»Ñ Ğ¾Ğ±Ñ€Ğ°Ğ±Ğ¾Ñ‚ĞºĞ¸
-   *  ĞŸÑ€ĞµĞ¾Ğ±Ñ€Ğ°Ğ·Ğ¾Ğ²Ğ°Ğ½Ğ¸Ñ:
-   *    - ÑƒĞ´Ğ°Ğ»ĞµĞ½Ğ¸Ğµ Ğ½Ğ°Ñ‡Ğ°Ğ»ÑŒĞ½Ñ‹Ñ…, Ñ…Ğ²Ğ¾ÑÑ‚Ğ¾Ğ²Ñ‹Ñ… Ğ¸ Ğ´Ğ²Ğ¾Ğ¹Ğ½Ñ‹Ñ… Ğ¿Ñ€Ğ¾Ğ±ĞµĞ»Ğ¾Ğ² Ğ¿Ñ€Ğ¾Ğ±ĞµĞ»Ğ¾Ğ²
-   *    - Ğ²ĞµÑ€Ñ…Ğ½Ğ¸Ğ¹ Ñ€ĞµĞ³Ğ¸ÑÑ‚Ñ€
-   *    - Ñ‚Ñ€Ğ°Ğ½ÑĞ»ÑÑ†Ğ¸Ñ Ğ»Ğ°Ñ‚Ğ¸Ğ½Ğ¸Ñ†Ñ‹ Ğ¸ 0
-   *    - ÑƒĞ´Ğ°Ğ»ĞµĞ½Ğ¸Ğµ Ğ»ÑĞ±Ñ‹Ñ… ÑĞ¸Ğ¼Ğ²Ğ¾Ğ»Ğ¾Ğ² ĞºÑ€Ğ¾Ğ¼Ğµ ĞºĞ¸Ñ€Ğ¸Ğ»Ğ»Ğ¸Ñ†Ñ‹
+   * Ôóíêöèÿ ïîäãîòîâêè ñòğîêè èìåíè (ÔÈÎ) äëÿ îáğàáîòêè
+   *  Ïğåîáğàçîâàíèÿ:
+   *    - óäàëåíèå íà÷àëüíûõ, õâîñòîâûõ è äâîéíûõ ïğîáåëîâ ïğîáåëîâ
+   *    - âåğõíèé ğåãèñòğ
+   *    - òğàíñëÿöèÿ ëàòèíèöû è 0
+   *    - óäàëåíèå ëşáûõ ñèìâîëîâ êğîìå êèğèëëèöû
    */
    function prepare_str$(p_str varchar2) return varchar2 is
    begin
@@ -553,8 +555,8 @@ create or replace package body zaprvkl_api is
    end prepare_str$;
   
   /**
-   * Ğ¤ÑƒĞ½ĞºÑ†Ğ¸Ñ ĞºĞ¾Ğ½Ğ²ĞµÑ€Ñ‚Ğ¸Ñ€Ğ¾Ğ²Ğ°Ğ½Ğ¸Ñ ÑÑ‚Ñ€Ğ¾ĞºĞ¸ Ğ² Ğ´Ğ°Ñ‚Ñƒ (Ğ²Ğ¾Ğ·Ğ²Ñ€Ğ°Ñ‰Ğ°ĞµÑ‚ null Ğ² ÑĞ»ÑƒÑ‡Ğ°Ğµ Ğ¾ÑˆĞ¸Ğ±ĞºĞ¸)
-   *  Ğ”Ğ°Ñ‚Ğ° Ğ¾Ğ¶Ğ¸Ğ´Ğ°ĞµÑ‚ÑÑ Ğ² Ñ„Ğ¾Ñ€Ğ¼Ğ°Ñ‚Ğµ Ğ“Ğ“Ğ“Ğ“ĞœĞœĞ”Ğ”
+   * Ôóíêöèÿ êîíâåğòèğîâàíèÿ ñòğîêè â äàòó (âîçâğàùàåò null â ñëó÷àå îøèáêè)
+   *  Äàòà îæèäàåòñÿ â ôîğìàòå ÃÃÃÃÌÌÄÄ
    */
   function to_date$(p_date_str varchar2) return date is
   begin
@@ -566,7 +568,7 @@ create or replace package body zaprvkl_api is
   
   
   /**
-   * Ğ¤ÑƒĞ½ĞºÑ†Ğ¸Ğ¸ Ğ¾Ğ±Ğ²ĞµÑ€Ñ‚ĞºĞ¸ Ğ´Ğ»Ñ Ğ³Ğ»Ğ¾Ğ±Ğ°Ğ»ÑŒĞ½Ñ‹Ñ… ĞºĞ¾Ğ½ÑÑ‚Ğ°Ğ½Ñ‚
+   * Ôóíêöèè îáâåğòêè äëÿ ãëîáàëüíûõ êîíñòàíò
    */
   --
   function get_ln_sts_created      return varchar2 deterministic is begin return G_LN_STS_CREATED     ; end get_ln_sts_created     ;

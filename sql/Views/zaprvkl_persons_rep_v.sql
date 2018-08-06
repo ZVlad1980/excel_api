@@ -5,6 +5,7 @@ create or replace view zaprvkl_persons_rep_v as
          p.imya                             first_name,
          p.otchestvo                        second_name,
          p.data_rogd                        birth_date,
+         p.pol                              sex,
          p.tab_nom                          employee_id,
          p.insurance_number                 snils,
          p.data_vstup                       accession_date,
