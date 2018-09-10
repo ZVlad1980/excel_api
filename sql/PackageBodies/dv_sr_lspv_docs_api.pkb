@@ -611,6 +611,26 @@ create or replace package body dv_sr_lspv_docs_api is
         raise;
     end insert_gf_persons_;
     --
+    -- Определение GF_PERSON по GAZFOND_TRANSFORM_CONTRAGENTS
+    --
+    procedure update_gf_person_tc_ is
+    begin
+      update dv_sr_gf_persons_t  gp
+      set    gp.gf_person_new = (
+               select tc.fk_contragent
+               from   gazfond.transform_contragents tc
+               where  1=1
+               and    tc.ssylka_fl = gp.ssylka
+             )
+      where  gp.gf_person_new is null
+      and    gp.contragent_type = 'PENSIONER';
+    exception
+      when others then
+        fix_exception($$plsql_line, 'update_gf_person_tc_(' || p_process_id || ')');
+        raise;
+    end update_gf_person_tc_;
+    
+    --
     -- Определение GF_PERSON по ИНН (которые не определены изначально)
     --
     procedure update_gf_person_inn_ is
@@ -691,6 +711,8 @@ create or replace package body dv_sr_lspv_docs_api is
     --
     insert_gf_persons_;
     --commit;
+    update_gf_person_tc_;
+    
     update_gf_person_inn_;
     --commit;
     update_gf_person_fio_;
