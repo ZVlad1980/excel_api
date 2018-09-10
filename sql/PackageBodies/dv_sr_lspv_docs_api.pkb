@@ -641,7 +641,7 @@ create or replace package body dv_sr_lspv_docs_api is
                select p.fk_contragent
                from   (
                        select p.fk_contragent,
-                              count(1)over(partition by p.fk_contragent) cnt
+                              count(1)over(partition by fl.ssylka) cnt
                        from   sp_fiz_lits         fl,
                               gf_people_v         p
                        where  1=1
@@ -657,6 +657,8 @@ create or replace package body dv_sr_lspv_docs_api is
              )
       where  gp.gf_person_new is null
       and    gp.contragent_type = 'PENSIONER';
+      --
+      --
       --
       update dv_sr_gf_persons_t  gp
       set    gp.gf_person_new = (
@@ -688,7 +690,9 @@ create or replace package body dv_sr_lspv_docs_api is
   begin
     --
     insert_gf_persons_;
+    --commit;
     update_gf_person_inn_;
+    --commit;
     update_gf_person_fio_;
     --
   exception
@@ -959,8 +963,6 @@ create or replace package body dv_sr_lspv_docs_api is
     l_process_id := create_process(
       p_process_name => C_PRC_UPDATE_GF_PERSONS
     );
-    --
-    
     --
     build_list_gf_persons(
       p_process_id => l_process_id

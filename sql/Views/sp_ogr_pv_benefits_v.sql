@@ -1,4 +1,4 @@
-create or replace view sp_ogr_pv_v as
+create or replace view sp_ogr_pv_benefits_v as
   with w_benefits as (
     select 'A' source_table,
            t.rid_td                          tdappid,

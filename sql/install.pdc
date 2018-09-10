@@ -353,8 +353,8 @@ prompt install payments_taxdeductions_v.sql
 @@Views\payments_taxdeductions_v.sql
 show error
 ---*/
-prompt install sp_ogr_pv_v.sql
-@@Views\sp_ogr_pv_v.sql
+prompt install sp_ogr_pv_benefits_v.sql
+@@Views\sp_ogr_pv_benefits_v.sql
 show error
 
 prompt install sp_ogr_benefits_v.sql

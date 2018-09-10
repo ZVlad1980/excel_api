@@ -16,7 +16,7 @@ create or replace view sp_ogr_benefits_all_v as
          pt.upper_income,
          op.end_year,
          pt.regdate
-  from   sp_ogr_pv_v              op,
+  from   sp_ogr_pv_benefits_v              op,
          payments_taxdeductions_v pt
   where  1=1
   and    pt.rid(+) = op.pt_rid

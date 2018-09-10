@@ -34,7 +34,8 @@ create or replace view zaprvkl_persons_rep_v as
                   where  inv.ssylka_fl = p.ssylka
                 ) then
              'Y'
-         end                                is_disabled
+         end                                is_disabled,
+         p.poch_zv
   from   fnd.sp_fiz_lits   p,
          fnd.kod_pens_shem ps,
          fnd.sp_ur_lits    u,

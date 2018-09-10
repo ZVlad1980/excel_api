@@ -415,7 +415,7 @@ create or replace package body ndfl2_report_api is
                    o.soderg_ogr,
                    t.tdappid,
                    t.pt_rid
-            from   sp_ogr_pv_v t,
+            from   sp_ogr_pv_benefits_v t,
                    kod_ogr_pv  o
             where  1=1
             and    o.kod_ogr_pv = t.shifr_schet
@@ -500,7 +500,7 @@ create or replace package body ndfl2_report_api is
                  case 
                    when exists (
                      select 1
-                     from   sp_ogr_pv_v p
+                     from   sp_ogr_pv_benefits_v p
                      where  p.nom_vkl = sfl.nom_vkl
                      and    p.nom_ips = sfl.nom_ips
                      and    p.start_year = vm.god
