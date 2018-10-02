@@ -1,5 +1,8 @@
 CREATE OR REPLACE PACKAGE BODY FXNDFL_UTIL AS
 
+--ID фейковой записи в f_ndfl_arh_xml_files, для формирования справок до закрытия года
+C_FAKE_FILE_ID constant number := 0;
+
 -- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
 gl_FLAGDEF             number := 0;
 gl_KODNA               number := Null;
@@ -1953,7 +1956,8 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
     pgod      in number,
     pforma    in number,
     ppriznak  in number,
-    pcommit   in number default 1
+    pcommit   in number default 1,
+    p_xml_id  in number default null
   ) return number as
     rnalag f2ndfl_spr_nal_agent%rowtype;
     nxmlid number;
@@ -1982,7 +1986,7 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
     where  na.kod_na = pkodna
     and    na.god = pgod;
     --
-    nxmlid := f_ndfl_xmlid_seq.nextval();
+    nxmlid := nvl(p_xml_id, f_ndfl_xmlid_seq.nextval());
     --
     insert into f_ndfl_arh_xml_files(
       id,
@@ -2040,6 +2044,8 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
   ) as
     --
     c_batch_size int := 3000;
+    
+    l_fake_files boolean;
     --
     cursor l_batches_cur is
       select s.priznak_s,
@@ -2104,11 +2110,44 @@ procedure KopirSprMes_vArhiv( pKodNA in number, pGod in number )  as
       end loop;
       --
     end raspredspravki_poxml_;
+    
+    
+    procedure create_fake_files_ is
+      l_xmlid    int;
+    begin
+      begin
+        select x.id
+        into   l_xmlid
+        from   f_ndfl_arh_xml_files x
+        where  x.id = C_FAKE_FILE_ID;
+      exception
+        when no_data_found then
+          l_xmlid    := zareg_xml(
+              pkodna   => pkodna, 
+              pgod     => pgod, 
+              pforma   => pforma, 
+              ppriznak => 1,
+              pcommit  => 0,
+              p_xml_id => 0 --признак фейковой пачки
+            );
+      end;
+        
+      update f2ndfl_arh_spravki ss
+      set    ss.r_xmlid = l_xmlid
+      where  ss.r_xmlid is null
+      and    ss.kod_na = pkodna
+      and    ss.god = pgod;
+      
+    end create_fake_files_;
     --
   begin
-    --
-    case pforma
-      when 2 then
+    --До декабря создаются фейковые пачки
+    l_fake_files := case when extract(month from gl_ACTUAL_DATE) < 12 then true else false end;
+    
+    case 
+      when pforma = 2 and l_fake_files then
+        create_fake_files_;
+      when pforma = 2 then
         --
         for b in l_batches_cur loop
           if b.priznak_s = 2 then

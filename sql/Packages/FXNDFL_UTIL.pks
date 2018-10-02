@@ -239,7 +239,8 @@ procedure Kopir_Adresa_vRF_izSOOTV( pPachka in number, pGod in number );
     pgod      in number,
     pforma    in number,
     ppriznak  in number,
-    pcommit   in number default 1
+    pcommit   in number default 1,
+    p_xml_id  in number default null
   ) return number;
  
 

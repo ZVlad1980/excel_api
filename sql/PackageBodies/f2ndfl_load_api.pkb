@@ -78,7 +78,7 @@ create or replace package body f2ndfl_load_api is
     function check_action_ return boolean is
     begin
       return case
-               when p_action_type = 'L' and p_action_code in (
+               when p_action_type = C_ACT_TYPE_LOAD and p_action_code in (
                       C_ACT_LOAD_ALL     ,
                       C_ACT_LOAD_SPRAVKI ,
                       C_ACT_LOAD_TOTAL   ,
@@ -88,7 +88,7 @@ create or replace package body f2ndfl_load_api is
                       C_ACT_INIT_XML     ,
                       C_ACT_DEL_ZERO_REF 
                     ) then true
-               when p_action_type = 'P' and p_action_code in (
+               when p_action_type = C_ACT_TYPE_PURGE and p_action_code in (
                       C_PRG_LOAD_ALL    ,
                       C_PRG_LOAD_SPRAVKI,
                       C_PRG_LOAD_TOTAL  ,
@@ -112,7 +112,8 @@ create or replace package body f2ndfl_load_api is
       where  exists(
                select 1
                from   f_ndfl_arh_xml_files f
-               where  f.god = p_year
+               where  f.id > 0
+               and    f.god = p_year
                and    f.kod_formy = 2
              );
       return true;

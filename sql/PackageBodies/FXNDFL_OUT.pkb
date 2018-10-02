@@ -521,11 +521,13 @@ CREATE OR REPLACE PACKAGE BODY FXNDFL_OUT AS
          CrLf := chr(13)||chr(10);  
          ERR_Pref := 'Чтение идентификатора Справки';
          Select ID, R_XMLID into nSprId, nFileId from f2NDFL_ARH_SPRAVKI where KOD_NA=pKodNA and GOD=pGOD and NOM_SPR=pNomSpravki and NOM_KORR=pNomKorr;
-                  
-         if nFileId is not null then
-           Read_XML_TITLE(nFileId);
+
+         if nFileId is null then
+           ERR_Pref := 'Справка №' || pNomSpravki || ' за ' || to_char(pGOD) ||
+                       ' год сформирована, но не готова для печати (нет привязки к пачке)';
+           raise program_error;
          else
-           gFormVersion := 5.04;
+           read_xml_title(nFileId);
          end if;
          -- данные налогового агента для справок
          ERR_Pref := 'Чтение данных Налогового Агента';
